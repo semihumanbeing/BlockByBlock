@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <filter id="moldShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <g filter="url(#moldShadow)" fill="currentColor">
+    <rect x="50" y="50" width="412" height="412" rx="36"/>
+    <rect x="64" y="64" width="384" height="384" rx="26" fill="none" stroke="#E2E8F0" stroke-width="4" opacity="0.8"/>
+    
+    <!-- 6 Clean Compartments (1x6, no lines) -->
+    <g transform="translate(84, 80)"><rect width="344" height="48" rx="10" fill="#000000" opacity="0.22"/><rect x="2" y="2" width="340" height="44" rx="8" fill="currentColor" opacity="0.88"/></g>
+    <g transform="translate(84, 136)"><rect width="344" height="48" rx="10" fill="#000000" opacity="0.22"/><rect x="2" y="2" width="340" height="44" rx="8" fill="currentColor" opacity="0.88"/></g>
+    <g transform="translate(84, 192)"><rect width="344" height="48" rx="10" fill="#000000" opacity="0.22"/><rect x="2" y="2" width="340" height="44" rx="8" fill="currentColor" opacity="0.88"/></g>
+    <g transform="translate(84, 248)"><rect width="344" height="48" rx="10" fill="#000000" opacity="0.22"/><rect x="2" y="2" width="340" height="44" rx="8" fill="currentColor" opacity="0.88"/></g>
+    <g transform="translate(84, 304)"><rect width="344" height="48" rx="10" fill="#000000" opacity="0.22"/><rect x="2" y="2" width="340" height="44" rx="8" fill="currentColor" opacity="0.88"/></g>
+    <g transform="translate(84, 360)"><rect width="344" height="48" rx="10" fill="#000000" opacity="0.22"/><rect x="2" y="2" width="340" height="44" rx="8" fill="currentColor" opacity="0.88"/></g>
+  </g>
+</svg>

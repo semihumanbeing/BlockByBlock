@@ -4,4 +4,19 @@ html, body {
     margin: 0;
     padding: 0;
     overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
+    outline: none;
+}
+
+* {
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+}
+
+canvas {
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
 }
