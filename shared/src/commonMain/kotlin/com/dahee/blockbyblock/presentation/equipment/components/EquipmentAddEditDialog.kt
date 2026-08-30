@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.dahee.blockbyblock.core.theme.AppColors
+import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.ui.AppButton
 import com.dahee.blockbyblock.core.ui.AppChip
 import com.dahee.blockbyblock.core.ui.AppTextField
@@ -62,6 +63,7 @@ fun EquipmentAddEditDialog(
     onSave: (Equipment) -> Unit,
     onDelete: ((String) -> Unit)? = null
 ) {
+    val strings = LocalStrings.current
     val isEditing = equipment != null
 
     var category by remember { mutableStateOf(equipment?.category ?: EquipmentCategory.MOLD) }
@@ -110,7 +112,7 @@ fun EquipmentAddEditDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (isEditing) "Edit Equipment" else "Register Equipment",
+                        text = if (isEditing) strings.equipmentEditTitle else strings.equipmentRegisterTitle,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = AppColors.TextPrimary
@@ -118,7 +120,7 @@ fun EquipmentAddEditDialog(
 
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
+                        contentDescription = strings.cancel,
                         tint = AppColors.TextMuted,
                         modifier = Modifier
                             .size(22.dp)
@@ -140,7 +142,7 @@ fun EquipmentAddEditDialog(
                 ) {
                     EquipmentCategory.entries.forEach { cat ->
                         AppChip(
-                            text = cat.displayName,
+                            text = if (cat == EquipmentCategory.MOLD) strings.moldListSection else strings.cookingToolListSection,
                             selected = category == cat,
                             onClick = {
                                 if (category != cat) {
@@ -162,7 +164,7 @@ fun EquipmentAddEditDialog(
                     
                     // 1. Grid preset selector
                     Text(
-                        text = "Mold Preset",
+                        text = strings.moldPresetLabelText,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = AppColors.TextSecondary
@@ -175,11 +177,7 @@ fun EquipmentAddEditDialog(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         MoldGridPreset.entries.forEach { preset ->
-                            val label = if (preset == MoldGridPreset.CUSTOM) {
-                                "Custom"
-                            } else {
-                                preset.label
-                            }
+                            val label = strings.moldPresetLabel(preset)
                             AppChip(
                                 text = label,
                                 selected = selectedPreset == preset,
@@ -202,8 +200,8 @@ fun EquipmentAddEditDialog(
                         AppTextField(
                             value = customCapacityText,
                             onValueChange = { customCapacityText = it },
-                            placeholder = "Enter capacity (e.g. 300)",
-                            label = "Custom Capacity (ml)",
+                            placeholder = strings.customCapacityPlaceholder,
+                            label = strings.customCapacityLabel,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
                     }
@@ -212,7 +210,7 @@ fun EquipmentAddEditDialog(
 
                     // 2. Mold slot count
                     Text(
-                        text = "Slots per Mold",
+                        text = strings.slotsPerMoldLabel,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = AppColors.TextSecondary
@@ -226,7 +224,7 @@ fun EquipmentAddEditDialog(
                     ) {
                         cellOptions.forEach { count ->
                             AppChip(
-                                text = "$count",
+                                text = strings.slotCount(count),
                                 selected = cellCount == count,
                                 onClick = {
                                     cellCount = count
@@ -243,7 +241,7 @@ fun EquipmentAddEditDialog(
 
                     // 3. Quantity Stepper
                     Text(
-                        text = "Quantity",
+                        text = strings.quantityLabel,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = AppColors.TextSecondary
@@ -302,7 +300,7 @@ fun EquipmentAddEditDialog(
 
                     // 4. Silicone pastel mold color
                     Text(
-                        text = "Mold Color (Silicone)",
+                        text = strings.moldColor,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = AppColors.TextSecondary
@@ -482,8 +480,8 @@ fun EquipmentAddEditDialog(
                     AppTextField(
                         value = memo,
                         onValueChange = { memo = it },
-                        placeholder = "e.g. For sauces & smoothies",
-                        label = "Memo"
+                        placeholder = strings.memoPlaceholder,
+                        label = strings.memoLabel
                     )
                 }
 
@@ -496,7 +494,7 @@ fun EquipmentAddEditDialog(
                 ) {
                     if (equipment != null && onDelete != null) {
                         AppButton(
-                            text = "Delete",
+                            text = strings.delete,
                             variant = ButtonVariant.DANGER,
                             onClick = { onDelete(equipment.id) },
                             modifier = Modifier.weight(1f)
@@ -504,14 +502,14 @@ fun EquipmentAddEditDialog(
                     }
 
                     AppButton(
-                        text = "Cancel",
+                        text = strings.cancel,
                         variant = ButtonVariant.SECONDARY,
                         onClick = onDismiss,
                         modifier = Modifier.weight(1f)
                     )
 
                     AppButton(
-                        text = if (isEditing) "Save Changes" else "Save",
+                        text = if (isEditing) strings.done else strings.save,
                         variant = ButtonVariant.PRIMARY,
                         onClick = {
                             val finalName = if (name.isNotBlank()) name else {

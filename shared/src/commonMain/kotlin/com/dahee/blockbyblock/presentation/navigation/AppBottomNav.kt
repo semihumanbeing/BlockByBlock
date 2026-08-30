@@ -31,10 +31,9 @@ import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.theme.AppColors
 
 fun NavTab.getLabel(strings: AppStrings): String = when (this) {
-    NavTab.TODAY -> strings.tabToday
-    NavTab.INVENTORY -> strings.tabInventoryNav
     NavTab.MEAL_PLAN -> strings.tabMealPlan
-    NavTab.EQUIPMENT -> strings.tabEquipment
+    NavTab.INVENTORY -> strings.tabInventoryNav
+    NavTab.BLOCK -> strings.tabBlock
     NavTab.ME -> strings.tabMe
 }
 

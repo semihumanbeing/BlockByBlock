@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.theme.AppColors
 import com.dahee.blockbyblock.core.ui.MoldGridVisualizer
 import com.dahee.blockbyblock.domain.model.MoldGridPreset
@@ -29,6 +30,7 @@ fun MoldPresetQuickAddRow(
     onQuickAdd: (MoldGridPreset, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalStrings.current
     val presetsWithColor = listOf(
         Pair(MoldGridPreset.ML_500, AppColors.MoldSkyBlue),
         Pair(MoldGridPreset.ML_250, AppColors.MoldMint),
@@ -43,13 +45,13 @@ fun MoldPresetQuickAddRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "표준 몰드 규격 빠른 추가",
+                text = strings.moldQuickAddTitle,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = AppColors.TextPrimary
             )
             Text(
-                text = "클릭하여 즉시 추가 (+1)",
+                text = strings.moldQuickAddSubtitle,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = AppColors.Primary

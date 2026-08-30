@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -34,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalFocusManager
@@ -45,21 +47,31 @@ import com.dahee.blockbyblock.core.theme.AppColors
 import com.dahee.blockbyblock.core.ui.AppCard
 import com.dahee.blockbyblock.domain.model.CookingToolType
 import com.dahee.blockbyblock.domain.model.Equipment
+import com.dahee.blockbyblock.domain.model.MealBlockItem
 import com.dahee.blockbyblock.domain.model.MoldGridPreset
+import com.dahee.blockbyblock.presentation.block.components.FoodBlock3DView
 import com.dahee.blockbyblock.presentation.equipment.EquipmentViewModel
 import com.dahee.blockbyblock.presentation.equipment.components.CookingToolVisual
 import com.dahee.blockbyblock.presentation.equipment.components.MoldView
+import com.dahee.blockbyblock.presentation.mealplan.MealPlanViewModel
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
-    viewModel: EquipmentViewModel,
+    equipmentViewModel: EquipmentViewModel,
+    mealPlanViewModel: MealPlanViewModel,
     onNavigateToEquipment: () -> Unit,
+    onNavigateToMealPlan: () -> Unit,
+    onNavigateToInventory: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val equipUiState by equipmentViewModel.uiState.collectAsState()
+    val mealUiState by mealPlanViewModel.uiState.collectAsState()
     val strings = LocalStrings.current
     val focusManager = LocalFocusManager.current
+
+    val todayModel = mealUiState.weekDays.find { it.isToday }
+    val todayRecord = todayModel?.mealRecord
 
     LazyColumn(
         modifier = modifier
@@ -112,7 +124,7 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                if (uiState.allEquipments.isEmpty()) {
+                if (equipUiState.allEquipments.isEmpty()) {
                     AppCard(
                         modifier = Modifier.fillMaxWidth(),
                         onClick = onNavigateToEquipment,
@@ -138,12 +150,12 @@ fun HomeScreen(
                     }
                 } else {
                     // Registered mold cards (horizontal scroll)
-                    if (uiState.moldEquipments.isNotEmpty()) {
+                    if (equipUiState.moldEquipments.isNotEmpty()) {
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            items(uiState.moldEquipments, key = { it.id }) { mold ->
+                            items(equipUiState.moldEquipments, key = { it.id }) { mold ->
                                 AppCard(
                                     modifier = Modifier.width(160.dp),
                                     onClick = onNavigateToEquipment,
@@ -181,14 +193,14 @@ fun HomeScreen(
                     }
 
                     // Registered cooking tools (FlowRow)
-                    if (uiState.toolEquipments.isNotEmpty()) {
+                    if (equipUiState.toolEquipments.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(10.dp))
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            uiState.toolEquipments.forEach { tool ->
+                            equipUiState.toolEquipments.forEach { tool ->
                                 val toolDisplayName = tool.toolType?.let { strings.cookingToolName(it) } ?: tool.name
 
                                 Box(
@@ -229,27 +241,215 @@ fun HomeScreen(
             }
         }
 
-        // 2. Today's Meal Plan Section
+        // 2. Today's Meal Plan Section (Live Sync with MealPlanViewModel)
         item {
-            HomeSection(
-                title = strings.homeTodayMealTitle,
-                subtitle = strings.homeTodayMealSubtitle,
-                iconVector = Icons.Default.DateRange
-            )
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = strings.homeTodayMealTitle,
+                            tint = AppColors.Primary,
+                            modifier = Modifier
+                                .padding(end = 6.dp)
+                                .size(20.dp)
+                        )
+                        Text(
+                            text = strings.homeTodayMealTitle,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.TextPrimary
+                        )
+                    }
+
+                    Text(
+                        text = "전체 식단 보기",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AppColors.Primary,
+                        modifier = Modifier
+                            .pointerHoverIcon(PointerIcon.Hand)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onNavigateToMealPlan
+                            )
+                            .padding(4.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                AppCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onNavigateToMealPlan
+                        ),
+                    padding = 16.dp
+                ) {
+                    if (todayRecord != null && todayRecord.totalBlockCount > 0) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            com.dahee.blockbyblock.domain.model.MealType.entries.forEach { mType ->
+                                val slot = todayRecord.getSlot(mType)
+                                if (slot.blocks.isNotEmpty()) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = mType.title,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AppColors.TextSecondary,
+                                            modifier = Modifier.width(36.dp)
+                                        )
+
+                                        FlowRow(
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            slot.blocks.forEach { item ->
+                                                HomeMealBlockChip(item = item)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "오늘 기록된 식단이 없습니다.",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = AppColors.TextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "+ 오늘 식단 기록하기",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.Primary
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         // 3. Inventory Stock Section
         item {
-            HomeSection(
-                title = strings.homeInventoryTitle,
-                subtitle = strings.homeInventorySubtitle,
-                iconVector = Icons.Default.ShoppingCart
-            )
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.ShoppingCart,
+                            contentDescription = strings.homeInventoryTitle,
+                            tint = AppColors.Primary,
+                            modifier = Modifier
+                                .padding(end = 6.dp)
+                                .size(20.dp)
+                        )
+                        Text(
+                            text = strings.homeInventoryTitle,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.TextPrimary
+                        )
+                    }
+
+                    Text(
+                        text = "보관함 가기",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AppColors.Primary,
+                        modifier = Modifier
+                            .pointerHoverIcon(PointerIcon.Hand)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onNavigateToInventory
+                            )
+                            .padding(4.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                AppCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onNavigateToInventory
+                        ),
+                    padding = 16.dp
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "보관함 바로가기",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AppColors.TextSecondary
+                        )
+                    }
+                }
+            }
         }
 
         item {
             Spacer(modifier = Modifier.height(20.dp))
         }
+    }
+}
+
+@Composable
+private fun HomeMealBlockChip(item: MealBlockItem) {
+    val shape = RoundedCornerShape(8.dp)
+    Row(
+        modifier = Modifier
+            .clip(shape)
+            .background(AppColors.SurfaceVariant)
+            .border(0.5.dp, AppColors.Border, shape)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        FoodBlock3DView(
+            colorHex = item.blockColorHex,
+            size = 26.dp
+        )
+
+        Text(
+            text = item.blockName,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = AppColors.TextPrimary
+        )
     }
 }
 
@@ -296,7 +496,6 @@ private fun HomeHeader() {
 @Composable
 private fun HomeSection(
     title: String,
-    subtitle: String,
     iconVector: androidx.compose.ui.graphics.vector.ImageVector
 ) {
     Column {
@@ -334,12 +533,6 @@ private fun HomeSection(
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = AppColors.TextSecondary
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = subtitle,
-                    fontSize = 12.sp,
-                    color = AppColors.TextMuted
                 )
             }
         }

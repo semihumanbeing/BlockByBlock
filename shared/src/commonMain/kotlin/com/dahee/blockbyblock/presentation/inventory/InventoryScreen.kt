@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,7 +26,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Kitchen
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -58,7 +62,9 @@ import com.dahee.blockbyblock.core.ui.AppButton
 import com.dahee.blockbyblock.core.ui.AppCard
 import com.dahee.blockbyblock.core.ui.AppChip
 import com.dahee.blockbyblock.core.ui.ButtonVariant
+import com.dahee.blockbyblock.domain.model.Ingredient
 import com.dahee.blockbyblock.domain.model.IngredientCategory
+import com.dahee.blockbyblock.domain.model.IngredientStatus
 import com.dahee.blockbyblock.presentation.inventory.components.IngredientAddEditDialog
 import com.dahee.blockbyblock.presentation.inventory.components.IngredientItemCard
 import com.dahee.blockbyblock.presentation.inventory.components.IngredientSearchAddDialog
@@ -257,7 +263,7 @@ fun InventoryScreen(
                 ) {
                     item {
                         AppChip(
-                            text = "전체 분류",
+                            text = strings.categoryAll,
                             selected = uiState.selectedCategory == null,
                             onClick = { viewModel.onCategoryFilterChange(null) },
                             horizontalPadding = 10.dp,
@@ -280,7 +286,19 @@ fun InventoryScreen(
             }
 
             // 3. Checklist Ingredients List
-            if (uiState.displayedIngredients.isEmpty()) {
+            val isPantrySeparationActive = (uiState.selectedTab == IngredientTab.IN_STOCK || uiState.selectedTab == IngredientTab.ALL) && uiState.selectedCategory == null
+            val freshIngredients = if (isPantrySeparationActive) {
+                uiState.displayedIngredients.filter { it.category != IngredientCategory.SAUCE_SEASONING }
+            } else {
+                uiState.displayedIngredients
+            }
+            val seasoningIngredients = if (isPantrySeparationActive) {
+                uiState.displayedIngredients.filter { it.category == IngredientCategory.SAUCE_SEASONING }
+            } else {
+                emptyList()
+            }
+
+            if (freshIngredients.isEmpty() && seasoningIngredients.isEmpty()) {
                 item {
                     AppCard(
                         modifier = Modifier.fillMaxWidth(),
@@ -299,7 +317,7 @@ fun InventoryScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 text = if (uiState.selectedTab == IngredientTab.SHOPPING_CART) {
-                                    "장바구니가 비어 있습니다"
+                                    strings.cartEmptyTitle
                                 } else {
                                     strings.inventoryEmptyTitle
                                 },
@@ -310,9 +328,9 @@ fun InventoryScreen(
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = if (uiState.selectedTab == IngredientTab.SHOPPING_CART) {
-                                    "상단 [재료 검색] 버튼을 눌러 구매할 식재료를 담아보세요."
+                                    strings.cartEmptyDesc
                                 } else {
-                                    "상단 [재료 검색] 버튼을 눌러 데이터베이스의 재료를 추가해보세요."
+                                    strings.inventoryEmptyDesc
                                 },
                                 fontSize = 12.sp,
                                 color = AppColors.TextMuted,
@@ -329,7 +347,7 @@ fun InventoryScreen(
                     }
                 }
             } else {
-                items(uiState.displayedIngredients, key = { it.id }) { ingredient ->
+                items(freshIngredients, key = { it.id }) { ingredient ->
                     val dismissState = rememberSwipeToDismissBoxState(
                         confirmValueChange = { dismissValue ->
                             if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
@@ -398,10 +416,21 @@ fun InventoryScreen(
                         )
                     }
                 }
+
+                // Dedicated Pantry Seasonings Section at the bottom of In-Stock and All tabs
+                if (seasoningIngredients.isNotEmpty()) {
+                    item {
+                        PantrySeasoningsSection(
+                            seasonings = seasoningIngredients,
+                            onToggleStatus = { viewModel.onToggleChecklistStatus(it) },
+                            onOpenEdit = { viewModel.onOpenEditDialog(it) }
+                        )
+                    }
+                }
             }
 
             item {
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(if (!isWeb) 80.dp else 24.dp))
             }
         }
 
@@ -450,12 +479,12 @@ fun InventoryScreen(
             }
         }
 
-        // Mobile Floating Cooking FAB (Center-Right circular button with pan icon)
+        // Mobile Floating Cooking FAB (Bottom-Right circular button with pan icon)
         if (!isWeb) {
             Box(
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 16.dp)
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 18.dp, bottom = 18.dp)
                     .shadow(6.dp, CircleShape, spotColor = AppColors.Shadow)
                     .clip(CircleShape)
                     .background(AppColors.Primary)
@@ -485,6 +514,177 @@ fun InventoryScreen(
                         color = Color.White
                     )
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PantrySeasoningsSection(
+    seasonings: List<Ingredient>,
+    onToggleStatus: (String) -> Unit,
+    onOpenEdit: (Ingredient) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val strings = LocalStrings.current
+
+    AppCard(
+        modifier = modifier.fillMaxWidth(),
+        padding = 16.dp
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Kitchen,
+                        contentDescription = strings.inventoryPantrySectionTitle,
+                        tint = AppColors.Primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = strings.inventoryPantrySectionTitle,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.TextPrimary
+                    )
+                }
+
+                Text(
+                    text = strings.pieceCount(seasonings.size),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.Primary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                seasonings.forEach { seasoning ->
+                    PantrySeasoningChip(
+                        seasoning = seasoning,
+                        onToggleStatus = { onToggleStatus(seasoning.id) },
+                        onOpenEdit = { onOpenEdit(seasoning) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PantrySeasoningChip(
+    seasoning: Ingredient,
+    onToggleStatus: () -> Unit,
+    onOpenEdit: () -> Unit
+) {
+    val strings = LocalStrings.current
+    val shape = RoundedCornerShape(10.dp)
+    val isInStock = seasoning.status == IngredientStatus.IN_STOCK
+    val isCart = seasoning.status == IngredientStatus.SHOPPING_CART
+    val isConsumed = seasoning.status == IngredientStatus.CONSUMED
+
+    val cardBg = when {
+        isInStock -> AppColors.Surface
+        isCart -> AppColors.AccentLight.copy(alpha = 0.35f)
+        else -> AppColors.SurfaceVariant.copy(alpha = 0.5f)
+    }
+
+    val cardBorder = when {
+        isInStock -> AppColors.Border
+        isCart -> AppColors.Accent.copy(alpha = 0.4f)
+        else -> AppColors.Border.copy(alpha = 0.4f)
+    }
+
+    val statusBg = when {
+        isInStock -> AppColors.PrimaryLight
+        isCart -> AppColors.Accent.copy(alpha = 0.15f)
+        else -> AppColors.SurfaceVariant
+    }
+
+    val statusColor = when {
+        isInStock -> AppColors.PrimaryDark
+        isCart -> AppColors.Accent
+        else -> AppColors.TextMuted
+    }
+
+    val statusText = when {
+        isInStock -> strings.inventoryTabInStock
+        isCart -> strings.inventoryTabShoppingCart
+        else -> strings.inventoryStatusConsumed
+    }
+
+    val statusIcon = when {
+        isInStock -> Icons.Default.Check
+        isCart -> Icons.Default.ShoppingCart
+        else -> Icons.Default.Remove
+    }
+
+    Row(
+        modifier = Modifier
+            .clip(shape)
+            .background(cardBg)
+            .border(0.5.dp, cardBorder, shape)
+            .padding(start = 10.dp, end = 5.dp, top = 5.dp, bottom = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = seasoning.name,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (isConsumed) AppColors.TextMuted else AppColors.TextPrimary,
+            modifier = Modifier
+                .pointerHoverIcon(PointerIcon.Hand)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onOpenEdit
+                )
+        )
+
+        // 3-state Circular Status Toggle Button: 장바구니 > 보유중 > 소진됨
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(statusBg)
+                .pointerHoverIcon(PointerIcon.Hand)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onToggleStatus
+                )
+                .padding(horizontal = 7.dp, vertical = 3.5.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Icon(
+                    imageVector = statusIcon,
+                    contentDescription = statusText,
+                    tint = statusColor,
+                    modifier = Modifier.size(11.dp)
+                )
+                Text(
+                    text = statusText,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = statusColor
+                )
             }
         }
     }

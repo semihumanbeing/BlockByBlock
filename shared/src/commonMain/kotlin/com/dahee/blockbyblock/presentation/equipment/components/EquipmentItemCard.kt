@@ -90,23 +90,24 @@ fun EquipmentItemCard(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Capacity badge
-                        Badge(
+                        Text(
                             text = "${equipment.displayCapacity}ml",
-                            bgColor = AppColors.PrimaryLight,
-                            textColor = AppColors.PrimaryDark
-                        )
-
-                        // Slot badge
-                        Badge(
-                            text = "${equipment.cellCount} slots",
-                            bgColor = AppColors.AccentLight,
-                            textColor = Color(0xFFB45309)
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.TextPrimary
                         )
 
                         Text(
-                            text = "Total ${equipment.cellCount * equipment.quantity} slots",
-                            fontSize = 11.sp,
+                            text = "·",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.TextMuted
+                        )
+
+                        Text(
+                            text = "${equipment.cellCount}칸",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = AppColors.TextSecondary
                         )
                     }
@@ -121,78 +122,56 @@ fun EquipmentItemCard(
 
             Spacer(modifier = Modifier.width(10.dp))
 
-            // Right Stepper Area (▲ ▼)
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+            // Right Stepper Area ([-] [N] [+])
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(AppColors.SurfaceVariant)
-                    .border(1.dp, AppColors.Border, RoundedCornerShape(10.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .border(1.dp, AppColors.Border, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 3.dp, vertical = 2.dp)
             ) {
-                // Increment arrow
+                // Decrement
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .clickable { onIncreaseQuantity() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "▲",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = AppColors.Primary
-                    )
-                }
-
-                // Current quantity
-                Text(
-                    text = "${equipment.quantity}",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AppColors.TextPrimary,
-                    modifier = Modifier.padding(vertical = 2.dp)
-                )
-
-                // Decrement arrow
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
+                        .size(26.dp)
                         .clip(RoundedCornerShape(6.dp))
                         .clickable { onDecreaseQuantity() },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "▼",
-                        fontSize = 11.sp,
+                        text = "-",
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (equipment.quantity > 1) AppColors.TextSecondary else AppColors.Danger
+                        color = if (equipment.quantity > 0) AppColors.TextPrimary else AppColors.TextMuted
+                    )
+                }
+
+                // Current quantity
+                Text(
+                    text = "${equipment.quantity}개",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary,
+                    modifier = Modifier.padding(horizontal = 6.dp)
+                )
+
+                // Increment
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable { onIncreaseQuantity() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "+",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.Primary
                     )
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun Badge(
-    text: String,
-    bgColor: Color,
-    textColor: Color
-) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(bgColor)
-            .padding(horizontal = 6.dp, vertical = 2.dp)
-    ) {
-        Text(
-            text = text,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = textColor
-        )
     }
 }

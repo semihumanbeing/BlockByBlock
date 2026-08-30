@@ -28,25 +28,50 @@ import com.dahee.blockbyblock.core.i18n.getStrings
 import com.dahee.blockbyblock.core.theme.AppColors
 import com.dahee.blockbyblock.core.theme.BlockByBlockTheme
 import com.dahee.blockbyblock.data.repository.InMemoryEquipmentRepository
+import com.dahee.blockbyblock.data.repository.InMemoryFoodBlockRepository
 import com.dahee.blockbyblock.data.repository.InMemoryIngredientRepository
+import com.dahee.blockbyblock.data.repository.InMemoryMealRecordRepository
+import com.dahee.blockbyblock.presentation.block.BlockInventoryScreen
+import com.dahee.blockbyblock.presentation.block.BlockViewModel
 import com.dahee.blockbyblock.presentation.equipment.EquipmentScreen
 import com.dahee.blockbyblock.presentation.equipment.EquipmentViewModel
 import com.dahee.blockbyblock.presentation.home.HomeScreen
 import com.dahee.blockbyblock.presentation.inventory.IngredientViewModel
 import com.dahee.blockbyblock.presentation.inventory.InventoryScreen
+import com.dahee.blockbyblock.presentation.mealplan.MealPlanScreen
+import com.dahee.blockbyblock.presentation.mealplan.MealPlanViewModel
 import com.dahee.blockbyblock.presentation.me.MeScreen
 import com.dahee.blockbyblock.presentation.navigation.AppBottomNav
 import com.dahee.blockbyblock.presentation.navigation.NavTab
 
 @Composable
 fun App() {
+    var currentTab by remember { mutableStateOf(NavTab.MEAL_PLAN) }
+    var isManagingEquipment by remember { mutableStateOf(false) }
+
     val equipmentRepository = remember { InMemoryEquipmentRepository() }
     val equipmentViewModel = remember { EquipmentViewModel(equipmentRepository) }
 
     val ingredientRepository = remember { InMemoryIngredientRepository() }
     val ingredientViewModel = remember { IngredientViewModel(ingredientRepository) }
 
-    var currentTab by remember { mutableStateOf(NavTab.INVENTORY) }
+    val foodBlockRepository = remember { InMemoryFoodBlockRepository() }
+    val blockViewModel = remember {
+        BlockViewModel(
+            foodBlockRepository = foodBlockRepository,
+            ingredientRepository = ingredientRepository,
+            equipmentRepository = equipmentRepository
+        )
+    }
+
+    val mealRecordRepository = remember { InMemoryMealRecordRepository() }
+    val mealPlanViewModel = remember {
+        MealPlanViewModel(
+            mealRecordRepository = mealRecordRepository,
+            foodBlockRepository = foodBlockRepository
+        )
+    }
+
     var currentLanguage by remember { mutableStateOf(AppLanguage.KO) }
 
     CompositionLocalProvider(
@@ -67,31 +92,42 @@ fun App() {
                         .weight(1f)
                         .fillMaxSize()
                 ) {
-                    when (currentTab) {
-                        NavTab.TODAY -> HomeScreen(
+                    if (isManagingEquipment) {
+                        EquipmentScreen(
                             viewModel = equipmentViewModel,
-                            onNavigateToEquipment = { currentTab = NavTab.EQUIPMENT }
+                            onNavigateBack = { isManagingEquipment = false }
                         )
-                        NavTab.EQUIPMENT -> EquipmentScreen(
-                            viewModel = equipmentViewModel
-                        )
-                        NavTab.INVENTORY -> InventoryScreen(
-                            viewModel = ingredientViewModel,
-                            onCookClick = { currentTab = NavTab.MEAL_PLAN }
-                        )
-                        NavTab.MEAL_PLAN -> PlaceholderTabScreen(
-                            title = strings.tabMealPlan,
-                            desc = strings.homeTodayMealSubtitle
-                        )
-                        NavTab.ME -> MeScreen(
-                            onLanguageChange = { currentLanguage = it }
-                        )
+                    } else {
+                        when (currentTab) {
+                            NavTab.MEAL_PLAN -> MealPlanScreen(
+                                viewModel = mealPlanViewModel
+                            )
+                            NavTab.INVENTORY -> InventoryScreen(
+                                viewModel = ingredientViewModel,
+                                onCookClick = {
+                                    blockViewModel.onOpenCreateScreen()
+                                    currentTab = NavTab.BLOCK
+                                }
+                            )
+                            NavTab.BLOCK -> BlockInventoryScreen(
+                                viewModel = blockViewModel,
+                                onNavigateToInventory = { currentTab = NavTab.INVENTORY },
+                                onNavigateToEquipment = { isManagingEquipment = true }
+                            )
+                            NavTab.ME -> MeScreen(
+                                onLanguageChange = { currentLanguage = it },
+                                onNavigateToEquipment = { isManagingEquipment = true }
+                            )
+                        }
                     }
                 }
 
                 AppBottomNav(
                     currentTab = currentTab,
-                    onTabSelected = { currentTab = it }
+                    onTabSelected = {
+                        currentTab = it
+                        isManagingEquipment = false
+                    }
                 )
             }
         }

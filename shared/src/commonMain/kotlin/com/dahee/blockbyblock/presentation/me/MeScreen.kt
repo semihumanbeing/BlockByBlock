@@ -20,7 +20,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,6 +49,7 @@ import com.dahee.blockbyblock.core.ui.AppCard
 @Composable
 fun MeScreen(
     onLanguageChange: (AppLanguage) -> Unit,
+    onNavigateToEquipment: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
@@ -128,6 +131,59 @@ fun MeScreen(
                                 lineHeight = 16.sp
                             )
                         }
+                    }
+                }
+            }
+
+            // 2. Equipment Management Section (Moved from Bottom Nav to ME screen)
+            item {
+                AppCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onNavigateToEquipment,
+                    padding = 16.dp
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(AppColors.PrimaryLight),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = strings.meEquipmentManageTitle,
+                                tint = AppColors.PrimaryDark,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(14.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = strings.meEquipmentManageTitle,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.TextPrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = strings.meEquipmentManageSubtitle,
+                                fontSize = 12.sp,
+                                color = AppColors.TextSecondary
+                            )
+                        }
+
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Navigate",
+                            tint = AppColors.TextMuted,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }

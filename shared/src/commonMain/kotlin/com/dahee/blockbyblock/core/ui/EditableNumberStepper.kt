@@ -14,8 +14,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,7 +49,7 @@ import com.dahee.blockbyblock.core.theme.AppColors
 import kotlinx.coroutines.delay
 
 /**
- * Stepper component supporting direct number input and arrow buttons.
+ * Stepper component supporting direct number input and - / + buttons.
  * Automatically exits edit mode and commits value when tapping outside or losing focus.
  */
 @Composable
@@ -60,7 +60,7 @@ fun EditableNumberStepper(
     step: Int = 1,
     minValue: Int = 1,
     maxValue: Int = 99999,
-    buttonSize: Dp = 22.dp,
+    buttonSize: Dp = 26.dp,
     modifier: Modifier = Modifier
 ) {
     var isEditing by remember { mutableStateOf(false) }
@@ -88,13 +88,13 @@ fun EditableNumberStepper(
             .clip(RoundedCornerShape(8.dp))
             .background(AppColors.SurfaceVariant)
             .border(1.dp, AppColors.Border, RoundedCornerShape(8.dp))
-            .padding(horizontal = 2.dp, vertical = 2.dp)
+            .padding(horizontal = 3.dp, vertical = 2.dp)
     ) {
-        // Decrement button (▼)
+        // Decrement button (-)
         Box(
             modifier = Modifier
                 .size(buttonSize)
-                .clip(RoundedCornerShape(4.dp))
+                .clip(RoundedCornerShape(6.dp))
                 .pointerHoverIcon(PointerIcon.Hand)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -113,10 +113,10 @@ fun EditableNumberStepper(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.KeyboardArrowDown,
+                imageVector = Icons.Default.Remove,
                 contentDescription = "Decrease",
                 tint = if (value > minValue) AppColors.TextPrimary else AppColors.TextMuted,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(15.dp)
             )
         }
 
@@ -148,7 +148,7 @@ fun EditableNumberStepper(
                 ),
                 singleLine = true,
                 textStyle = TextStyle(
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = AppColors.PrimaryDark,
                     textAlign = TextAlign.Center
@@ -168,12 +168,12 @@ fun EditableNumberStepper(
                     }
                     .background(Color.White, RoundedCornerShape(4.dp))
                     .border(1.dp, AppColors.Primary, RoundedCornerShape(4.dp))
-                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
             )
         } else {
             Text(
                 text = "$value$suffix",
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = AppColors.TextPrimary,
                 textAlign = TextAlign.Center,
@@ -181,7 +181,7 @@ fun EditableNumberStepper(
                 softWrap = false,
                 overflow = TextOverflow.Clip,
                 modifier = Modifier
-                    .defaultMinSize(minWidth = 32.dp)
+                    .defaultMinSize(minWidth = 34.dp)
                     .pointerHoverIcon(PointerIcon.Hand)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -194,11 +194,11 @@ fun EditableNumberStepper(
             )
         }
 
-        // Increment button (▲)
+        // Increment button (+)
         Box(
             modifier = Modifier
                 .size(buttonSize)
-                .clip(RoundedCornerShape(4.dp))
+                .clip(RoundedCornerShape(6.dp))
                 .pointerHoverIcon(PointerIcon.Hand)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -217,10 +217,10 @@ fun EditableNumberStepper(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.KeyboardArrowUp,
+                imageVector = Icons.Default.Add,
                 contentDescription = "Increase",
                 tint = AppColors.Primary,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(15.dp)
             )
         }
     }

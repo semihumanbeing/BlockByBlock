@@ -1,9 +1,11 @@
 package com.dahee.blockbyblock.core.i18n
 
+import com.dahee.blockbyblock.domain.model.BlockSizeCategory
 import com.dahee.blockbyblock.domain.model.CookingToolType
 import com.dahee.blockbyblock.domain.model.IngredientCategory
 import com.dahee.blockbyblock.domain.model.IngredientStatus
 import com.dahee.blockbyblock.domain.model.IngredientUnit
+import com.dahee.blockbyblock.domain.model.MealType
 import com.dahee.blockbyblock.domain.model.MoldGridPreset
 
 object EnStrings : AppStrings {
@@ -16,21 +18,25 @@ object EnStrings : AppStrings {
     override val done = "Done"
     override val add = "Add"
     override val addBtn = "Add"
+    override val back = "Back"
     override val inUse = "In Use"
     override val selected = "Selected"
     override val unitSlot = "s"
     override val unitPiece = " ea"
+    override val unitDay = " days"
     override val customSlotBtn = "Custom"
     override fun slotCount(count: Int) = if (count == 1) "1 slot" else "$count slots"
-    override fun pieceCount(count: Int) = if (count == 1) "1 mold" else "$count molds"
+    override fun pieceCount(count: Int) = if (count == 1) "1 item" else "$count items"
     override fun totalSlots(slots: Int) = "$slots slots total"
     override fun totalSlotsPortion(slots: Int) = "$slots total portions"
 
     // Navigation Tabs
     override val tabToday = "Today"
     override val tabInventoryNav = "Storage"
+    override val tabBlock = "Blocks"
     override val tabMealPlan = "Meals"
     override val tabEquipment = "Equipment"
+    override val tabMe = "MY"
 
     // Cooking Tools
     override fun cookingToolName(type: CookingToolType) = when (type) {
@@ -43,7 +49,7 @@ object EnStrings : AppStrings {
         CookingToolType.CUSTOM -> "Other Tools"
     }
 
-    // Mold Presets
+    // Mold Presets & Sizing
     override fun moldPresetLabel(preset: MoldGridPreset) = when (preset) {
         MoldGridPreset.ML_500 -> "500ml"
         MoldGridPreset.ML_250 -> "250ml"
@@ -54,6 +60,9 @@ object EnStrings : AppStrings {
     override val customCapacityLabel = "Capacity per slot (ml)"
     override val customCapacityPlaceholder = "Enter ml"
     override val moldColor = "Mold Color"
+    override val moldQuickAddTitle = "Quick Add Standard Molds"
+    override val moldQuickAddSubtitle = "Tap to add immediately (+1)"
+    override fun blockSizeName(category: BlockSizeCategory) = category.titleEn
 
     // Home Screen
     override val homeAppSubtitle = "Smart Block Portion Meal Prep"
@@ -68,9 +77,7 @@ object EnStrings : AppStrings {
     override val homeNoEquipmentRegistered = "No equipment registered yet"
     override val homeRegisterEquipmentNow = "Tap to register molds and cooking tools"
     override val homeTodayMealTitle = "Today's Meal"
-    override val homeTodayMealSubtitle = "Portion meals scheduled for today"
     override val homeInventoryTitle = "Storage Inventory"
-    override val homeInventorySubtitle = "Stored portion blocks in fridge & freezer"
 
     // Equipment Onboarding Screen (Screen 1)
     override val onboardingTitle = "Equipment Setup"
@@ -98,15 +105,22 @@ object EnStrings : AppStrings {
     override val noMoldsRegistered = "No molds registered."
     override val noToolsRegistered = "No cooking tools registered."
 
-    // Single Mold Edit Dialog
+    // Single Mold / Equipment Edit Dialog
     override val editMoldDialogTitle = "Edit Mold"
     override val editMoldDialogDeleteBtn = "Delete"
     override val editMoldDialogSaveBtn = "Save Changes"
     override fun moldDetailSummary(capacityMl: Int, cellCount: Int, quantity: Int) =
         "$cellCount slots each ($quantity molds, ${cellCount * quantity} slots total)"
+    override val equipmentEditTitle = "Edit Equipment"
+    override val equipmentRegisterTitle = "Register Equipment"
+    override val moldPresetLabelText = "Mold Preset"
+    override val slotsPerMoldLabel = "Slots per Mold"
+    override val quantityLabel = "Quantity"
+    override val equipmentColorLabel = "Equipment Color"
+    override val memoLabel = "Memo"
+    override val memoPlaceholder = "Enter memo (optional)"
 
-    // Navigation Tab & ME Screen
-    override val tabMe = "MY"
+    // ME Screen
     override val meTitle = "My Info & Settings"
     override val meSubtitle = "Manage your profile and app preferences"
     override val meProfileSection = "Profile"
@@ -119,8 +133,62 @@ object EnStrings : AppStrings {
     override val meLanguageKo = "한국어"
     override val meLanguageEn = "English"
     override val meEquipmentSummaryTitle = "Registered Equipment"
+    override val meEquipmentManageTitle = "Manage Equipment & Molds"
+    override val meEquipmentManageSubtitle = "Configure your silicone molds and cooking tools"
     override fun meEquipmentSummaryDesc(moldCount: Int, toolCount: Int) = "$moldCount molds · $toolCount cooking tools"
     override val meAppVersion = "App Version 1.0.0"
+
+    // Food Block Inventory (Phase 4)
+    override val blockTitle = "Meal Block Inventory"
+    override val blockSubtitle = "Stored portion blocks in freezer & fridge"
+    override val blockTabAll = "All Blocks"
+    override val blockTabFreezer = "Freezer"
+    override val blockTabFridge = "Fridge"
+    override val blockEmptyTitle = "No meal blocks stored yet"
+    override val blockEmptyDesc = "Portion your ingredients to create your first meal block."
+    override val blockCreateBtn = "Create Block"
+    override val createBlockTitle = "Create Meal Block"
+    override val createBlockSubtitle = "Combine in-stock ingredients into custom meal portion blocks"
+    override val editBlockTitle = "Edit Meal Block"
+    override val editBlockSubtitle = "Update stored meal block details"
+    override val editBlockSubmitBtn = "Save Changes"
+    override val createBlockNameLabel = "Dish / Block Name"
+    override val createBlockSectionIngredients = "Select Ingredients"
+    override val createBlockMainIngredientsSubLabel = "Main Ingredients"
+    override val createBlockSearchIngredientPlaceholder = "Search main ingredients..."
+    override val createBlockNoMatchingIngredients = "No matching ingredients found"
+    override val prevPageBtn = "Prev"
+    override val nextPageBtn = "Next"
+    override fun selectedIngredientsCount(count: Int) = "$count selected"
+    override val createBlockNoIngredients = "No ingredients currently in stock"
+    override val createBlockGoToInventory = "Add ingredients"
+    override val createBlockSectionSubIngredients = "Seasonings & Spices"
+    override val createBlockSubIngredientsSubLabel = "Seasonings & Spices"
+    override val createBlockOwnedSeasoningsLabel = "In-Stock Sub-Ingredients (Tap to add)"
+    override val createBlockSubIngredientPlaceholder = "Add seasoning (e.g. Salt, Pepper)..."
+    override val createBlockAddSubBtn = "Add"
+    override val createBlockSectionMold = "Select Portion Mold"
+    override val createBlockMoldCountLabel = "Number of Molds to Use"
+    override fun createBlockMoldCountMax(count: Int) = "(Owned: $count)"
+    override val createBlockNoMolds = "No molds registered yet"
+    override val createBlockGoToEquipment = "Register molds"
+    override val createBlockSectionStorage = "Portion Settings"
+    override val createBlockQuantityLabel = "Block Count"
+    override val createBlockStorageTypeLabel = "Storage Method"
+    override val createBlockFreezer = "Freezer"
+    override val createBlockFridge = "Fridge"
+    override val createBlockShelfLifeLabel = "Shelf Life"
+    override fun createBlockDaysLabel(days: Int) = "$days days (Default)"
+    override val createBlockSubmitBtn = "Create Meal Block"
+    override val createBlockNamePlaceholder = "Enter dish name (e.g. Chicken Fried Rice)"
+    override val createBlockSuccessToast = "Meal block created successfully!"
+    override val shelfLifeExpired = "Expired"
+    override fun shelfLifeExpiringSoon(days: Int) = "Expires in $days days (Soon)"
+    override fun shelfLifeDays(days: Int) = "$days days shelf life"
+    override val historyTitle = "History"
+    override val historySubtitle = "Load previously made block"
+    override val createBlockSectionCookingTool = "Cooking Tool (Optional)"
+    override val noCookingToolSelected = "None"
 
     // Inventory & Ingredients (Phase 3)
     override val inventoryTitle = "Ingredients & Storage"
@@ -131,6 +199,9 @@ object EnStrings : AppStrings {
     override val inventoryTabAll = "All"
     override val inventoryTabInStock = "In Stock"
     override val inventoryTabShoppingCart = "Shopping Cart"
+    override val inventoryStatusConsumed = "Consumed"
+    override val inventoryPantrySectionTitle = "Sub-Ingredients"
+    override val inventoryPantryMoveToCart = "Add to Cart"
     override val inventoryLoadMoreBtn = "Load More"
     override fun inventoryShowingCount(showing: Int, total: Int) = "Showing $showing of $total items"
     override val inventoryEmptyTitle = "No ingredients registered"
@@ -164,8 +235,40 @@ object EnStrings : AppStrings {
     override fun itemDeletedToast(name: String) = "'$name' has been deleted."
     override fun catalogAddCustomBtn(name: String) = "Add '$name' as custom"
     override val catalogNoResults = "No matching ingredients found"
+    override val categoryAll = "All Categories"
+    override val cartEmptyTitle = "Shopping cart is empty"
+    override val cartEmptyDesc = "Tap [Search Ingredients] above to add items to buy."
+    override val ingredientNamePlaceholder = "e.g. Chicken breast, Onion, Egg"
 
     override fun ingredientCategoryName(category: IngredientCategory) = category.displayNameEn
     override fun ingredientUnitName(unit: IngredientUnit) = unit.displayNameEn
     override fun ingredientStatusName(status: IngredientStatus) = status.displayNameEn
+
+    // Meal Plan (Phase 5)
+    override fun mealTypeName(type: MealType) = when (type) {
+        MealType.BREAKFAST -> "Breakfast"
+        MealType.LUNCH -> "Lunch"
+        MealType.DINNER -> "Dinner"
+        MealType.SNACK -> "Snack"
+    }
+    override val deleteMealRecordTitle = "Delete Meal Record"
+    override fun deleteMealRecordConfirm(mealType: String) = "Are you sure you want to delete $mealType record?"
+    override val backToToday = "Today"
+    override val mealPlanHint = "Tap a slot to record or edit meal blocks"
+    override fun addMealBlockHint(mealType: String) = "+ Tap to select $mealType blocks"
+    override fun memoPrefix(memo: String) = "Memo: $memo"
+    override val editArrow = "Edit >"
+    override val addMealPlanBtn = "+ Record Meal"
+    override fun mealRecordDialogTitle(mealType: String) = "$mealType Meal Record"
+    override val mealRecordEatingBlocksTitle = "Eating Blocks"
+    override val mealRecordRemoveHint = "Tap block to remove"
+    override val mealRecordEmptyEatingBlocksHint = "Tap blocks below to stack on your meal tray"
+    override val mealRecordInventoryBlocksTitle = "Stored Blocks"
+    override val mealRecordAddHint = "Tap to add 1 piece"
+    override val mealRecordSearchPlaceholder = "Search stored blocks..."
+    override val mealRecordNoBlocksInStock = "No stored blocks available."
+    override val mealRecordNoMatchingBlocks = "No matching blocks found."
+    override val mealRecordMemoLabel = "Memo"
+    override val mealRecordMemoPlaceholder = "Add meal notes (e.g., Add fresh salad)"
+    override val mealRecordMinBlockRequired = "Please select at least 1 block"
 }

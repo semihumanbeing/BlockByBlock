@@ -174,43 +174,43 @@ fun EquipmentListScreen(
             }
         } else {
             item {
-                FlowRow(
+                val chunks = uiState.toolEquipments.chunked(4)
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    uiState.toolEquipments.forEach { tool ->
-                        val toolDisplayName = tool.toolType?.let { strings.cookingToolName(it) } ?: tool.name
-
-                        Box(
-                            modifier = Modifier
-                                .width(88.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(AppColors.Surface)
-                                .border(1.dp, AppColors.Border, RoundedCornerShape(12.dp))
-                                .padding(vertical = 10.dp, horizontal = 4.dp),
-                            contentAlignment = Alignment.Center
+                    chunks.forEach { rowTools ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                tool.toolType?.let { toolType ->
-                                    CookingToolVisual(
-                                        type = toolType,
-                                        size = 40.dp
+                            rowTools.forEach { tool ->
+                                val toolDisplayName = tool.toolType?.let { strings.cookingToolName(it) } ?: tool.name
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    tool.toolType?.let { toolType ->
+                                        CookingToolVisual(
+                                            type = toolType,
+                                            size = 64.dp
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                    }
+                                    Text(
+                                        text = toolDisplayName,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = AppColors.TextPrimary,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        maxLines = 1
                                     )
-                                    Spacer(modifier = Modifier.height(6.dp))
                                 }
-                                Text(
-                                    text = toolDisplayName,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = AppColors.TextPrimary,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    maxLines = 1
-                                )
+                            }
+                            // Fill empty columns if the row has fewer than 4 items
+                            repeat(4 - rowTools.size) {
+                                Spacer(modifier = Modifier.weight(1f))
                             }
                         }
                     }
@@ -227,7 +227,7 @@ fun EquipmentListScreen(
 /**
  * Screen 3 Mold Item Card:
  * - Click to open edit dialog modal
- * - Dynamic MoldView + Capacity & Slot badges + Stepper
+ * - Dynamic MoldView + Capacity & Slot text + Stepper
  */
 @Composable
 private fun MoldItemCard(
@@ -261,30 +261,37 @@ private fun MoldItemCard(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Badges: capacity (e.g. 500ml) & slots (e.g. 2 slots)
+            // Capacity (e.g. 250ml) & Slots (e.g. 4칸) - Clean large text without square badges
             Row(
                 modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Badge(
+                Text(
                     text = "${equipment.displayCapacity}ml",
-                    bgColor = AppColors.PrimaryLight,
-                    textColor = AppColors.PrimaryDark,
-                    fontSize = 13.sp
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary
                 )
 
-                Badge(
+                Text(
+                    text = "·",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextMuted
+                )
+
+                Text(
                     text = strings.slotCount(equipment.cellCount),
-                    bgColor = AppColors.AccentLight,
-                    textColor = Color(0xFFB45309),
-                    fontSize = 13.sp
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AppColors.TextSecondary
                 )
             }
 
             Spacer(modifier = Modifier.width(10.dp))
 
-            // Quantity Stepper (▲ ▼)
+            // Quantity Stepper ([-] [N개] [+])
             EditableNumberStepper(
                 value = equipment.quantity,
                 onValueChange = onQuantitySet,
@@ -292,29 +299,9 @@ private fun MoldItemCard(
                 step = 1,
                 minValue = 0
             )
-        }
-    }
-}
 
-@Composable
-private fun Badge(
-    text: String,
-    bgColor: Color,
-    textColor: Color,
-    fontSize: androidx.compose.ui.unit.TextUnit = 11.sp
-) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(bgColor)
-            .padding(horizontal = 10.dp, vertical = 6.dp)
-    ) {
-        Text(
-            text = text,
-            fontSize = fontSize,
-            fontWeight = FontWeight.Bold,
-            color = textColor
-        )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
     }
 }
 

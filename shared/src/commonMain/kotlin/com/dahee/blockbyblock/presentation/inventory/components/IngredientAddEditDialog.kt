@@ -143,7 +143,7 @@ fun IngredientAddEditDialog(
                 AppTextField(
                     value = name,
                     onValueChange = { name = it },
-                    placeholder = "예: 닭가슴살, 양파, 계란",
+                    placeholder = strings.ingredientNamePlaceholder,
                     label = strings.inventoryNameLabel
                 )
 

@@ -1,9 +1,11 @@
 package com.dahee.blockbyblock.core.i18n
 
+import com.dahee.blockbyblock.domain.model.BlockSizeCategory
 import com.dahee.blockbyblock.domain.model.CookingToolType
 import com.dahee.blockbyblock.domain.model.IngredientCategory
 import com.dahee.blockbyblock.domain.model.IngredientStatus
 import com.dahee.blockbyblock.domain.model.IngredientUnit
+import com.dahee.blockbyblock.domain.model.MealType
 import com.dahee.blockbyblock.domain.model.MoldGridPreset
 
 object KoStrings : AppStrings {
@@ -16,10 +18,12 @@ object KoStrings : AppStrings {
     override val done = "완료"
     override val add = "추가"
     override val addBtn = "추가"
+    override val back = "뒤로"
     override val inUse = "사용 중"
     override val selected = "선택됨"
     override val unitSlot = "칸"
     override val unitPiece = "개"
+    override val unitDay = "일"
     override val customSlotBtn = "커스텀"
     override fun slotCount(count: Int) = "${count}칸"
     override fun pieceCount(count: Int) = "${count}개"
@@ -29,8 +33,10 @@ object KoStrings : AppStrings {
     // Navigation Tabs
     override val tabToday = "오늘"
     override val tabInventoryNav = "보관함"
+    override val tabBlock = "블록"
     override val tabMealPlan = "식단"
     override val tabEquipment = "장비"
+    override val tabMe = "MY"
 
     // Cooking Tools
     override fun cookingToolName(type: CookingToolType) = when (type) {
@@ -43,7 +49,7 @@ object KoStrings : AppStrings {
         CookingToolType.CUSTOM -> "기타 조리도구"
     }
 
-    // Mold Presets
+    // Mold Presets & Sizing
     override fun moldPresetLabel(preset: MoldGridPreset) = when (preset) {
         MoldGridPreset.ML_500 -> "500ml"
         MoldGridPreset.ML_250 -> "250ml"
@@ -54,38 +60,39 @@ object KoStrings : AppStrings {
     override val customCapacityLabel = "1칸당 용량 (ml)"
     override val customCapacityPlaceholder = "용량(ml) 입력"
     override val moldColor = "몰드 색상"
+    override val moldQuickAddTitle = "표준 몰드 규격 빠른 추가"
+    override val moldQuickAddSubtitle = "클릭하여 즉시 추가 (+1)"
+    override fun blockSizeName(category: BlockSizeCategory) = category.titleKo
 
     // Home Screen
-    override val homeAppSubtitle = "체계적인 소분 식단 라이프"
+    override val homeAppSubtitle = "체계적인 소분 라이프"
     override val homeGreeting = "안녕하세요, 소분 마스터님!"
     override val homeBannerTitle = "스마트한 블록 소분 & 밀키트"
     override val homeBannerSubtitle = "나만의 몰드와 레시피로 주간 식단을 완성해보세요."
     override val homeQuickAddMoldTitle = "빠른 몰드 규격 추가"
-    override val homeEquipmentStatusTitle = "내 몰드 & 장비 현황"
+    override val homeEquipmentStatusTitle = "내 장비 현황"
     override val homeManageBtn = "관리 >"
     override val homeRegisteredMolds = "등록된 몰드"
     override val homeCookingTools = "보유 조리도구"
     override val homeNoEquipmentRegistered = "등록된 장비가 없습니다"
-    override val homeRegisterEquipmentNow = "터치하여 소분 몰드와 조리 도구를 등록해보세요"
+    override val homeRegisterEquipmentNow = "터치하여 장비 등록"
     override val homeTodayMealTitle = "오늘의 식단"
-    override val homeTodayMealSubtitle = "오늘 섭취할 소분 식사 목록"
-    override val homeInventoryTitle = "보관함 재고 현황"
-    override val homeInventorySubtitle = "냉장 / 냉동 보관 중인 소분 블록 내역"
+    override val homeInventoryTitle = "식재료 보관함"
 
     // Equipment Onboarding Screen (Screen 1)
     override val onboardingTitle = "내 장비 등록"
-    override val onboardingSubtitle = "보유 중인 소분 몰드와 조리기구를 등록하고 스마트하게 요리해보세요."
+    override val onboardingSubtitle = "보유 중인 몰드와 조리기구를 등록하고 스마트하게 요리해보세요."
     override val onboardingCardTitle = "장비를 등록해볼까요?"
-    override val onboardingCardDesc = "소분 몰드와 조리기구를 선택하면 딱 맞는 블록 레시피를 추천해 드려요."
+    override val onboardingCardDesc = "몰드와 조리기구를 선택하면 딱 맞는 블록 레시피를 추천해 드려요."
     override val onboardingStartBtn = "장비 선택하기"
 
     // Equipment Setup Screen (Screen 2)
     override val setupTitle = "장비 등록 & 설정"
     override val setupSubtitle = "사용할 몰드와 보유 중인 조리 도구를 선택하세요"
     override val moldSectionTitle = "몰드 선택 (최소 1개 필수)"
-    override val moldSectionSubtitle = "사이즈를 터치하여 칸 수와 색상을 설정하세요"
+    override val moldSectionSubtitle = "칸 수와 색상을 설정하세요"
     override val toolsSectionTitle = "보유 조리 기구 (선택 사항)"
-    override val toolsSectionSubtitle = "터치하여 보유 중인 조리 도구를 바로 선택하세요"
+    override val toolsSectionSubtitle = "보유 중인 조리 도구를 선택하세요"
     override val setupSaveBtn = "저장하기"
     override val errorMinMoldRequired = "최소 1개 이상의 몰드를 선택해주세요."
 
@@ -93,20 +100,27 @@ object KoStrings : AppStrings {
     override val listTitle = "내 장비 목록"
     override val listSubtitle = "보유 중인 몰드 규격과 조리기구입니다"
     override val editAllBtn = "한번에 수정하기"
-    override val moldListSection = "소분 몰드"
+    override val moldListSection = "몰드"
     override val cookingToolListSection = "조리 도구"
     override val noMoldsRegistered = "등록된 몰드가 없습니다."
     override val noToolsRegistered = "등록된 조리 도구가 없습니다."
 
-    // Single Mold Edit Dialog
+    // Single Mold / Equipment Edit Dialog
     override val editMoldDialogTitle = "몰드 수정"
     override val editMoldDialogDeleteBtn = "삭제"
     override val editMoldDialogSaveBtn = "수정 완료"
     override fun moldDetailSummary(capacityMl: Int, cellCount: Int, quantity: Int) =
         "1개당 ${cellCount}칸 (총 ${cellCount * quantity}칸)"
+    override val equipmentEditTitle = "장비 수정"
+    override val equipmentRegisterTitle = "장비 등록"
+    override val moldPresetLabelText = "몰드 규격"
+    override val slotsPerMoldLabel = "1개당 칸수"
+    override val quantityLabel = "수량"
+    override val equipmentColorLabel = "장비 색상"
+    override val memoLabel = "메모"
+    override val memoPlaceholder = "메모 입력 (선택)"
 
-    // Navigation Tab & ME Screen
-    override val tabMe = "MY"
+    // ME Screen
     override val meTitle = "내 정보 & 설정"
     override val meSubtitle = "프로필과 앱 설정을 관리합니다"
     override val meProfileSection = "프로필"
@@ -119,8 +133,62 @@ object KoStrings : AppStrings {
     override val meLanguageKo = "한국어"
     override val meLanguageEn = "English"
     override val meEquipmentSummaryTitle = "내 등록 장비 현황"
+    override val meEquipmentManageTitle = "내 장비 및 몰드 관리"
+    override val meEquipmentManageSubtitle = "보유 중인 몰드 규격과 조리기구를 설정합니다"
     override fun meEquipmentSummaryDesc(moldCount: Int, toolCount: Int) = "몰드 ${moldCount}개 · 조리도구 ${toolCount}개 등록됨"
     override val meAppVersion = "앱 버전 1.0.0"
+
+    // Food Block Inventory (Phase 4)
+    override val blockTitle = "블록 인벤토리"
+    override val blockSubtitle = "블록 보관 현황"
+    override val blockTabAll = "전체 블록"
+    override val blockTabFreezer = "냉동 보관"
+    override val blockTabFridge = "냉장 보관"
+    override val blockEmptyTitle = "보관 중인 블록이 없습니다"
+    override val blockEmptyDesc = "식재료를 활용해 첫 번째 블록을 만들어보세요."
+    override val blockCreateBtn = "새 블록 만들기"
+    override val createBlockTitle = "블록 만들기"
+    override val createBlockSubtitle = "보유 중인 식재료를 조합하여 나만의 블록을 만듭니다"
+    override val editBlockTitle = "블록 수정"
+    override val editBlockSubtitle = "보관 중인 블록 정보를 수정합니다"
+    override val editBlockSubmitBtn = "수정 완료"
+    override val createBlockNameLabel = "메뉴명"
+    override val createBlockSectionIngredients = "식재료 선택"
+    override val createBlockMainIngredientsSubLabel = "주재료"
+    override val createBlockSearchIngredientPlaceholder = "주재료 검색..."
+    override val createBlockNoMatchingIngredients = "검색된 식재료가 없습니다"
+    override val prevPageBtn = "이전"
+    override val nextPageBtn = "다음"
+    override fun selectedIngredientsCount(count: Int) = "${count}개 선택됨"
+    override val createBlockNoIngredients = "현재 보유 중인 식재료가 없습니다"
+    override val createBlockGoToInventory = "재료 추가하기"
+    override val createBlockSectionSubIngredients = "추가 재료 (양념/조미료 등)"
+    override val createBlockSubIngredientsSubLabel = "추가 재료 (양념/조미료 등)"
+    override val createBlockOwnedSeasoningsLabel = "보유 중인 부재료 (탭하여 추가)"
+    override val createBlockSubIngredientPlaceholder = "부재료 입력 (예: 소금, 후추, 참기름)..."
+    override val createBlockAddSubBtn = "추가"
+    override val createBlockSectionMold = "몰드 선택"
+    override val createBlockMoldCountLabel = "사용할 몰드 개수"
+    override fun createBlockMoldCountMax(count: Int) = "(보유 ${count}개)"
+    override val createBlockNoMolds = "등록된 몰드가 없습니다"
+    override val createBlockGoToEquipment = "몰드 등록하기"
+    override val createBlockSectionStorage = "소분 설정"
+    override val createBlockQuantityLabel = "블록 수량"
+    override val createBlockStorageTypeLabel = "보관 방식"
+    override val createBlockFreezer = "냉동 보관"
+    override val createBlockFridge = "냉장 보관"
+    override val createBlockShelfLifeLabel = "소비기한"
+    override fun createBlockDaysLabel(days: Int) = "${days}일 (기본)"
+    override val createBlockSubmitBtn = "블록 만들기"
+    override val createBlockNamePlaceholder = "메뉴명 입력 (예: 닭가슴살 볶음밥)"
+    override val createBlockSuccessToast = "블록이 성공적으로 완성되었습니다!"
+    override val shelfLifeExpired = "소비기한 만료"
+    override fun shelfLifeExpiringSoon(days: Int) = "소비기한 ${days}일 (임박)"
+    override fun shelfLifeDays(days: Int) = "소비기한 ${days}일"
+    override val historyTitle = "히스토리"
+    override val historySubtitle = "이전에 만든 블록 불러오기"
+    override val createBlockSectionCookingTool = "사용 조리도구 (선택)"
+    override val noCookingToolSelected = "선택 안 함"
 
     // Inventory & Ingredients (Phase 3)
     override val inventoryTitle = "식재료 보관함"
@@ -131,6 +199,9 @@ object KoStrings : AppStrings {
     override val inventoryTabAll = "전체"
     override val inventoryTabInStock = "보유중"
     override val inventoryTabShoppingCart = "장바구니"
+    override val inventoryStatusConsumed = "소진됨"
+    override val inventoryPantrySectionTitle = "부재료"
+    override val inventoryPantryMoveToCart = "장바구니 담기"
     override val inventoryLoadMoreBtn = "더 조회하기"
     override fun inventoryShowingCount(showing: Int, total: Int) = "${showing} / ${total}개 표시 중"
     override val inventoryEmptyTitle = "등록된 식재료가 없습니다"
@@ -164,8 +235,40 @@ object KoStrings : AppStrings {
     override fun itemDeletedToast(name: String) = "'${name}'이(가) 삭제되었습니다."
     override fun catalogAddCustomBtn(name: String) = "'${name}' 직접 추가하기"
     override val catalogNoResults = "검색 결과가 없습니다"
+    override val categoryAll = "전체 분류"
+    override val cartEmptyTitle = "장바구니가 비어 있습니다"
+    override val cartEmptyDesc = "상단 [재료 검색] 버튼을 눌러 구매할 식재료를 담아보세요."
+    override val ingredientNamePlaceholder = "예: 닭가슴살, 양파, 계란"
 
     override fun ingredientCategoryName(category: IngredientCategory) = category.displayNameKo
     override fun ingredientUnitName(unit: IngredientUnit) = unit.displayNameKo
     override fun ingredientStatusName(status: IngredientStatus) = status.displayNameKo
+
+    // Meal Plan (Phase 5)
+    override fun mealTypeName(type: MealType) = when (type) {
+        MealType.BREAKFAST -> "아침"
+        MealType.LUNCH -> "점심"
+        MealType.DINNER -> "저녁"
+        MealType.SNACK -> "간식"
+    }
+    override val deleteMealRecordTitle = "식단 기록 삭제"
+    override fun deleteMealRecordConfirm(mealType: String) = "${mealType} 식단 기록을 삭제하시겠습니까?"
+    override val backToToday = "오늘로"
+    override val mealPlanHint = "칸을 터치하여 식단 블록을 기록하고 수정하세요"
+    override fun addMealBlockHint(mealType: String) = "+ 터치하여 ${mealType} 블록 선택하기"
+    override fun memoPrefix(memo: String) = "메모: $memo"
+    override val editArrow = "수정 >"
+    override val addMealPlanBtn = "+ 식단 기록하기"
+    override fun mealRecordDialogTitle(mealType: String) = "${mealType} 식단 기록"
+    override val mealRecordEatingBlocksTitle = "먹을 블록"
+    override val mealRecordRemoveHint = "블록 터치 시 빼기"
+    override val mealRecordEmptyEatingBlocksHint = "아래 보관함 블록을 터치하여 식단에 쌓아보세요"
+    override val mealRecordInventoryBlocksTitle = "보관함 블록"
+    override val mealRecordAddHint = "터치하여 1개씩 추가"
+    override val mealRecordSearchPlaceholder = "보관함 블록 검색..."
+    override val mealRecordNoBlocksInStock = "보관함에 남아있는 블록이 없습니다."
+    override val mealRecordNoMatchingBlocks = "검색된 블록이 없습니다."
+    override val mealRecordMemoLabel = "메모"
+    override val mealRecordMemoPlaceholder = "식단 메모를 남겨보세요 (예: 샐러드 추가)"
+    override val mealRecordMinBlockRequired = "최소 1개 이상의 블록을 선택해주세요"
 }

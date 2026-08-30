@@ -148,7 +148,7 @@ fun IngredientSearchAddDialog(
                 ) {
                     item {
                         AppChip(
-                            text = "전체",
+                            text = strings.inventoryTabAll,
                             selected = selectedCategory == null,
                             onClick = { onCategoryFilterChange(null) },
                             horizontalPadding = 8.dp,

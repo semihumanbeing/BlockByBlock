@@ -90,17 +90,27 @@ A cute 3D toy block brick miniature model of a rectangular golden yellow butter 
 
 ---
 
-### 3) 소분 몰드 & 냉동 보관함 (Silicone Molds & Trays)
+### 3) 몰드 & 냉동 보관함 (Silicone Molds & Trays)
 
-#### 🧊 2구 소분 몰드 (2-Slot Silicone Mold Tray)
-```text
-A cute 3D toy block brick miniature model of a 2-compartment rectangular silicone freezing food mold tray (block style), built with pastel lavender purple exterior block bricks with embossed studs on the rims, containing 2 deep transparent clear plastic block bin slots with visible volume indicator lines, white bottom trim. Isolated on a solid pure white background with a soft contact shadow, isometric 3/4 high angle, clean 3D render.
-```
+#### 🧊 2구 몰드 (2-Slot Silicone Mold Tray)
+- **프롬프트**:
+  ```text
+  A premium isometric 3D game asset of a high-grade food-grade silicone freezing mold tray with 2 deep square slots, mint teal color, soft matte translucent texture, glossy highlights, crisp round lego-style studs on edges, high resolution, clean white background, soft ambient occlusion shadow beneath, mobile game UI asset style, ray tracing render, 8k
+  ```
 
 #### 🧊 8구 이유식/양념 얼음틀 몰드 (8-Slot Mini Mold Tray)
 ```text
 A cute 3D toy block brick miniature model of an 8-compartment (2x4 grid) mini baby food freezer tray, constructed from pastel coral pink block bricks, with 8 small transparent clear square well compartments. Isometric 3/4 high angle view, solid pure white background, studio lighting, cute toy render.
 ```
+
+---
+
+## 4. 에셋 명명 규칙 & 파일 규격
+
+| 자산 분류 | 파일명 규칙 | 주요 색상 | 비주얼 특징 | 세부 렌더링 지침 |
+| :--- | :--- | :--- | :--- | :--- |
+| **조리 기구** | `tool_*.png` | 화이트, 메탈 그레이, 틸 | 토이 가전 스타일 | 둥근 모서리 + 디테일 버튼 다이얼 |
+| **몰드 (1~15구)**| `mold_*.png` | 민트 틸 / 화이트 | 투명 슬롯 큐브 | 테두리 스터드 돌기 + 투명 사각 슬롯 |
 
 ---
 
@@ -136,7 +146,7 @@ A cute 3D toy block brick miniature model of a round kitchen mechanical timer, b
 | **에어프라이어** | `air_fryer.png` | 파스텔 민트 (`#4DB6AC`) | 화이트 띠, 블랙 에어벤트 | 반쯤 열린 서랍 속 황금 감자튀김 |
 | **슬로우쿠커** | `slow_cooker.png` | 체리 레드 (`#E53935`) | 그레이 손잡이/받침 | 투명 돔 뚜껑 + 블랙 전원선 & 플러그 |
 | **조리도구 3종** | `other_utensils.png` | 블랙 / 레드 / 메탈릭 그레이 | 옐로우/화이트 계란 | 프라이팬 계란후라이 + 주걱 + 거품기 |
-| **소분 몰드 (1~15구)**| `mold_*.png` | 민트 틸 / 화이트 | 투명 슬롯 큐브 | 테두리 스터드 돌기 + 투명 사각 슬롯 |
+| **몰드 (1~15구)**| `mold_*.png` | 민트 틸 / 화이트 | 투명 슬롯 큐브 | 테두리 스터드 돌기 + 투명 사각 슬롯 |
 
 ---
 
