@@ -6,9 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,22 +27,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dahee.blockbyblock.core.theme.AppColors
+import kotlinx.coroutines.delay
 
 /**
- * Stepper component supporting direct number input and ▲ ▼ buttons.
+ * Stepper component supporting direct number input and arrow buttons.
+ * Automatically exits edit mode and commits value when tapping outside or losing focus.
  */
 @Composable
 fun EditableNumberStepper(
@@ -50,12 +59,28 @@ fun EditableNumberStepper(
     suffix: String = "",
     step: Int = 1,
     minValue: Int = 1,
-    maxValue: Int = 999,
+    maxValue: Int = 99999,
     buttonSize: Dp = 22.dp,
     modifier: Modifier = Modifier
 ) {
     var isEditing by remember { mutableStateOf(false) }
-    var textInput by remember(value) { mutableStateOf(value.toString()) }
+    var textInput by remember(value) { mutableStateOf(TextFieldValue(value.toString(), selection = TextRange(value.toString().length))) }
+    var hasFocused by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(isEditing) {
+        if (isEditing) {
+            textInput = TextFieldValue(value.toString(), selection = TextRange(value.toString().length))
+            hasFocused = false
+            delay(30)
+            try {
+                focusRequester.requestFocus()
+            } catch (_: Throwable) {
+                // Focus requester may throw if not attached yet
+            }
+        }
+    }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -75,6 +100,12 @@ fun EditableNumberStepper(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = {
+                        if (isEditing) {
+                            val parsed = textInput.text.toIntOrNull() ?: value
+                            onValueChange(parsed.coerceIn(minValue, maxValue))
+                            isEditing = false
+                            hasFocused = false
+                        }
                         val newValue = (value - step).coerceAtLeast(minValue)
                         onValueChange(newValue)
                     }
@@ -94,9 +125,9 @@ fun EditableNumberStepper(
             BasicTextField(
                 value = textInput,
                 onValueChange = { input ->
-                    if (input.all { it.isDigit() } && input.length <= 4) {
+                    if (input.text.all { it.isDigit() } && input.text.length <= 5) {
                         textInput = input
-                        val parsed = input.toIntOrNull()
+                        val parsed = input.text.toIntOrNull()
                         if (parsed != null && parsed >= minValue && parsed <= maxValue) {
                             onValueChange(parsed)
                         }
@@ -108,9 +139,11 @@ fun EditableNumberStepper(
                 ),
                 keyboardActions = KeyboardActions(
                     onDone = {
-                        val parsed = textInput.toIntOrNull() ?: value
+                        val parsed = textInput.text.toIntOrNull() ?: value
                         onValueChange(parsed.coerceIn(minValue, maxValue))
                         isEditing = false
+                        hasFocused = false
+                        focusManager.clearFocus()
                     }
                 ),
                 singleLine = true,
@@ -121,10 +154,21 @@ fun EditableNumberStepper(
                     textAlign = TextAlign.Center
                 ),
                 modifier = Modifier
-                    .width(36.dp)
+                    .defaultMinSize(minWidth = 38.dp)
+                    .focusRequester(focusRequester)
+                    .onFocusChanged { focusState ->
+                        if (focusState.isFocused) {
+                            hasFocused = true
+                        } else if (hasFocused && isEditing) {
+                            val parsed = textInput.text.toIntOrNull() ?: value
+                            onValueChange(parsed.coerceIn(minValue, maxValue))
+                            isEditing = false
+                            hasFocused = false
+                        }
+                    }
                     .background(Color.White, RoundedCornerShape(4.dp))
                     .border(1.dp, AppColors.Primary, RoundedCornerShape(4.dp))
-                    .padding(vertical = 1.dp)
+                    .padding(horizontal = 4.dp, vertical = 1.dp)
             )
         } else {
             Text(
@@ -137,11 +181,14 @@ fun EditableNumberStepper(
                 softWrap = false,
                 overflow = TextOverflow.Clip,
                 modifier = Modifier
+                    .defaultMinSize(minWidth = 32.dp)
                     .pointerHoverIcon(PointerIcon.Hand)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = { isEditing = true }
+                        onClick = {
+                            isEditing = true
+                        }
                     )
                     .padding(horizontal = 4.dp, vertical = 2.dp)
             )
@@ -157,6 +204,12 @@ fun EditableNumberStepper(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = {
+                        if (isEditing) {
+                            val parsed = textInput.text.toIntOrNull() ?: value
+                            onValueChange(parsed.coerceIn(minValue, maxValue))
+                            isEditing = false
+                            hasFocused = false
+                        }
                         val newValue = (value + step).coerceAtMost(maxValue)
                         onValueChange(newValue)
                     }

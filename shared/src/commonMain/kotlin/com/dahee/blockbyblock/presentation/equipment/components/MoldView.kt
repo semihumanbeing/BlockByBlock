@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -27,7 +26,7 @@ import com.dahee.blockbyblock.domain.model.MoldGridPreset
  * @param cellCount User configured slot count (optional, partitions grid when provided)
  */
 @Composable
-fun SouperMoldBrickView(
+fun MoldView(
     preset: MoldGridPreset,
     moldColor: Color,
     modifier: Modifier = Modifier,

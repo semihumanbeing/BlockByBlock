@@ -40,9 +40,11 @@ import com.dahee.blockbyblock.domain.model.Equipment
 import com.dahee.blockbyblock.domain.model.MoldGridPreset
 import com.dahee.blockbyblock.presentation.equipment.EquipmentViewModel
 import com.dahee.blockbyblock.presentation.equipment.components.CookingToolVisual
+import com.dahee.blockbyblock.presentation.equipment.components.MoldView
 import com.dahee.blockbyblock.presentation.equipment.components.SingleMoldEditDialog
-import com.dahee.blockbyblock.presentation.equipment.components.SouperMoldBrickView
 import com.dahee.blockbyblock.presentation.equipment.state.EquipmentUiState
+
+import androidx.compose.ui.platform.LocalFocusManager
 
 /**
  * Screen 3: Shows all registered molds & cooking equipment at a glance,
@@ -56,6 +58,7 @@ fun EquipmentListScreen(
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
+    val focusManager = LocalFocusManager.current
 
     // Single mold edit dialog modal
     if (uiState.editingMold != null) {
@@ -71,6 +74,12 @@ fun EquipmentListScreen(
         modifier = modifier
             .fillMaxSize()
             .background(AppColors.Background)
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                focusManager.clearFocus()
+            }
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -96,10 +105,10 @@ fun EquipmentListScreen(
                     )
                 }
 
-                // Top-right [Edit All] button
+                // Top-right [Edit All] button (Warm Honey Yellow from palette)
                 AppButton(
                     text = strings.editAllBtn,
-                    variant = ButtonVariant.SECONDARY,
+                    variant = ButtonVariant.WARM_YELLOW,
                     onClick = { viewModel.onOpenEditScreen() },
                     height = 38.dp
                 )
@@ -218,7 +227,7 @@ fun EquipmentListScreen(
 /**
  * Screen 3 Mold Item Card:
  * - Click to open edit dialog modal
- * - Dynamic SouperMoldBrickView + Capacity & Slot badges + Stepper
+ * - Dynamic MoldView + Capacity & Slot badges + Stepper
  */
 @Composable
 private fun MoldItemCard(
@@ -243,7 +252,7 @@ private fun MoldItemCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Mold silicone brick visual (reflecting dynamic color in real-time)
-            SouperMoldBrickView(
+            MoldView(
                 preset = equipment.moldPreset ?: MoldGridPreset.CUSTOM,
                 moldColor = AppColors.hexToColor(equipment.moldColorHex),
                 cellCount = equipment.cellCount,

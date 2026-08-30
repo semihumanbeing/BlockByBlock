@@ -1,6 +1,9 @@
 package com.dahee.blockbyblock.core.i18n
 
 import com.dahee.blockbyblock.domain.model.CookingToolType
+import com.dahee.blockbyblock.domain.model.IngredientCategory
+import com.dahee.blockbyblock.domain.model.IngredientStatus
+import com.dahee.blockbyblock.domain.model.IngredientUnit
 import com.dahee.blockbyblock.domain.model.MoldGridPreset
 
 interface AppStrings {
@@ -10,6 +13,7 @@ interface AppStrings {
     val cancel: String
     val edit: String
     val delete: String
+    val undo: String
     val done: String
     val add: String
     val addBtn: String
@@ -103,4 +107,50 @@ interface AppStrings {
     val meEquipmentSummaryTitle: String
     fun meEquipmentSummaryDesc(moldCount: Int, toolCount: Int): String
     val meAppVersion: String
+
+    // Inventory & Ingredients (Phase 3)
+    val inventoryTitle: String
+    val inventorySubtitle: String
+    val inventorySearchPlaceholder: String
+    val inventoryQuickAddPlaceholder: String
+    val inventoryQuickAddBtn: String
+    val inventoryTabAll: String
+    val inventoryTabInStock: String
+    val inventoryTabShoppingCart: String
+    val inventoryLoadMoreBtn: String
+    fun inventoryShowingCount(showing: Int, total: Int): String
+    val inventoryEmptyTitle: String
+    val inventoryEmptyDesc: String
+    val inventoryAutoSavedNotice: String
+    val inventoryEditTitle: String
+    val inventoryAddTitle: String
+    val inventoryDeleteConfirm: String
+    val inventoryNameLabel: String
+    val inventoryQuantityLabel: String
+    val inventoryUnitLabel: String
+    val inventoryCategoryLabel: String
+    val inventoryStatusToggleToCart: String
+    val inventoryStatusToggleToStock: String
+    val inventoryCartTip: String
+    val inventorySearchBtn: String
+    val cookBtn: String
+    val catalogSearchTitle: String
+    val catalogSearchPlaceholder: String
+    val catalogTargetStock: String
+    val catalogTargetCart: String
+    val addInStockBtn: String
+    val addCartBtn: String
+    val alreadyAddedInStock: String
+    val alreadyAddedCart: String
+    val alreadyAddedConsumed: String
+    val markAsConsumedBtn: String
+    val moveToCartBtn: String
+    val restoreToStockBtn: String
+    fun alreadyExistsToast(name: String, status: String): String
+    fun itemDeletedToast(name: String): String
+    fun catalogAddCustomBtn(name: String): String
+    val catalogNoResults: String
+    fun ingredientCategoryName(category: IngredientCategory): String
+    fun ingredientUnitName(unit: IngredientUnit): String
+    fun ingredientStatusName(status: IngredientStatus): String
 }

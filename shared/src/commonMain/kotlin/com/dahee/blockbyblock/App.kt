@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -25,9 +28,12 @@ import com.dahee.blockbyblock.core.i18n.getStrings
 import com.dahee.blockbyblock.core.theme.AppColors
 import com.dahee.blockbyblock.core.theme.BlockByBlockTheme
 import com.dahee.blockbyblock.data.repository.InMemoryEquipmentRepository
+import com.dahee.blockbyblock.data.repository.InMemoryIngredientRepository
 import com.dahee.blockbyblock.presentation.equipment.EquipmentScreen
 import com.dahee.blockbyblock.presentation.equipment.EquipmentViewModel
 import com.dahee.blockbyblock.presentation.home.HomeScreen
+import com.dahee.blockbyblock.presentation.inventory.IngredientViewModel
+import com.dahee.blockbyblock.presentation.inventory.InventoryScreen
 import com.dahee.blockbyblock.presentation.me.MeScreen
 import com.dahee.blockbyblock.presentation.navigation.AppBottomNav
 import com.dahee.blockbyblock.presentation.navigation.NavTab
@@ -37,7 +43,10 @@ fun App() {
     val equipmentRepository = remember { InMemoryEquipmentRepository() }
     val equipmentViewModel = remember { EquipmentViewModel(equipmentRepository) }
 
-    var currentTab by remember { mutableStateOf(NavTab.EQUIPMENT) }
+    val ingredientRepository = remember { InMemoryIngredientRepository() }
+    val ingredientViewModel = remember { IngredientViewModel(ingredientRepository) }
+
+    var currentTab by remember { mutableStateOf(NavTab.INVENTORY) }
     var currentLanguage by remember { mutableStateOf(AppLanguage.KO) }
 
     CompositionLocalProvider(
@@ -66,9 +75,9 @@ fun App() {
                         NavTab.EQUIPMENT -> EquipmentScreen(
                             viewModel = equipmentViewModel
                         )
-                        NavTab.INVENTORY -> PlaceholderTabScreen(
-                            title = strings.tabInventoryNav,
-                            desc = strings.homeInventorySubtitle
+                        NavTab.INVENTORY -> InventoryScreen(
+                            viewModel = ingredientViewModel,
+                            onCookClick = { currentTab = NavTab.MEAL_PLAN }
                         )
                         NavTab.MEAL_PLAN -> PlaceholderTabScreen(
                             title = strings.tabMealPlan,
@@ -99,20 +108,21 @@ private fun PlaceholderTabScreen(title: String, desc: String) {
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "📦",
-                fontSize = 40.sp
+            Icon(
+                imageVector = Icons.Default.DateRange,
+                contentDescription = title,
+                tint = AppColors.Primary,
+                modifier = Modifier.padding(bottom = 12.dp)
             )
             Text(
                 text = title,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = AppColors.TextPrimary,
-                modifier = Modifier.padding(top = 12.dp)
+                color = AppColors.TextPrimary
             )
             Text(
                 text = desc,
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 color = AppColors.TextSecondary,
                 modifier = Modifier.padding(top = 6.dp)
             )

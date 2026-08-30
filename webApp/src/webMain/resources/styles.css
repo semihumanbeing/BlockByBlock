@@ -4,6 +4,8 @@ html, body {
     margin: 0;
     padding: 0;
     overflow: hidden;
+    background-color: #FAF6F0; /* AppColors.Background: Warm Milk Ivory */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
     user-select: none;
@@ -14,9 +16,292 @@ html, body {
 * {
     -webkit-tap-highlight-color: transparent;
     outline: none;
+    box-sizing: border-box;
 }
 
 canvas {
     outline: none;
     -webkit-tap-highlight-color: transparent;
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+#composeApp {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* 🧱 Smart Loading Splash Screen (Fixed Overlay, Warm Ivory Palette) */
+#splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #FAF6F0; /* Matching AppColors.Background */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 99999;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.5s ease-out, visibility 0.5s ease;
+}
+
+#splash-screen.fade-out {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Center Content Area */
+.splash-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 20px;
+}
+
+.splash-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 32px 36px;
+    max-width: 340px;
+    width: 100%;
+    background: #FFFFFF;
+    border: 1px solid #E5DDD3; /* AppColors.Border */
+    border-radius: 24px;
+    box-shadow: 0 12px 32px -8px rgba(44, 36, 30, 0.08);
+    animation: cardFloat 3s ease-in-out infinite alternate;
+}
+
+@keyframes cardFloat {
+    0% { transform: translateY(0px); }
+    100% { transform: translateY(-5px); }
+}
+
+/* 🌿🧀🥩 Flat Pastel LEGO Food Bricks (Taller Vertical, Flat Colors, No Gradients) */
+.food-assembly-track {
+    display: flex;
+    align-items: center; /* Exactly equal height alignment */
+    justify-content: center;
+    height: 72px;
+    margin-bottom: 18px;
+    position: relative;
+    filter: drop-shadow(0 6px 12px rgba(44, 36, 30, 0.08));
+}
+
+.food-brick {
+    position: relative;
+    height: 58px; /* Taller vertical height */
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    border-radius: 2px;
+    animation: blockSnapIn 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+    will-change: transform, opacity;
+}
+
+/* 🌿 250ml Wide Brick: Width 48px */
+.brick-wide {
+    width: 48px;
+    padding: 7px 5px;
+}
+
+/* 🧀🥩 125ml Thin Brick: Width 24px */
+.brick-thin {
+    width: 24px;
+    padding: 7px 4px;
+}
+
+/* 2x2 Grid for 4 Studs (Wide Brick) */
+.stud-grid-2x2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 10px 8px;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-items: center;
+}
+
+/* 1x2 Grid for 2 Studs (Thin Brick) */
+.stud-grid-1x2 {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+/* Clean Flat Pastel LEGO Stud (No Gradients, Simple Vector Feel) */
+.lego-stud {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    position: relative;
+    box-sizing: border-box;
+}
+
+/* 🌿 1. Pastel Sage Green (250ml, 4 Studs): Flat Color */
+.brick-green {
+    background: #78BA99;
+    border: 1.5px solid #589A79;
+    border-right: none;
+    border-radius: 3px 0 0 3px;
+    box-shadow: 0 3px 0 #4B8567;
+    animation-delay: 0.0s;
+    z-index: 3;
+}
+
+.brick-green .lego-stud {
+    background: #6FAFA0;
+    border: 1.5px solid #589A79;
+    box-shadow: 0 1.5px 0 #4B8567, inset 0 1px 0.5px rgba(255, 255, 255, 0.45);
+}
+
+/* 🧀 2. Pastel Butter Yellow (125ml, 2 Studs): Flat Color */
+.brick-yellow {
+    background: #F7CE65;
+    border: 1.5px solid #D8A935;
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+    box-shadow: 0 3px 0 #BA8C20;
+    animation-delay: 0.12s;
+    z-index: 2;
+}
+
+.brick-yellow .lego-stud {
+    background: #F2C455;
+    border: 1.5px solid #D8A935;
+    box-shadow: 0 1.5px 0 #BA8C20, inset 0 1px 0.5px rgba(255, 255, 255, 0.45);
+}
+
+/* 🥩 3. Pastel Coral Terracotta (125ml, 2 Studs): Flat Color */
+.brick-redbrown {
+    background: #E5836C;
+    border: 1.5px solid #C4624C;
+    border-left: none;
+    border-radius: 0 3px 3px 0;
+    box-shadow: 0 3px 0 #A84833;
+    animation-delay: 0.24s;
+    z-index: 1;
+}
+
+.brick-redbrown .lego-stud {
+    background: #DE7760;
+    border: 1.5px solid #C4624C;
+    box-shadow: 0 1.5px 0 #A84833, inset 0 1px 0.5px rgba(255, 255, 255, 0.45);
+}
+
+/* 슉 → 착! 오른쪽에서 왼쪽으로 빠르게 날아와 1~2px 오버슛 후 조립 고정 */
+@keyframes blockSnapIn {
+    0% {
+        opacity: 0;
+        transform: translateX(80px);
+    }
+    11% {
+        opacity: 1;
+        transform: translateX(-2px); /* 1~2px 미세 overshoot */
+    }
+    15% {
+        opacity: 1;
+        transform: translateX(0px);  /* 제자리에 착! 락킹 */
+    }
+    72% {
+        opacity: 1;
+        transform: translateX(0px);  /* 완벽한 트리콜로 레고 블록 유지 */
+    }
+    82% {
+        opacity: 0;
+        transform: translateX(0px);  /* 부드러운 페이드 리셋 */
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(80px);
+    }
+}
+
+/* App Title & Loading Text */
+.splash-title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.4px;
+    color: #2C241E; /* AppColors.TextPrimary */
+}
+
+.splash-loading-text {
+    margin: 8px 0 0 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #6B5E54; /* AppColors.TextSecondary */
+    letter-spacing: -0.2px;
+}
+
+.splash-loading-text .dots {
+    display: inline-block;
+    animation: dotsWave 1.4s infinite;
+}
+
+@keyframes dotsWave {
+    0%, 20% { opacity: 0.2; }
+    50% { opacity: 0.6; }
+    80%, 100% { opacity: 1; }
+}
+
+/* 📱 Bottom Navigation Bar during Splash */
+.splash-bottom-nav {
+    width: 100%;
+    background: #FFFFFF; /* AppColors.Surface */
+    border-top: 1px solid #E5DDD3; /* AppColors.Border */
+    border-radius: 20px 20px 0 0;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+.splash-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 14px;
+    color: #A89F91; /* AppColors.TextMuted */
+}
+
+.splash-nav-item.active {
+    color: #3D7A68; /* AppColors.Primary */
+}
+
+.splash-nav-item svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
+.splash-nav-item span {
+    margin-top: 2px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.splash-nav-item.active span {
+    font-weight: 700;
 }

@@ -38,7 +38,9 @@ enum class ButtonVariant {
     PRIMARY,
     SECONDARY,
     OUTLINE,
-    DANGER
+    DANGER,
+    ACCENT,
+    WARM_YELLOW
 }
 
 @Composable
@@ -74,11 +76,21 @@ fun AppButton(
             if (enabled) Color.White else AppColors.TextMuted,
             if (enabled) Color(0xFFB03A2E) else AppColors.Border
         )
+        ButtonVariant.ACCENT -> listOf(
+            if (enabled) AppColors.Accent else AppColors.Border,
+            if (enabled) Color.White else AppColors.TextMuted,
+            if (enabled) Color(0xFFC05621) else AppColors.Border
+        )
+        ButtonVariant.WARM_YELLOW -> listOf(
+            if (enabled) AppColors.BlockYellow else AppColors.Border,
+            if (enabled) AppColors.TextPrimary else AppColors.TextMuted,
+            if (enabled) Color(0xFFD4AC0D) else AppColors.Border
+        )
     }
 
     val shape = RoundedCornerShape(14.dp)
     val pressOffsetY = if (isPressed && enabled) 2.dp else 0.dp
-    val elevation = if (isPressed || !enabled) 0.dp else if (variant == ButtonVariant.PRIMARY) 3.dp else 1.dp
+    val elevation = if (isPressed || !enabled) 0.dp else if (variant == ButtonVariant.PRIMARY || variant == ButtonVariant.ACCENT || variant == ButtonVariant.WARM_YELLOW) 3.dp else 1.dp
 
     Box(
         modifier = modifier
@@ -130,6 +142,8 @@ fun AppButton(
         ButtonVariant.SECONDARY -> if (enabled) AppColors.TextPrimary else AppColors.TextMuted
         ButtonVariant.OUTLINE -> if (enabled) AppColors.Primary else AppColors.TextMuted
         ButtonVariant.DANGER -> if (enabled) Color.White else AppColors.TextMuted
+        ButtonVariant.ACCENT -> if (enabled) Color.White else AppColors.TextMuted
+        ButtonVariant.WARM_YELLOW -> if (enabled) AppColors.TextPrimary else AppColors.TextMuted
     }
 
     AppButton(

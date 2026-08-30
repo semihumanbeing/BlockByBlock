@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,10 +44,11 @@ import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.theme.AppColors
 import com.dahee.blockbyblock.core.ui.AppCard
 import com.dahee.blockbyblock.domain.model.CookingToolType
+import com.dahee.blockbyblock.domain.model.Equipment
 import com.dahee.blockbyblock.domain.model.MoldGridPreset
 import com.dahee.blockbyblock.presentation.equipment.EquipmentViewModel
 import com.dahee.blockbyblock.presentation.equipment.components.CookingToolVisual
-import com.dahee.blockbyblock.presentation.equipment.components.SouperMoldBrickView
+import com.dahee.blockbyblock.presentation.equipment.components.MoldView
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -57,11 +59,18 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val strings = LocalStrings.current
+    val focusManager = LocalFocusManager.current
 
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .background(AppColors.Background)
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                focusManager.clearFocus()
+            }
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
@@ -70,7 +79,7 @@ fun HomeScreen(
             HomeHeader()
         }
 
-        // 1. Equipment & Mold Status Section (Dynamic SouperMoldBrickView + Cooking Tool visuals)
+        // 1. Equipment & Mold Status Section (Dynamic MoldView + Cooking Tool visuals)
         item {
             Column {
                 Row(
@@ -144,7 +153,7 @@ fun HomeScreen(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        SouperMoldBrickView(
+                                        MoldView(
                                             preset = mold.moldPreset ?: MoldGridPreset.CUSTOM,
                                             moldColor = AppColors.hexToColor(mold.moldColorHex),
                                             cellCount = mold.cellCount,

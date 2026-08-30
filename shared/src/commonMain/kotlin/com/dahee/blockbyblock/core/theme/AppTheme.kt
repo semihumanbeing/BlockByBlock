@@ -2,14 +2,13 @@ package com.dahee.blockbyblock.core.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -46,15 +45,12 @@ val AppShapes = Shapes(
 
 @Composable
 fun getKoreanFontFamily(): FontFamily {
-    return FontFamily(
-        Font(Res.font.notosans_kr_regular, weight = FontWeight.Normal),
-        Font(Res.font.notosans_kr_regular, weight = FontWeight.Medium),
-        Font(Res.font.notosans_kr_regular, weight = FontWeight.SemiBold),
-        Font(Res.font.notosans_kr_regular, weight = FontWeight.Bold)
-    )
+    val regularFont = Font(Res.font.notosans_kr_regular, weight = FontWeight.Normal)
+    return remember(regularFont) {
+        FontFamily(regularFont)
+    }
 }
 
-@Composable
 fun getAppTypography(fontFamily: FontFamily): Typography {
     return Typography(
         displayLarge = TextStyle(fontFamily = fontFamily, fontSize = 57.sp),
@@ -81,14 +77,16 @@ fun BlockByBlockTheme(
     content: @Composable () -> Unit
 ) {
     val fontFamily = getKoreanFontFamily()
-    val typography = getAppTypography(fontFamily)
+    val typography = remember(fontFamily) { getAppTypography(fontFamily) }
 
     MaterialTheme(
         colorScheme = LightColorScheme,
         shapes = AppShapes,
         typography = typography
     ) {
-        ProvideTextStyle(value = TextStyle(fontFamily = fontFamily, color = AppColors.TextPrimary)) {
+        CompositionLocalProvider(
+            androidx.compose.material3.LocalTextStyle provides TextStyle(fontFamily = fontFamily, color = AppColors.TextPrimary)
+        ) {
             content()
         }
     }

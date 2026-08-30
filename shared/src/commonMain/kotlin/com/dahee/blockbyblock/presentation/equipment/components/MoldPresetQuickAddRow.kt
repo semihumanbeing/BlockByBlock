@@ -43,7 +43,7 @@ fun MoldPresetQuickAddRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "⚡ 표준 몰드 규격 빠른 추가",
+                text = "표준 몰드 규격 빠른 추가",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = AppColors.TextPrimary

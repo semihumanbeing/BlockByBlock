@@ -48,6 +48,8 @@ import com.dahee.blockbyblock.core.ui.EditableNumberStepper
 import com.dahee.blockbyblock.domain.model.Equipment
 import com.dahee.blockbyblock.domain.model.MoldGridPreset
 
+import androidx.compose.ui.platform.LocalFocusManager
+
 /**
  * Modal dialog to quickly edit/delete a single mold from Screen 3 list
  */
@@ -59,6 +61,7 @@ fun SingleMoldEditDialog(
     onDelete: (String) -> Unit
 ) {
     val strings = LocalStrings.current
+    val focusManager = LocalFocusManager.current
     var cellCount by remember { mutableStateOf(equipment.cellCount) }
     var quantity by remember { mutableStateOf(equipment.quantity) }
     var colorHex by remember { mutableStateOf(equipment.moldColorHex) }
@@ -79,6 +82,12 @@ fun SingleMoldEditDialog(
                 .clip(RoundedCornerShape(20.dp))
                 .background(AppColors.Background)
                 .border(0.5.dp, AppColors.Border.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) {
+                    focusManager.clearFocus()
+                }
                 .padding(20.dp)
         ) {
             Column(
@@ -133,7 +142,7 @@ fun SingleMoldEditDialog(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.width(76.dp)
                         ) {
-                            SouperMoldBrickView(
+                            MoldView(
                                 preset = preset,
                                 moldColor = AppColors.hexToColor(colorHex),
                                 cellCount = cellCount,

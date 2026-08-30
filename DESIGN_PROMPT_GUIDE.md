@@ -1,9 +1,9 @@
 # 🧱 BlockByBlock 3D 블록/토이 스타일 에셋 생성 프롬프트 가이드
 # (3D Toy Block Brick & Kitchen Asset Design Prompt Guide)
 
-이 문서는 `/drawable` 및 `/images`의 기존 에셋(**가스레인지, 오븐, 믹서기, 전자레인지, 에어프라이어, 슬로우쿠커, 몰드 등**)과 완벽하게 일치하는 **3D 블록 브릭 토이 스타일 일러스트**를 생성하기 위한 공식 프롬프트 가이드입니다.
+이 문서는 `shared/src/commonMain/composeResources/drawable/`의 기존 에셋(**가스레인지, 오븐, 믹서기, 전자레인지, 에어프라이어, 슬로우쿠커, 장바구니, 몰드 등**)과 완벽하게 일치하는 **3D 블록 브릭 토이 스타일 일러스트**를 생성하기 위한 공식 프롬프트 가이드입니다.
 
-새로운 조리기구, 식재료, 소분 블록, UI 아이콘 및 뱃지 등을 제작할 때 아래의 **마스터 프롬프트 템플릿**을 복사하여 `[대상/아이템]` 부분만 변경해 사용하면 일관된 디자인 퀄리티를 유지할 수 있습니다.
+새로운 조리기구, 식재료, 소분 블록, UI 아이콘 및 뱃지 등을 제작할 때 아래의 **마스터 프롬프트 템플릿**을 복사하여 `[대상/아이템]` 부분만 변경해 사용하며, 생성된 이미지는 항상 **`shared/src/commonMain/composeResources/drawable/` 단일 경로**에만 저장합니다.
 
 ---
 
@@ -94,7 +94,7 @@ A cute 3D toy block brick miniature model of a rectangular golden yellow butter 
 
 #### 🧊 2구 소분 몰드 (2-Slot Silicone Mold Tray)
 ```text
-A cute 3D toy block brick miniature model of a 2-compartment rectangular silicone freezing food mold tray (Souper Cubes style), built with pastel lavender purple exterior block bricks with embossed studs on the rims, containing 2 deep transparent clear plastic block bin slots with visible volume indicator lines, white bottom trim. Isolated on a solid pure white background with a soft contact shadow, isometric 3/4 high angle, clean 3D render.
+A cute 3D toy block brick miniature model of a 2-compartment rectangular silicone freezing food mold tray (block style), built with pastel lavender purple exterior block bricks with embossed studs on the rims, containing 2 deep transparent clear plastic block bin slots with visible volume indicator lines, white bottom trim. Isolated on a solid pure white background with a soft contact shadow, isometric 3/4 high angle, clean 3D render.
 ```
 
 #### 🧊 8구 이유식/양념 얼음틀 몰드 (8-Slot Mini Mold Tray)

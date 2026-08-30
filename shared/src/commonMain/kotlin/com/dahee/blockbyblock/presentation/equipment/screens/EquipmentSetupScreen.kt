@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -56,7 +57,7 @@ import com.dahee.blockbyblock.domain.model.CookingToolType
 import com.dahee.blockbyblock.domain.model.MoldGridPreset
 import com.dahee.blockbyblock.presentation.equipment.EquipmentViewModel
 import com.dahee.blockbyblock.presentation.equipment.components.CookingToolVisual
-import com.dahee.blockbyblock.presentation.equipment.components.SouperMoldBrickView
+import com.dahee.blockbyblock.presentation.equipment.components.MoldView
 import com.dahee.blockbyblock.presentation.equipment.state.EquipmentUiState
 import com.dahee.blockbyblock.presentation.equipment.state.MoldDraftConfig
 
@@ -71,11 +72,18 @@ fun EquipmentSetupScreen(
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
+    val focusManager = LocalFocusManager.current
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(AppColors.Background)
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                focusManager.clearFocus()
+            }
     ) {
         LazyColumn(
             modifier = Modifier
@@ -347,7 +355,7 @@ private fun MoldSetupRow(
                         onClick = onToggleSelect
                     )
             ) {
-                SouperMoldBrickView(
+                MoldView(
                     preset = draft.preset,
                     moldColor = AppColors.hexToColor(draft.moldColorHex),
                     cellCount = draft.cellCount,

@@ -1,6 +1,9 @@
 package com.dahee.blockbyblock.core.i18n
 
 import com.dahee.blockbyblock.domain.model.CookingToolType
+import com.dahee.blockbyblock.domain.model.IngredientCategory
+import com.dahee.blockbyblock.domain.model.IngredientStatus
+import com.dahee.blockbyblock.domain.model.IngredientUnit
 import com.dahee.blockbyblock.domain.model.MoldGridPreset
 
 object KoStrings : AppStrings {
@@ -9,6 +12,7 @@ object KoStrings : AppStrings {
     override val cancel = "취소"
     override val edit = "수정"
     override val delete = "삭제"
+    override val undo = "실행 취소"
     override val done = "완료"
     override val add = "추가"
     override val addBtn = "추가"
@@ -53,10 +57,10 @@ object KoStrings : AppStrings {
 
     // Home Screen
     override val homeAppSubtitle = "체계적인 소분 식단 라이프"
-    override val homeGreeting = "안녕하세요, 소분 마스터님! 🧊"
+    override val homeGreeting = "안녕하세요, 소분 마스터님!"
     override val homeBannerTitle = "스마트한 블록 소분 & 밀키트"
     override val homeBannerSubtitle = "나만의 몰드와 레시피로 주간 식단을 완성해보세요."
-    override val homeQuickAddMoldTitle = "⚡ 빠른 몰드 규격 추가"
+    override val homeQuickAddMoldTitle = "빠른 몰드 규격 추가"
     override val homeEquipmentStatusTitle = "내 몰드 & 장비 현황"
     override val homeManageBtn = "관리 >"
     override val homeRegisteredMolds = "등록된 몰드"
@@ -108,7 +112,7 @@ object KoStrings : AppStrings {
     override val meProfileSection = "프로필"
     override val meProfileName = "닉네임"
     override val meProfileDefaultName = "소분 마스터"
-    override val meProfileDesc = "스마트한 소분 밀프렙 라이프를 즐기는 중 🧱"
+    override val meProfileDesc = "스마트한 소분 밀프렙 라이프를 즐기는 중"
     override val meSettingsSection = "앱 설정"
     override val meLanguageSetting = "언어 설정"
     override val meLanguageDesc = "앱에서 사용할 언어를 선택하세요"
@@ -117,4 +121,51 @@ object KoStrings : AppStrings {
     override val meEquipmentSummaryTitle = "내 등록 장비 현황"
     override fun meEquipmentSummaryDesc(moldCount: Int, toolCount: Int) = "몰드 ${moldCount}개 · 조리도구 ${toolCount}개 등록됨"
     override val meAppVersion = "앱 버전 1.0.0"
+
+    // Inventory & Ingredients (Phase 3)
+    override val inventoryTitle = "식재료 보관함"
+    override val inventorySubtitle = "보유 중인 재료와 장바구니 목록을 관리합니다"
+    override val inventorySearchPlaceholder = "재료 검색..."
+    override val inventoryQuickAddPlaceholder = "새 식재료 입력..."
+    override val inventoryQuickAddBtn = "추가"
+    override val inventoryTabAll = "전체"
+    override val inventoryTabInStock = "보유중"
+    override val inventoryTabShoppingCart = "장바구니"
+    override val inventoryLoadMoreBtn = "더 조회하기"
+    override fun inventoryShowingCount(showing: Int, total: Int) = "${showing} / ${total}개 표시 중"
+    override val inventoryEmptyTitle = "등록된 식재료가 없습니다"
+    override val inventoryEmptyDesc = "상단 입력창이나 추가 버튼을 통해 식재료를 등록해보세요."
+    override val inventoryAutoSavedNotice = "변경사항이 자동으로 저장되었습니다"
+    override val inventoryEditTitle = "식재료 수정"
+    override val inventoryAddTitle = "새 식재료 등록"
+    override val inventoryDeleteConfirm = "이 식재료를 삭제하시겠습니까?"
+    override val inventoryNameLabel = "재료 이름"
+    override val inventoryQuantityLabel = "수량"
+    override val inventoryUnitLabel = "단위 선택"
+    override val inventoryCategoryLabel = "카테고리"
+    override val inventoryStatusToggleToCart = "장바구니로 이동"
+    override val inventoryStatusToggleToStock = "보유중으로 전환"
+    override val inventoryCartTip = "장을 본 후 체크를 누르면 내 보관함(보유중)으로 쏙 이동돼요!"
+    override val inventorySearchBtn = "재료 검색"
+    override val cookBtn = "요리하기"
+    override val catalogSearchTitle = "재료 검색 및 추가"
+    override val catalogSearchPlaceholder = "재료명 검색 (예: 닭가슴살, 양파, 계란)..."
+    override val catalogTargetStock = "보유중으로 추가"
+    override val catalogTargetCart = "장바구니로 추가"
+    override val addInStockBtn = "+ 보유중"
+    override val addCartBtn = "+ 장바구니"
+    override val alreadyAddedInStock = "보유중 등록됨"
+    override val alreadyAddedCart = "장바구니 등록됨"
+    override val alreadyAddedConsumed = "소진됨"
+    override val markAsConsumedBtn = "소진"
+    override val moveToCartBtn = "장바구니로"
+    override val restoreToStockBtn = "보유중으로"
+    override fun alreadyExistsToast(name: String, status: String) = "'${name}'은(는) 이미 ${status}에 등록되어 있습니다."
+    override fun itemDeletedToast(name: String) = "'${name}'이(가) 삭제되었습니다."
+    override fun catalogAddCustomBtn(name: String) = "'${name}' 직접 추가하기"
+    override val catalogNoResults = "검색 결과가 없습니다"
+
+    override fun ingredientCategoryName(category: IngredientCategory) = category.displayNameKo
+    override fun ingredientUnitName(unit: IngredientUnit) = unit.displayNameKo
+    override fun ingredientStatusName(status: IngredientStatus) = status.displayNameKo
 }

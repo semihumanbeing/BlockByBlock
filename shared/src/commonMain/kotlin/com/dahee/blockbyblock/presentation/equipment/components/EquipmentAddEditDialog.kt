@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -330,11 +331,11 @@ fun EquipmentAddEditDialog(
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (isSelected) {
-                                    Text(
-                                        text = "✓",
-                                        color = AppColors.TextPrimary,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = AppColors.TextPrimary,
+                                        modifier = Modifier.size(14.dp)
                                     )
                                 }
                             }

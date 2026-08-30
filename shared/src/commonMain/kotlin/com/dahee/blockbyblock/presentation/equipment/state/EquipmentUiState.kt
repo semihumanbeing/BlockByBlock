@@ -41,9 +41,9 @@ data class EquipmentUiState(
         val defaultMoldDrafts = listOf(
             MoldDraftConfig(preset = MoldGridPreset.ML_500, isSelected = true, cellCount = 2, quantity = 1, moldColorHex = "#BAE6FD"),
             MoldDraftConfig(preset = MoldGridPreset.ML_250, isSelected = false, cellCount = 4, quantity = 1, moldColorHex = "#A7F3D0"),
-            MoldDraftConfig(preset = MoldGridPreset.ML_125, isSelected = false, cellCount = 6, quantity = 1, moldColorHex = "#FECDD3"),
-            MoldDraftConfig(preset = MoldGridPreset.ML_75, isSelected = false, cellCount = 12, quantity = 1, moldColorHex = "#FEF08A"),
-            MoldDraftConfig(preset = MoldGridPreset.CUSTOM, isSelected = false, customCapacityMl = 300, cellCount = 12, quantity = 1, moldColorHex = "#E9D5FF")
+            MoldDraftConfig(preset = MoldGridPreset.ML_125, isSelected = false, cellCount = 8, quantity = 1, moldColorHex = "#FECDD3"),
+            MoldDraftConfig(preset = MoldGridPreset.ML_75, isSelected = false, cellCount = 16, quantity = 1, moldColorHex = "#FEF08A"),
+            MoldDraftConfig(preset = MoldGridPreset.CUSTOM, isSelected = false, customCapacityMl = 300, cellCount = 16, quantity = 1, moldColorHex = "#E9D5FF")
         )
     }
 }
