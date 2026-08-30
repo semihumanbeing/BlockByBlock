@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,10 +36,14 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -61,7 +66,9 @@ import com.dahee.blockbyblock.domain.model.Ingredient
 import com.dahee.blockbyblock.domain.model.MoldGridPreset
 import com.dahee.blockbyblock.presentation.block.BlockViewModel
 import com.dahee.blockbyblock.presentation.block.state.BlockUiState
+import com.dahee.blockbyblock.presentation.equipment.components.CookingToolVisual
 import com.dahee.blockbyblock.presentation.equipment.components.MoldView
+import androidx.compose.ui.graphics.graphicsLayer
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -74,6 +81,13 @@ fun CreateBlockScreen(
 ) {
     val strings = LocalStrings.current
     val focusManager = LocalFocusManager.current
+    var showNoIngredientBubble by remember { mutableStateOf(false) }
+
+    androidx.compose.runtime.LaunchedEffect(uiState.selectedIngredientIds.size, uiState.subIngredients.size) {
+        if (uiState.selectedIngredientIds.isNotEmpty() || uiState.subIngredients.isNotEmpty()) {
+            showNoIngredientBubble = false
+        }
+    }
 
     Box(
         modifier = modifier
@@ -631,20 +645,68 @@ fun CreateBlockScreen(
 
                         val toolOptions = com.dahee.blockbyblock.domain.model.CookingToolType.entries.filter { it != com.dahee.blockbyblock.domain.model.CookingToolType.CUSTOM }
                         FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             toolOptions.forEach { toolType ->
                                 val isSelected = uiState.selectedCookingToolType == toolType
-                                AppChip(
-                                    text = strings.cookingToolName(toolType),
-                                    selected = isSelected,
-                                    onClick = { viewModel.onSelectCookingTool(toolType) },
-                                    horizontalPadding = 12.dp,
-                                    verticalPadding = 7.dp,
-                                    fontSize = 12.sp
-                                )
+                                val toolName = strings.cookingToolName(toolType)
+
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier = Modifier
+                                        .width(72.dp)
+                                        .pointerHoverIcon(PointerIcon.Hand)
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                            onClick = { viewModel.onSelectCookingTool(toolType) }
+                                        )
+                                ) {
+                                    Box(
+                                        contentAlignment = Alignment.TopEnd
+                                    ) {
+                                        CookingToolVisual(
+                                            type = toolType,
+                                            size = 50.dp,
+                                            modifier = Modifier.graphicsLayer {
+                                                alpha = if (isSelected) 1.0f else 0.42f
+                                                scaleX = if (isSelected) 1.06f else 0.94f
+                                                scaleY = if (isSelected) 1.06f else 0.94f
+                                            }
+                                        )
+
+                                        if (isSelected) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(18.dp)
+                                                    .clip(CircleShape)
+                                                    .background(AppColors.Primary),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = "Selected",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    Text(
+                                        text = toolName,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) AppColors.PrimaryDark else AppColors.TextSecondary,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 1
+                                    )
+                                }
                             }
                         }
                     }
@@ -778,15 +840,72 @@ fun CreateBlockScreen(
                 }
             }
 
-            // 6. Submit Button
+            // 6. Submit Button with Tooltip Speech Bubble (Overlaid on top without pushing button down)
             item {
-                AppButton(
-                    text = if (uiState.isEditing) strings.editBlockSubmitBtn else strings.createBlockSubmitBtn,
-                    onClick = { viewModel.onSubmitCreateBlock() },
-                    enabled = uiState.canSubmit,
-                    variant = ButtonVariant.PRIMARY,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    // Actual Submit Button (Stationary)
+                    AppButton(
+                        text = if (uiState.isEditing) strings.editBlockSubmitBtn else strings.createBlockSubmitBtn,
+                        onClick = {
+                            val hasNoIngredients = uiState.selectedIngredientIds.isEmpty() && uiState.subIngredients.isEmpty()
+                            if (hasNoIngredients && !showNoIngredientBubble) {
+                                showNoIngredientBubble = true
+                            } else {
+                                showNoIngredientBubble = false
+                                viewModel.onSubmitCreateBlock()
+                            }
+                        },
+                        enabled = uiState.canSubmit,
+                        variant = ButtonVariant.PRIMARY,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    // Floating Speech Bubble (Overlaps the card above smoothly)
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = showNoIngredientBubble,
+                        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(initialScale = 0.85f),
+                        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut(targetScale = 0.85f),
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .offset(y = (-44).dp)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .shadow(6.dp, RoundedCornerShape(10.dp), spotColor = AppColors.Shadow)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(AppColors.TextPrimary)
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = strings.createBlockNoIngredientTooltip,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+
+                            // Speech Bubble Tail (Downward Triangle)
+                            androidx.compose.foundation.Canvas(
+                                modifier = Modifier.size(width = 12.dp, height = 6.dp)
+                            ) {
+                                val path = androidx.compose.ui.graphics.Path().apply {
+                                    moveTo(0f, 0f)
+                                    lineTo(size.width, 0f)
+                                    lineTo(size.width / 2f, size.height)
+                                    close()
+                                }
+                                drawPath(path, color = AppColors.TextPrimary)
+                            }
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(30.dp))
             }
         }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -262,31 +263,37 @@ fun BlockInventoryScreen(
                         enableDismissFromEndToStart = true,
                         backgroundContent = {
                             val isSwiping = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
-                            if (isSwiping) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(Color(0xFFE53935))
-                                        .padding(end = 20.dp),
-                                    contentAlignment = Alignment.CenterEnd
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.CenterEnd
+                            ) {
+                                if (isSwiping) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .fillMaxWidth(0.5f)
+                                            .clip(RoundedCornerShape(topEnd = 14.dp, bottomEnd = 14.dp))
+                                            .background(Color(0xFFE53935))
+                                            .padding(end = 20.dp),
+                                        contentAlignment = Alignment.CenterEnd
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = strings.delete,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Text(
-                                            text = strings.delete,
-                                            color = Color.White,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = strings.delete,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Text(
+                                                text = strings.delete,
+                                                color = Color.White,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
                                     }
                                 }
                             }

@@ -48,14 +48,15 @@ import com.dahee.blockbyblock.core.ui.AppCard
 
 @Composable
 fun MeScreen(
+    nickname: String = "나만의 쉐프",
+    onNicknameChange: (String) -> Unit = {},
     onLanguageChange: (AppLanguage) -> Unit,
     onNavigateToEquipment: () -> Unit = {},
+    onRestartTutorial: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
     val currentLang = LocalAppLanguage.current
-
-    var nickname by remember { mutableStateOf(strings.meProfileDefaultName) }
 
     Column(
         modifier = modifier
@@ -237,7 +238,36 @@ fun MeScreen(
                 }
             }
 
-            // 3. App Info
+            // 3. Tutorial Restart Section
+            item {
+                AppCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onRestartTutorial,
+                    padding = 16.dp
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = strings.tutorialRestartBtn,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AppColors.PrimaryDark
+                        )
+
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Restart",
+                            tint = AppColors.PrimaryDark,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+
+            // 4. App Info
             item {
                 AppCard(
                     modifier = Modifier.fillMaxWidth(),

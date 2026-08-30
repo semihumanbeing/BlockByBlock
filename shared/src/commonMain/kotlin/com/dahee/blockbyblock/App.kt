@@ -12,6 +12,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,11 +44,16 @@ import com.dahee.blockbyblock.presentation.mealplan.MealPlanViewModel
 import com.dahee.blockbyblock.presentation.me.MeScreen
 import com.dahee.blockbyblock.presentation.navigation.AppBottomNav
 import com.dahee.blockbyblock.presentation.navigation.NavTab
+import com.dahee.blockbyblock.presentation.tutorial.TutorialGuideBanner
+import com.dahee.blockbyblock.presentation.tutorial.TutorialStep
+import com.dahee.blockbyblock.presentation.tutorial.WelcomeProfileScreen
 
 @Composable
 fun App() {
     var currentTab by remember { mutableStateOf(NavTab.MEAL_PLAN) }
     var isManagingEquipment by remember { mutableStateOf(false) }
+    var tutorialStep by remember { mutableStateOf(TutorialStep.WELCOME_PROFILE) }
+    var userNickname by remember { mutableStateOf("나만의 쉐프") }
 
     val equipmentRepository = remember { InMemoryEquipmentRepository() }
     val equipmentViewModel = remember { EquipmentViewModel(equipmentRepository) }
@@ -72,7 +78,30 @@ fun App() {
         )
     }
 
+    val ingredientUiState by ingredientViewModel.uiState.collectAsState()
+    val blockUiState by blockViewModel.uiState.collectAsState()
+
+    val hasAddedIngredient = ingredientUiState.registeredIngredients.isNotEmpty()
+    val hasCreatedBlock = blockUiState.blocks.isNotEmpty()
+
     var currentLanguage by remember { mutableStateOf(AppLanguage.KO) }
+
+    // Listen for meal slot save during tutorial
+    androidx.compose.runtime.LaunchedEffect(mealPlanViewModel, tutorialStep) {
+        mealPlanViewModel.onSlotSavedListener = {
+            if (tutorialStep == TutorialStep.MEAL_PLAN) {
+                tutorialStep = TutorialStep.CONGRATULATIONS
+            }
+        }
+    }
+
+    // Auto fade-out after celebration
+    androidx.compose.runtime.LaunchedEffect(tutorialStep) {
+        if (tutorialStep == TutorialStep.CONGRATULATIONS) {
+            kotlinx.coroutines.delay(2800)
+            tutorialStep = TutorialStep.COMPLETED
+        }
+    }
 
     CompositionLocalProvider(
         LocalAppLanguage provides currentLanguage,
@@ -81,12 +110,64 @@ fun App() {
         val strings = LocalStrings.current
 
         BlockByBlockTheme {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(AppColors.Background)
-                    .safeDrawingPadding()
-            ) {
+            // 0. Full Screen Welcome & Nickname Setup (First Onboarding Step with pure background and stacked legos)
+            if (tutorialStep == TutorialStep.WELCOME_PROFILE) {
+                WelcomeProfileScreen(
+                    onStart = { name ->
+                        userNickname = name
+                        tutorialStep = TutorialStep.EQUIPMENT_SETUP
+                        isManagingEquipment = true
+                        currentTab = NavTab.ME
+                    },
+                    onSkip = {
+                        tutorialStep = TutorialStep.COMPLETED
+                        isManagingEquipment = false
+                        currentTab = NavTab.MEAL_PLAN
+                    }
+                )
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(AppColors.Background)
+                        .safeDrawingPadding()
+                ) {
+                // Top Interactive Tutorial Guide Banner (Active during tutorial)
+                TutorialGuideBanner(
+                    currentStep = tutorialStep,
+                    hasAddedIngredient = hasAddedIngredient,
+                    hasCreatedBlock = hasCreatedBlock,
+                    onNextStep = {
+                        when (tutorialStep) {
+                            TutorialStep.EQUIPMENT_SETUP -> {
+                                tutorialStep = TutorialStep.INVENTORY_SETUP
+                                isManagingEquipment = false
+                                currentTab = NavTab.INVENTORY
+                            }
+                            TutorialStep.INVENTORY_SETUP -> {
+                                tutorialStep = TutorialStep.CREATE_BLOCK
+                                isManagingEquipment = false
+                                currentTab = NavTab.BLOCK
+                                blockViewModel.onOpenCreateScreen()
+                            }
+                            TutorialStep.CREATE_BLOCK -> {
+                                tutorialStep = TutorialStep.MEAL_PLAN
+                                isManagingEquipment = false
+                                currentTab = NavTab.MEAL_PLAN
+                                blockViewModel.onCloseCreateScreen()
+                            }
+                            TutorialStep.MEAL_PLAN -> {
+                                tutorialStep = TutorialStep.CONGRATULATIONS
+                            }
+                            else -> {}
+                        }
+                    },
+                    onSkip = {
+                        tutorialStep = TutorialStep.COMPLETED
+                        isManagingEquipment = false
+                    }
+                )
+
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -102,21 +183,34 @@ fun App() {
                             NavTab.MEAL_PLAN -> MealPlanScreen(
                                 viewModel = mealPlanViewModel
                             )
+                            NavTab.BLOCK -> BlockInventoryScreen(
+                                viewModel = blockViewModel,
+                                onNavigateToInventory = {
+                                    isManagingEquipment = false
+                                    currentTab = NavTab.INVENTORY
+                                },
+                                onNavigateToEquipment = { isManagingEquipment = true }
+                            )
                             NavTab.INVENTORY -> InventoryScreen(
                                 viewModel = ingredientViewModel,
                                 onCookClick = {
-                                    blockViewModel.onOpenCreateScreen()
+                                    if (tutorialStep == TutorialStep.INVENTORY_SETUP) {
+                                        tutorialStep = TutorialStep.CREATE_BLOCK
+                                    }
+                                    isManagingEquipment = false
                                     currentTab = NavTab.BLOCK
+                                    blockViewModel.onOpenCreateScreen()
                                 }
                             )
-                            NavTab.BLOCK -> BlockInventoryScreen(
-                                viewModel = blockViewModel,
-                                onNavigateToInventory = { currentTab = NavTab.INVENTORY },
-                                onNavigateToEquipment = { isManagingEquipment = true }
-                            )
                             NavTab.ME -> MeScreen(
+                                nickname = userNickname,
+                                onNicknameChange = { userNickname = it },
                                 onLanguageChange = { currentLanguage = it },
-                                onNavigateToEquipment = { isManagingEquipment = true }
+                                onNavigateToEquipment = { isManagingEquipment = true },
+                                onRestartTutorial = {
+                                    isManagingEquipment = false
+                                    tutorialStep = TutorialStep.WELCOME_PROFILE
+                                }
                             )
                         }
                     }
@@ -132,6 +226,7 @@ fun App() {
             }
         }
     }
+}
 }
 
 @Composable

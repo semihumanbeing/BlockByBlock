@@ -175,6 +175,7 @@ interface AppStrings {
     val historySubtitle: String
     val createBlockSectionCookingTool: String
     val noCookingToolSelected: String
+    val createBlockNoIngredientTooltip: String
 
     // Inventory & Ingredients (Phase 3)
     val inventoryTitle: String
@@ -203,6 +204,7 @@ interface AppStrings {
     val inventoryStatusToggleToCart: String
     val inventoryStatusToggleToStock: String
     val inventoryCartTip: String
+    val inventorySwipeToDeleteHint: String
     val inventorySearchBtn: String
     val cookBtn: String
     val catalogSearchTitle: String
@@ -251,4 +253,23 @@ interface AppStrings {
     val mealRecordMemoLabel: String
     val mealRecordMemoPlaceholder: String
     val mealRecordMinBlockRequired: String
+
+    // Tutorial & Onboarding
+    val tutorialWelcomeTitle: String
+    val tutorialWelcomeSubtitle: String
+    val tutorialNicknamePlaceholder: String
+    val tutorialStartBtn: String
+    val tutorialSkipBtn: String
+    val tutorialStepEquipmentMsg: String
+    val tutorialStepEquipmentNextBtn: String
+    val tutorialStepInventoryMsg: String
+    val tutorialStepInventoryAddedMsg: String
+    val tutorialStepInventoryNextBtn: String
+    val tutorialStepBlockMsg: String
+    val tutorialStepBlockCreatedMsg: String
+    val tutorialStepBlockNextBtn: String
+    val tutorialStepMealPlanMsg: String
+    val tutorialStepCompleteBtn: String
+    val tutorialCongratulationsMsg: String
+    val tutorialRestartBtn: String
 }

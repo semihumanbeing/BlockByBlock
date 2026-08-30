@@ -175,7 +175,7 @@
   - **5. 소분 설정**:
     - **만들 블록 수량**: **`선택 몰드 칸수 × 몰드 개수`**로 자동 계산되어 초기 세팅 + **숫자 클릭 시 직접 타이핑 및 `+/-` 수정 지원**
     - **소비기한**: **직접 타이핑하여 수정 가능한 소비기한 일수 입력창** (기본 90일, 보관 방식은 100% 냉동 기준)
-  - **하단 액션**: `[음식 블록 만들기]` Primary 초록색 버튼으로 원터치 밀프렙 완성 (임의의 완료 알림 배너 배제)
+  - **하단 액션**: `[음식 블록 만들기]` Primary 초록색 버튼으로 밀프렙 완성 (식재료를 선택하지 않고 버튼 클릭 시 팝업 대신 미니 말풍선 툴팁 *"식재료가 선택되지 않았습니다. 한 번 더 누르면 바로 생성돼요 💡"* 이 노출되며, 한 번 더 클릭 시 생성 완료 지원)
 - **패키지**: `com.dahee.blockbyblock.presentation.block` 및 `domain/model/FoodBlock.kt`, `domain/model/FoodBlockColor.kt`, `domain/repository/FoodBlockRepository.kt`, `data/repository/InMemoryFoodBlockRepository.kt`
 
 #### 6) 식단 메인 대시보드 (오늘 / 이번 주) & 4개 탭 구조 (Phase 5 구현 완료)
@@ -207,6 +207,18 @@
     - **순수 레고 블록 트레이**: `총 N개` 등 개수 텍스트를 제거하고, 해당 일자에 등록된 **위에서 본 레고 블록 이미지만 가로로 착착착 쌓아놓은 깔끔한 비주얼** 노출
     - **날짜 카드 터치 시 ➔ 해당 날짜의 일별 식단 화면으로 즉시 전환**: 해당 날짜의 아침/점심/저녁/간식 전체를 바로 조회하고 수정할 수 있도록 유기적 연결
 - **패키지**: `com.dahee.blockbyblock.presentation.mealplan` 및 `domain/model/MealRecord.kt`, `domain/repository/MealRecordRepository.kt`, `data/repository/InMemoryMealRecordRepository.kt`
+
+#### 7) 인터랙티브 온보딩 튜토리얼 시스템 (Phase 6 구현 완료)
+- **별도 가짜 페이지 없이 실제 앱 화면 기반 가이드 투어**:
+  - **1단계 (웰컴 & 닉네임 설정)**: `#FAF6F0` 배경과 3D 레고 스택 비주얼의 `WelcomeProfileScreen` 전체 화면 ➔ 닉네임 입력 및 시작
+  - **2단계 (장비 설정)**: 실제 `MY > 장비 관리` 화면으로 자동 이동 ➔ 상단 `TutorialGuideBanner`에서 몰드 선택 가이드
+  - **3단계 (보관함 등록)**: 실제 `보관함` 탭으로 자동 이동 ➔ 식재료 검색/등록 가이드 (재료 등록 시 *"재료를 등록했습니다! 체크리스트를 클릭하면 장바구니와 소진으로 바뀌어요"* 실시간 안내)
+  - **4단계 (블록 생성)**: 실제 `블록 만들기` 화면 오픈 ➔ 첫 푸드 블록 완성 가이드 (블록 완성 시 *"축하합니다 블록을 생성했어요! 이제 식단을 구성해볼까요?"* 안내)
+  - **5단계 (식단 완성)**: 1번 탭 `식단` 메인 화면으로 랜딩 ➔ 오늘 식단 칸에 첫 블록 꽂기 및 저장 완료 시 *"축하합니다 튜토리얼을 완료했습니다! 즐거운 소분 라이프 되세요!"* 축하 배너 2.8초 후 자동 페이드아웃
+- **건너뛰기 및 다시보기 지원**:
+  - 전 단계에서 `[건너뛰기]` 상시 제공으로 피로도 0%
+  - `MY` 탭에서 언제든 **`[튜토리얼 다시 보기]`** 지원
+- **패키지**: `com.dahee.blockbyblock.presentation.tutorial` (`TutorialStep.kt`, `WelcomeProfileScreen.kt`, `TutorialGuideBanner.kt`)
 
 ---
 

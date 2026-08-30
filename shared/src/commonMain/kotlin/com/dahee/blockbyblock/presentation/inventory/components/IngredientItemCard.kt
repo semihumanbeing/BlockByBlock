@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -108,106 +109,122 @@ fun IngredientItemCard(
         },
         borderWidth = 0.5.dp,
         elevation = 0.dp,
-        padding = 12.dp,
-        onClick = onEdit
+        padding = 0.dp
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. Checklist style toggle circle
+            // 1. Checklist Left Tap Area (Large touch target for easy toggling)
             Box(
                 modifier = Modifier
-                    .size(30.dp)
-                    .shadow(if (isInStock) 1.dp else 0.dp, CircleShape, spotColor = AppColors.Shadow)
-                    .clip(CircleShape)
-                    .background(checkboxBg)
-                    .border(
-                        width = if (isInStock) 1.5.dp else 1.5.dp,
-                        color = checkboxBorder,
-                        shape = CircleShape
-                    )
                     .pointerHoverIcon(PointerIcon.Hand)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = onToggleStatus
-                    ),
+                    )
+                    .padding(start = 14.dp, end = 10.dp, top = 14.dp, bottom = 14.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (isInStock) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = strings.selected,
-                        tint = Color.White,
-                        modifier = Modifier.size(17.dp)
-                    )
-                } else if (isConsumed) {
-                    // Small shopping cart hint icon indicating click to move to cart
-                    Icon(
-                        imageVector = Icons.Default.ShoppingCart,
-                        contentDescription = strings.moveToCartBtn,
-                        tint = Color(0xFFEA580C).copy(alpha = 0.75f),
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // 2. Ingredient Name & Category
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .shadow(if (isInStock) 1.dp else 0.dp, CircleShape, spotColor = AppColors.Shadow)
+                        .clip(CircleShape)
+                        .background(checkboxBg)
+                        .border(
+                            width = 1.5.dp,
+                            color = checkboxBorder,
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = ingredient.name,
-                        fontSize = 15.sp,
-                        fontWeight = if (isInStock) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isConsumed) AppColors.TextMuted else AppColors.TextPrimary,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-
-                    // Status Badge (In Stock vs Consumed vs Shopping Cart)
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(
-                                when {
-                                    isInStock -> AppColors.PrimaryLight.copy(alpha = 0.7f)
-                                    isConsumed -> AppColors.SurfaceVariant
-                                    else -> AppColors.AccentLight
-                                }
-                            )
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = strings.ingredientStatusName(ingredient.status),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = when {
-                                isInStock -> AppColors.PrimaryDark
-                                isConsumed -> AppColors.TextMuted
-                                else -> Color(0xFFC2410C)
-                            }
+                    if (isInStock) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = strings.selected,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    } else if (isConsumed) {
+                        Icon(
+                            imageVector = Icons.Default.ShoppingCart,
+                            contentDescription = strings.moveToCartBtn,
+                            tint = Color(0xFFEA580C).copy(alpha = 0.75f),
+                            modifier = Modifier.size(15.dp)
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // Category Tag
-                Text(
-                    text = strings.ingredientCategoryName(ingredient.category),
-                    fontSize = 11.sp,
-                    color = AppColors.TextMuted
-                )
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            // 2. Right Content Area (Name click to edit + Action buttons)
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 12.dp, top = 10.dp, bottom = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Ingredient Name & Category (Click to Edit)
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onEdit
+                        )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = ingredient.name,
+                            fontSize = 15.sp,
+                            fontWeight = if (isInStock) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isConsumed) AppColors.TextMuted else AppColors.TextPrimary,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+
+                        // Status Badge (In Stock vs Consumed vs Shopping Cart)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(
+                                    when {
+                                        isInStock -> AppColors.PrimaryLight.copy(alpha = 0.7f)
+                                        isConsumed -> AppColors.SurfaceVariant
+                                        else -> AppColors.AccentLight
+                                    }
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = strings.ingredientStatusName(ingredient.status),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = when {
+                                    isInStock -> AppColors.PrimaryDark
+                                    isConsumed -> AppColors.TextMuted
+                                    else -> Color(0xFFC2410C)
+                                }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    // Category Tag
+                    Text(
+                        text = strings.ingredientCategoryName(ingredient.category),
+                        fontSize = 11.sp,
+                        color = AppColors.TextMuted
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
 
             // 3. Quick Action Buttons per Status (Frictionless 1-Tap Management)
             Row(
@@ -301,6 +318,28 @@ fun IngredientItemCard(
                     // SHOPPING_CART: No action button on the right per user preference
                     isCart -> {}
                 }
+
+                // Delete Trash Icon Button (Direct 1-tap delete)
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(7.dp))
+                        .background(AppColors.SurfaceVariant.copy(alpha = 0.7f))
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onDelete
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = strings.delete,
+                        tint = AppColors.TextMuted,
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
             }
 
             // 4. Quantity Stepper UI (Preserved in code, hidden per user request)
@@ -363,4 +402,5 @@ fun IngredientItemCard(
             }
         }
     }
+}
 }

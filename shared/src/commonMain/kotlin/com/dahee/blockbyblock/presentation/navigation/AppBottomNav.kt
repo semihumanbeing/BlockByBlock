@@ -32,8 +32,8 @@ import com.dahee.blockbyblock.core.theme.AppColors
 
 fun NavTab.getLabel(strings: AppStrings): String = when (this) {
     NavTab.MEAL_PLAN -> strings.tabMealPlan
-    NavTab.INVENTORY -> strings.tabInventoryNav
     NavTab.BLOCK -> strings.tabBlock
+    NavTab.INVENTORY -> strings.tabInventoryNav
     NavTab.ME -> strings.tabMe
 }
 

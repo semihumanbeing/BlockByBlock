@@ -18,7 +18,7 @@ data class UndoDeleteState(
 )
 
 data class IngredientUiState(
-    val selectedTab: IngredientTab = IngredientTab.IN_STOCK,
+    val selectedTab: IngredientTab = IngredientTab.ALL,
     val selectedCategory: IngredientCategory? = null,
     val registeredIngredients: List<Ingredient> = emptyList(),
     val allMatchingIngredients: List<Ingredient> = emptyList(),

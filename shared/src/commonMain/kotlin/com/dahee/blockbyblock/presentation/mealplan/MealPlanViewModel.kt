@@ -233,6 +233,8 @@ class MealPlanViewModel(
         _dialogState.value = _dialogState.value.copy(memo = newMemo)
     }
 
+    var onSlotSavedListener: (() -> Unit)? = null
+
     fun onSaveSlot() {
         val dialog = _dialogState.value
         if (dialog.selectedBlocks.isEmpty()) {
@@ -254,6 +256,7 @@ class MealPlanViewModel(
             val updatedDay = existingDay.updateSlot(updatedSlot).copy(updatedAt = currentTimeMillis())
             mealRecordRepository.saveMealRecord(updatedDay)
             onCloseSlotDialog()
+            onSlotSavedListener?.invoke()
         }
     }
 

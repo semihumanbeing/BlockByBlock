@@ -189,6 +189,7 @@ object EnStrings : AppStrings {
     override val historySubtitle = "Load previously made block"
     override val createBlockSectionCookingTool = "Cooking Tool (Optional)"
     override val noCookingToolSelected = "None"
+    override val createBlockNoIngredientTooltip = "No ingredients selected. Tap once more to create anyway"
 
     // Inventory & Ingredients (Phase 3)
     override val inventoryTitle = "Ingredients & Storage"
@@ -217,6 +218,7 @@ object EnStrings : AppStrings {
     override val inventoryStatusToggleToCart = "Move to Shopping Cart"
     override val inventoryStatusToggleToStock = "Mark as In Stock"
     override val inventoryCartTip = "Tap the checkbox after shopping to move items into In Stock!"
+    override val inventorySwipeToDeleteHint = "Swipe card left or tap delete icon to remove"
     override val inventorySearchBtn = "Search Ingredients"
     override val cookBtn = "Cook Now"
     override val catalogSearchTitle = "Search & Add Ingredients"
@@ -271,4 +273,23 @@ object EnStrings : AppStrings {
     override val mealRecordMemoLabel = "Memo"
     override val mealRecordMemoPlaceholder = "Add meal notes (e.g., Add fresh salad)"
     override val mealRecordMinBlockRequired = "Please select at least 1 block"
+
+    // Tutorial & Onboarding
+    override val tutorialWelcomeTitle = "WELCOME!"
+    override val tutorialWelcomeSubtitle = "Please enter your nickname"
+    override val tutorialNicknamePlaceholder = "Enter nickname (e.g., Master Chef)"
+    override val tutorialStartBtn = "Get Started (1/4 Equipment) >"
+    override val tutorialSkipBtn = "Skip"
+    override val tutorialStepEquipmentMsg = "1/4 Equipment: Check or add your silicone molds from presets!"
+    override val tutorialStepEquipmentNextBtn = "Next: Add Ingredients >"
+    override val tutorialStepInventoryMsg = "2/4 Ingredients: Search or quick-add your fridge ingredients!"
+    override val tutorialStepInventoryAddedMsg = "Ingredient registered! Tapping check toggles Cart/Consumed, and swipe left to delete."
+    override val tutorialStepInventoryNextBtn = "Next: Make Blocks >"
+    override val tutorialStepBlockMsg = "3/4 Blocks: Set a menu name & color to create your first food block!"
+    override val tutorialStepBlockCreatedMsg = "Congratulations! You created a block! Let's plan your meal now."
+    override val tutorialStepBlockNextBtn = "Next: Meal Plan >"
+    override val tutorialStepMealPlanMsg = "4/4 Meal Plan: Tap a meal slot to place your newly created block!"
+    override val tutorialStepCompleteBtn = "Finish Tutorial 🎉"
+    override val tutorialCongratulationsMsg = "Congratulations! You completed the tutorial! Enjoy your portion life!"
+    override val tutorialRestartBtn = "Restart Tutorial"
 }

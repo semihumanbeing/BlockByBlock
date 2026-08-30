@@ -189,6 +189,7 @@ object KoStrings : AppStrings {
     override val historySubtitle = "이전에 만든 블록 불러오기"
     override val createBlockSectionCookingTool = "사용 조리도구 (선택)"
     override val noCookingToolSelected = "선택 안 함"
+    override val createBlockNoIngredientTooltip = "식재료가 선택되지 않았습니다. 한 번 더 누르면 바로 생성돼요!"
 
     // Inventory & Ingredients (Phase 3)
     override val inventoryTitle = "식재료 보관함"
@@ -217,6 +218,7 @@ object KoStrings : AppStrings {
     override val inventoryStatusToggleToCart = "장바구니로 이동"
     override val inventoryStatusToggleToStock = "보유중으로 전환"
     override val inventoryCartTip = "장을 본 후 체크를 누르면 내 보관함(보유중)으로 쏙 이동돼요!"
+    override val inventorySwipeToDeleteHint = "카드를 왼쪽으로 밀어 삭제하거나, 체크를 눌러 상태를 바꿀 수 있어요"
     override val inventorySearchBtn = "재료 검색"
     override val cookBtn = "요리하기"
     override val catalogSearchTitle = "재료 검색 및 추가"
@@ -271,4 +273,23 @@ object KoStrings : AppStrings {
     override val mealRecordMemoLabel = "메모"
     override val mealRecordMemoPlaceholder = "식단 메모를 남겨보세요 (예: 샐러드 추가)"
     override val mealRecordMinBlockRequired = "최소 1개 이상의 블록을 선택해주세요"
+
+    // Tutorial & Onboarding
+    override val tutorialWelcomeTitle = "WELCOME!"
+    override val tutorialWelcomeSubtitle = "닉네임을 정해주세요"
+    override val tutorialNicknamePlaceholder = "닉네임 입력 (예: 소분마스터)"
+    override val tutorialStartBtn = "시작하기 (1/4 장비 선택) >"
+    override val tutorialSkipBtn = "건너뛰기"
+    override val tutorialStepEquipmentMsg = "1/4 장비 설정: 집에 있는 몰드를 체크하거나 프리셋에서 추가해보세요!"
+    override val tutorialStepEquipmentNextBtn = "다음: 식재료 등록 >"
+    override val tutorialStepInventoryMsg = "2/4 재료 등록: 냉장고에 있는 식재료를 검색하거나 빠른 추가로 등록해보세요!"
+    override val tutorialStepInventoryAddedMsg = "재료를 등록했습니다! 체크를 누르면 장바구니/소진으로 바뀌고, 카드를 왼쪽으로 밀면 삭제할 수 있어요."
+    override val tutorialStepInventoryNextBtn = "다음: 블록 만들기 >"
+    override val tutorialStepBlockMsg = "3/4 블록 생성: 메뉴명을 적고 원하는 색상을 골라 첫 푸드 블록을 완성해보세요!"
+    override val tutorialStepBlockCreatedMsg = "축하합니다 블록을 생성했어요! 이제 식단을 구성해볼까요?"
+    override val tutorialStepBlockNextBtn = "다음: 식단 이동 >"
+    override val tutorialStepMealPlanMsg = "4/4 식단 완성: 오늘 식단 칸을 눌러 방금 만든 블록을 꽂아보세요!"
+    override val tutorialStepCompleteBtn = "튜토리얼 완료 🎉"
+    override val tutorialCongratulationsMsg = "축하합니다 튜토리얼을 완료했습니다! 즐거운 소분 라이프 되세요!"
+    override val tutorialRestartBtn = "튜토리얼 다시 보기"
 }
