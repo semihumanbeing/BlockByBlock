@@ -154,7 +154,75 @@ fun CreateBlockScreen(
                 }
             }
 
-            // Top: 3D Food Block Hero Preview with Vertical Color Palette on the side
+            // 2. Section 1: Menu Name & History
+            item {
+                AppCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    padding = 16.dp
+                ) {
+                    Column {
+                        // History Recommendation Chips (when user has created blocks before)
+                        if (uiState.historyBlocks.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = strings.historyTitle,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.Primary
+                                )
+                                Text(
+                                    text = strings.historySubtitle,
+                                    fontSize = 11.sp,
+                                    color = AppColors.TextMuted
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                items(uiState.historyBlocks, key = { it.id }) { history ->
+                                    val isSelected = uiState.customBlockName == history.name
+                                    AppChip(
+                                        text = history.name,
+                                        selected = isSelected,
+                                        onClick = { viewModel.onApplyHistoryBlock(history) },
+                                        horizontalPadding = 10.dp,
+                                        verticalPadding = 6.dp,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+                        }
+
+                        Text(
+                            text = strings.createBlockNameLabel,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.TextPrimary
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        AppTextField(
+                            value = uiState.customBlockName,
+                            onValueChange = { viewModel.onCustomBlockNameChange(it) },
+                            placeholder = strings.createBlockNamePlaceholder,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
+            // 3. Section 2: 3D Food Block Hero Preview with Vertical Color Palette on the side
             item {
                 AppCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -230,259 +298,7 @@ fun CreateBlockScreen(
                 }
             }
 
-            // 2. Section 1: Menu Name & History
-            item {
-                AppCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    padding = 16.dp
-                ) {
-                    Column {
-                        // History Recommendation Chips (when user has created blocks before)
-                        if (uiState.historyBlocks.isNotEmpty()) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = strings.historyTitle,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AppColors.Primary
-                                )
-                                Text(
-                                    text = strings.historySubtitle,
-                                    fontSize = 11.sp,
-                                    color = AppColors.TextMuted
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                items(uiState.historyBlocks, key = { it.id }) { history ->
-                                    val isSelected = uiState.customBlockName == history.name
-                                    AppChip(
-                                        text = history.name,
-                                        selected = isSelected,
-                                        onClick = { viewModel.onApplyHistoryBlock(history) },
-                                        horizontalPadding = 10.dp,
-                                        verticalPadding = 6.dp,
-                                        fontSize = 12.sp
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(14.dp))
-                        }
-
-                        Text(
-                            text = strings.createBlockNameLabel,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AppColors.TextPrimary
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        AppTextField(
-                            value = uiState.customBlockName,
-                            onValueChange = { viewModel.onCustomBlockNameChange(it) },
-                            placeholder = strings.createBlockNamePlaceholder,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-            }
-
-            // 3. Section 2: Ingredients Box (Main Ingredients + Sub-ingredients combined in one card)
-            item {
-                AppCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    padding = 16.dp
-                ) {
-                    Column {
-                        Text(
-                            text = strings.createBlockSectionIngredients,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AppColors.TextPrimary
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Part A: Main Ingredients (In Stock Checklist with Search & Pagination)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = strings.createBlockMainIngredientsSubLabel,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = AppColors.TextPrimary
-                            )
-                            if (uiState.selectedIngredientIds.isNotEmpty()) {
-                                Text(
-                                    text = strings.selectedIngredientsCount(uiState.selectedIngredientIds.size),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AppColors.Primary
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        if (uiState.inStockMainIngredients.isEmpty()) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 10.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = strings.createBlockNoIngredients,
-                                    fontSize = 13.sp,
-                                    color = AppColors.TextSecondary
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                AppButton(
-                                    text = strings.createBlockGoToInventory,
-                                    onClick = onNavigateToInventory,
-                                    variant = ButtonVariant.SECONDARY
-                                )
-                            }
-                        } else {
-                            // Search bar for main ingredients
-                            AppTextField(
-                                value = uiState.ingredientSearchQuery,
-                                onValueChange = { viewModel.onIngredientSearchQueryChange(it) },
-                                placeholder = strings.createBlockSearchIngredientPlaceholder,
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Search,
-                                        contentDescription = "Search",
-                                        tint = AppColors.TextSecondary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            if (uiState.filteredInStockIngredients.isEmpty()) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 16.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = strings.createBlockNoMatchingIngredients,
-                                        fontSize = 13.sp,
-                                        color = AppColors.TextSecondary
-                                    )
-                                }
-                            } else {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    uiState.pagedInStockIngredients.forEach { ingredient ->
-                                        val isSelected = uiState.selectedIngredientIds.contains(ingredient.id)
-                                        IngredientCheckboxRow(
-                                            ingredient = ingredient,
-                                            isSelected = isSelected,
-                                            onToggle = { viewModel.onToggleIngredient(ingredient.id) }
-                                        )
-                                    }
-                                }
-
-                                if (uiState.totalIngredientPages > 1) {
-                                    IngredientPaginationControls(
-                                        currentPage = uiState.ingredientPageIndex,
-                                        totalPages = uiState.totalIngredientPages,
-                                        onPageChange = { viewModel.onIngredientPageChange(it) }
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(18.dp))
-
-                        // Part B: Extra Ingredients / Seasonings (Unified layout: Input field at Top -> Chip list at Bottom)
-                        Text(
-                            text = strings.createBlockSubIngredientsSubLabel,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = AppColors.TextPrimary
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        // 1. Direct sub-ingredient input text field at Top (Enter key support)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            AppTextField(
-                                value = uiState.subIngredientInput,
-                                onValueChange = { viewModel.onSubIngredientInputChange(it) },
-                                placeholder = strings.createBlockSubIngredientPlaceholder,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                keyboardActions = KeyboardActions(onDone = { viewModel.onAddSubIngredient() }),
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            AppButton(
-                                text = strings.createBlockAddSubBtn,
-                                onClick = { viewModel.onAddSubIngredient() },
-                                enabled = uiState.subIngredientInput.isNotBlank(),
-                                variant = ButtonVariant.PRIMARY
-                            )
-                        }
-
-                        // 2. Chip list at Bottom (In-place toggleable chips without redundant bottom tag list)
-                        val inStockNames = uiState.inStockSeasonings.map { it.name }
-                        val customAddedNames = uiState.subIngredients.filter { !inStockNames.contains(it) }
-                        val allDisplayItems = inStockNames + customAddedNames
-
-                        if (allDisplayItems.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                allDisplayItems.forEach { name ->
-                                    val isSelected = uiState.subIngredients.contains(name)
-                                    val isCustom = customAddedNames.contains(name)
-
-                                    SubIngredientToggleChip(
-                                        name = name,
-                                        isSelected = isSelected,
-                                        isCustom = isCustom,
-                                        onToggle = {
-                                            if (isSelected) {
-                                                viewModel.onRemoveSubIngredient(name)
-                                            } else {
-                                                viewModel.onAddSubIngredientDirectly(name)
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 4. Section 3: Select Mold & Number of Molds to Use (Horizontal Scroll Card List + Mold Count Stepper)
+            // 4. Section 3: Select Mold & Number of Molds to Use + Portion Quantity
             item {
                 AppCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -533,13 +349,14 @@ fun CreateBlockScreen(
                                 }
                             }
 
-                            // Stepper to choose number of molds to use (1 .. mold.quantity)
+                            // Steppers: Number of molds to use + Portion quantity directly below
                             if (uiState.selectedMold != null) {
                                 val mold = uiState.selectedMold!!
                                 val maxCount = mold.quantity.coerceAtLeast(1)
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
+                                // Stepper: Number of molds to use
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -621,114 +438,262 @@ fun CreateBlockScreen(
                                         }
                                     }
                                 }
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // Stepper: Portion Quantity (블록 수량 / 소분 수량)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = strings.createBlockQuantityLabel,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = AppColors.TextPrimary
+                                    )
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(AppColors.SurfaceVariant)
+                                                .border(1.dp, AppColors.Border, CircleShape)
+                                                .pointerHoverIcon(PointerIcon.Hand)
+                                                .clickable(
+                                                    enabled = uiState.blockQuantity > 1,
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    indication = null,
+                                                    onClick = { viewModel.onBlockQuantityChange(-1) }
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Remove,
+                                                contentDescription = "Minus",
+                                                tint = if (uiState.blockQuantity > 1) AppColors.TextPrimary else AppColors.TextMuted,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+
+                                        Text(
+                                            text = strings.pieceCount(uiState.blockQuantity),
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AppColors.TextPrimary,
+                                            modifier = Modifier.width(36.dp),
+                                            textAlign = TextAlign.Center
+                                        )
+
+                                        Box(
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(AppColors.Primary)
+                                                .pointerHoverIcon(PointerIcon.Hand)
+                                                .clickable(
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    indication = null,
+                                                    onClick = { viewModel.onBlockQuantityChange(1) }
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Add,
+                                                contentDescription = "Plus",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // Section: Cooking Tool Selection (Optional)
+            // 5. Section 4: Ingredients (Main Ingredients + Extra Ingredients in one unified card)
             item {
                 AppCard(
                     modifier = Modifier.fillMaxWidth(),
                     padding = 16.dp
                 ) {
                     Column {
+                        // Part A: Main Ingredients
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = strings.createBlockSectionIngredients,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.TextPrimary
+                            )
+                            if (uiState.selectedIngredientIds.isNotEmpty()) {
+                                Text(
+                                    text = strings.selectedIngredientsCount(uiState.selectedIngredientIds.size),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.Primary
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        if (uiState.inStockMainIngredients.isEmpty()) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 10.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = strings.createBlockNoIngredients,
+                                    fontSize = 13.sp,
+                                    color = AppColors.TextSecondary
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                AppButton(
+                                    text = strings.createBlockGoToInventory,
+                                    onClick = onNavigateToInventory,
+                                    variant = ButtonVariant.SECONDARY
+                                )
+                            }
+                        } else {
+                            // Search bar for main ingredients
+                            AppTextField(
+                                value = uiState.ingredientSearchQuery,
+                                onValueChange = { viewModel.onIngredientSearchQueryChange(it) },
+                                placeholder = strings.createBlockSearchIngredientPlaceholder,
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = "Search",
+                                        tint = AppColors.TextSecondary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            if (uiState.filteredInStockIngredients.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = strings.createBlockNoMatchingIngredients,
+                                        fontSize = 13.sp,
+                                        color = AppColors.TextSecondary
+                                    )
+                                }
+                            } else {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    uiState.pagedInStockIngredients.forEach { ingredient ->
+                                        val isSelected = uiState.selectedIngredientIds.contains(ingredient.id)
+                                        IngredientCheckboxRow(
+                                            ingredient = ingredient,
+                                            isSelected = isSelected,
+                                            onToggle = { viewModel.onToggleIngredient(ingredient.id) }
+                                        )
+                                    }
+                                }
+
+                                if (uiState.totalIngredientPages > 1) {
+                                    IngredientPaginationControls(
+                                        currentPage = uiState.ingredientPageIndex,
+                                        totalPages = uiState.totalIngredientPages,
+                                        onPageChange = { viewModel.onIngredientPageChange(it) }
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        // Part B: Extra Ingredients (추가 재료)
                         Text(
-                            text = strings.createBlockSectionCookingTool,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
+                            text = strings.createBlockSectionSubIngredients,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = AppColors.TextPrimary
                         )
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        val toolOptions = remember(uiState.availableCookingTools) {
-                            uiState.availableCookingTools.mapNotNull { it.toolType }
-                                .distinct()
-                                .filter { it != com.dahee.blockbyblock.domain.model.CookingToolType.CUSTOM }
+                        // 1. Direct sub-ingredient input text field at Top (Enter key support)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            AppTextField(
+                                value = uiState.subIngredientInput,
+                                onValueChange = { viewModel.onSubIngredientInputChange(it) },
+                                placeholder = strings.createBlockSubIngredientPlaceholder,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                keyboardActions = KeyboardActions(onDone = { viewModel.onAddSubIngredient() }),
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            AppButton(
+                                text = strings.createBlockAddSubBtn,
+                                onClick = { viewModel.onAddSubIngredient() },
+                                enabled = uiState.subIngredientInput.isNotBlank(),
+                                variant = ButtonVariant.PRIMARY
+                            )
                         }
 
-                        if (toolOptions.isNotEmpty()) {
+                        // 2. Chip list at Bottom (In-place toggleable chips without redundant bottom tag list)
+                        val inStockNames = uiState.inStockSeasonings.map { it.name }
+                        val customAddedNames = uiState.subIngredients.filter { !inStockNames.contains(it) }
+                        val allDisplayItems = inStockNames + customAddedNames
+
+                        if (allDisplayItems.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+
                             FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.Start),
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                toolOptions.forEach { toolType ->
-                                    val isSelected = uiState.selectedCookingToolType == toolType
-                                    val toolName = strings.cookingToolName(toolType)
+                                allDisplayItems.forEach { name ->
+                                    val isSelected = uiState.subIngredients.contains(name)
+                                    val isCustom = customAddedNames.contains(name)
 
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center,
-                                        modifier = Modifier
-                                            .width(72.dp)
-                                            .pointerHoverIcon(PointerIcon.Hand)
-                                            .clickable(
-                                                interactionSource = remember { MutableInteractionSource() },
-                                                indication = null,
-                                                onClick = { viewModel.onSelectCookingTool(toolType) }
-                                            )
-                                    ) {
-                                        Box(
-                                            contentAlignment = Alignment.TopEnd
-                                        ) {
-                                            CookingToolVisual(
-                                                type = toolType,
-                                                size = 50.dp,
-                                                modifier = Modifier.graphicsLayer {
-                                                    alpha = if (isSelected) 1.0f else 0.42f
-                                                    scaleX = if (isSelected) 1.06f else 0.94f
-                                                    scaleY = if (isSelected) 1.06f else 0.94f
-                                                }
-                                            )
-
+                                    SubIngredientToggleChip(
+                                        name = name,
+                                        isSelected = isSelected,
+                                        isCustom = isCustom,
+                                        onToggle = {
                                             if (isSelected) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(18.dp)
-                                                        .clip(CircleShape)
-                                                        .background(AppColors.Primary),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Check,
-                                                        contentDescription = "Selected",
-                                                        tint = Color.White,
-                                                        modifier = Modifier.size(12.dp)
-                                                    )
-                                                }
+                                                viewModel.onRemoveSubIngredient(name)
+                                            } else {
+                                                viewModel.onAddSubIngredientDirectly(name)
                                             }
                                         }
-
-                                        Spacer(modifier = Modifier.height(4.dp))
-
-                                        Text(
-                                            text = toolName,
-                                            fontSize = 11.sp,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                            color = if (isSelected) AppColors.PrimaryDark else AppColors.TextSecondary,
-                                            textAlign = TextAlign.Center,
-                                            maxLines = 1
-                                        )
-                                    }
+                                    )
                                 }
                             }
-                        } else {
-                            Text(
-                                text = strings.noOwnedCookingTools,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = AppColors.TextMuted,
-                                modifier = Modifier.padding(vertical = 6.dp)
-                            )
                         }
                     }
                 }
             }
 
-            // 5. Section 4: Portion Settings (Auto calculated total block count: mold cells * mold count + Editable + Days)
+            // 7. Section 6: Other Settings (Cooking Tool Selection + Shelf Life Days)
             item {
                 AppCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -736,90 +701,107 @@ fun CreateBlockScreen(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Text(
-                            text = strings.createBlockSectionStorage,
+                            text = strings.createBlockSectionOther,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = AppColors.TextPrimary
                         )
 
-                        // 1. Total Blocks Stepper & Direct Input ([mold cells * mold count] initial value)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        // Part 1: Cooking Tool Selection (Optional)
+                        Column {
                             Text(
-                                text = strings.createBlockQuantityLabel,
+                                text = strings.createBlockSectionCookingTool,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = AppColors.TextPrimary
                             )
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(34.dp)
-                                        .clip(CircleShape)
-                                        .background(AppColors.SurfaceVariant)
-                                        .border(1.dp, AppColors.Border, CircleShape)
-                                        .pointerHoverIcon(PointerIcon.Hand)
-                                        .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null,
-                                            onClick = { viewModel.onBlockQuantityChange(-1) }
-                                        ),
-                                    contentAlignment = Alignment.Center
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            val toolOptions = remember(uiState.availableCookingTools) {
+                                uiState.availableCookingTools.mapNotNull { it.toolType }
+                                    .distinct()
+                                    .filter { it != com.dahee.blockbyblock.domain.model.CookingToolType.CUSTOM }
+                            }
+
+                            if (toolOptions.isNotEmpty()) {
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.Start),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Remove,
-                                        contentDescription = "Minus",
-                                        tint = AppColors.TextPrimary,
-                                        modifier = Modifier.size(16.dp)
-                                    )
+                                    toolOptions.forEach { toolType ->
+                                        val isSelected = uiState.selectedCookingToolType == toolType
+                                        val toolName = strings.cookingToolName(toolType)
+
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center,
+                                            modifier = Modifier
+                                                .width(72.dp)
+                                                .pointerHoverIcon(PointerIcon.Hand)
+                                                .clickable(
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    indication = null,
+                                                    onClick = { viewModel.onSelectCookingTool(toolType) }
+                                                )
+                                        ) {
+                                            Box(
+                                                contentAlignment = Alignment.TopEnd
+                                            ) {
+                                                CookingToolVisual(
+                                                    type = toolType,
+                                                    size = 50.dp,
+                                                    modifier = Modifier.graphicsLayer {
+                                                        alpha = if (isSelected) 1.0f else 0.42f
+                                                        scaleX = if (isSelected) 1.06f else 0.94f
+                                                        scaleY = if (isSelected) 1.06f else 0.94f
+                                                    }
+                                                )
+
+                                                if (isSelected) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(18.dp)
+                                                            .clip(CircleShape)
+                                                            .background(AppColors.Primary),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Check,
+                                                            contentDescription = "Selected",
+                                                            tint = Color.White,
+                                                            modifier = Modifier.size(12.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.height(4.dp))
+
+                                            Text(
+                                                text = toolName,
+                                                fontSize = 11.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) AppColors.PrimaryDark else AppColors.TextSecondary,
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
                                 }
-
-                                AppTextField(
-                                    value = uiState.blockQuantityInput,
-                                    onValueChange = { viewModel.onBlockQuantityInputChange(it) },
-                                    placeholder = "1",
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    modifier = Modifier.width(64.dp)
-                                )
-
-                                Box(
-                                    modifier = Modifier
-                                        .size(34.dp)
-                                        .clip(CircleShape)
-                                        .background(AppColors.Primary)
-                                        .pointerHoverIcon(PointerIcon.Hand)
-                                        .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null,
-                                            onClick = { viewModel.onBlockQuantityChange(1) }
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = "Plus",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-
+                            } else {
                                 Text(
-                                    text = strings.unitPiece,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AppColors.TextPrimary
+                                    text = strings.noOwnedCookingTools,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = AppColors.TextMuted,
+                                    modifier = Modifier.padding(vertical = 6.dp)
                                 )
                             }
                         }
 
-                        // 2. Shelf Life (Editable input for days)
+                        // Part 2: Shelf Life (Editable input for days)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,

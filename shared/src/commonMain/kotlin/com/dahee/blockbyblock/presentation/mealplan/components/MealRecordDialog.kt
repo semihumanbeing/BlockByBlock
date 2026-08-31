@@ -57,6 +57,7 @@ import com.dahee.blockbyblock.core.ui.AppButton
 import com.dahee.blockbyblock.core.ui.AppTextField
 import com.dahee.blockbyblock.core.ui.ButtonVariant
 import com.dahee.blockbyblock.domain.model.MealBlockItem
+import com.dahee.blockbyblock.domain.model.MealPreset
 import com.dahee.blockbyblock.domain.model.MealType
 import com.dahee.blockbyblock.presentation.block.components.FoodBlockTopView
 import com.dahee.blockbyblock.presentation.mealplan.AvailableBlockPiece
@@ -64,6 +65,7 @@ import com.dahee.blockbyblock.presentation.mealplan.AvailableBlockPiece
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.window.DialogProperties
 
@@ -88,12 +90,18 @@ fun MealRecordDialog(
     onMemoChange: (String) -> Unit,
     onMoveToTop: (AvailableBlockPiece) -> Unit,
     onMoveToBottom: (MealBlockItem) -> Unit,
+    savedPresets: List<MealPreset> = emptyList(),
+    onSaveCurrentAsPreset: (String) -> Unit = {},
+    onApplyPreset: (MealPreset) -> Unit = {},
+    onDeletePreset: (String) -> Unit = {},
     onSave: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val strings = LocalStrings.current
     val focusManager = LocalFocusManager.current
     var searchQuery by remember { mutableStateOf("") }
+    var isSavePresetMode by remember { mutableStateOf(false) }
+    var presetNameInput by remember { mutableStateOf("") }
 
     // Group available individual pieces by their block type (blockId)
     val blockGroups = remember(availableBlocks, searchQuery) {
@@ -169,7 +177,7 @@ fun MealRecordDialog(
                         contentDescription = strings.cancel,
                         tint = AppColors.TextMuted,
                         modifier = Modifier
-                            .size(22.dp)
+                            .size(20.dp)
                             .pointerHoverIcon(PointerIcon.Hand)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -229,6 +237,145 @@ fun MealRecordDialog(
                     blockHeight = 96.dp,
                     onBlockClick = onMoveToBottom
                 )
+
+                // 2.2 Save Current Combination as Preset Button & Inline Input
+                if (selectedBlocks.isNotEmpty()) {
+                    if (!isSavePresetMode) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(AppColors.PrimaryLight.copy(alpha = 0.5f))
+                                .pointerHoverIcon(PointerIcon.Hand)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = {
+                                        presetNameInput = titleInput.ifBlank { "" }
+                                        isSavePresetMode = true
+                                    }
+                                )
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = strings.saveMealPreset,
+                                tint = AppColors.Primary,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = strings.saveMealPreset,
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.Primary
+                            )
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(AppColors.SurfaceVariant.copy(alpha = 0.6f))
+                                .border(0.5.dp, AppColors.Border, RoundedCornerShape(10.dp))
+                                .padding(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = strings.enterPresetName,
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.TextPrimary
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                AppTextField(
+                                    value = presetNameInput,
+                                    onValueChange = { presetNameInput = it },
+                                    placeholder = strings.presetNamePlaceholder,
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                AppButton(
+                                    text = strings.save,
+                                    variant = ButtonVariant.PRIMARY,
+                                    onClick = {
+                                        onSaveCurrentAsPreset(presetNameInput)
+                                        isSavePresetMode = false
+                                        presetNameInput = ""
+                                    }
+                                )
+
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = strings.cancel,
+                                    tint = AppColors.TextMuted,
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .pointerHoverIcon(PointerIcon.Hand)
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                            onClick = { isSavePresetMode = false }
+                                        )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 2.5 Saved Meal Presets Section (저장된 식단 세트 - 도시락통 안에 레고 블록들이 들어있는 모습)
+                if (savedPresets.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = strings.savedMealPresets,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.TextPrimary
+                                )
+                                Text(
+                                    text = "${savedPresets.size}개",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.Primary
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            savedPresets.forEach { preset ->
+                                SavedMealPresetCard(
+                                    preset = preset,
+                                    onApply = { onApplyPreset(preset) },
+                                    onDelete = { onDeletePreset(preset.id) }
+                                )
+                            }
+                        }
+                    }
+                }
 
                 // 3. Bottom Available Blocks Pool (Grouped Grid by Food Block Type)
                 Column {
@@ -448,6 +595,98 @@ private fun AvailableBlockGridCard(
                 fontWeight = FontWeight.ExtraBold,
                 color = if (isAvailable) AppColors.Primary else AppColors.TextMuted
             )
+        }
+    }
+}
+
+@Composable
+private fun SavedMealPresetCard(
+    preset: MealPreset,
+    onApply: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val strings = LocalStrings.current
+    val shape = RoundedCornerShape(12.dp)
+
+    Box(
+        modifier = modifier
+            .width(180.dp)
+            .clip(shape)
+            .background(AppColors.Surface)
+            .border(1.dp, AppColors.Border, shape)
+            .pointerHoverIcon(PointerIcon.Hand)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onApply
+            )
+            .padding(10.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Header: Preset Name & Delete X Button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = preset.name,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = strings.deletePreset,
+                    tint = AppColors.TextMuted,
+                    modifier = Modifier
+                        .size(16.dp)
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onDelete
+                        )
+                )
+            }
+
+            // Authentic Bento Lunch Box Preview with Lego blocks inside
+            BentoLunchBoxView(
+                blocks = preset.blocks,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+            )
+
+            // Bottom Apply Tag
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${preset.blocks.size}개 블록",
+                    fontSize = 10.5.sp,
+                    color = AppColors.TextSecondary
+                )
+
+                Text(
+                    text = strings.applyPreset,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.Primary
+                )
+            }
         }
     }
 }

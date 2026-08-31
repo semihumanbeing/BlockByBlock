@@ -20,7 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -319,27 +319,20 @@ fun IngredientItemCard(
                     isCart -> {}
                 }
 
-                // Delete Trash Icon Button (Direct 1-tap delete)
-                Box(
+                // Delete X Icon Button (Direct 1-tap delete matching Block Inventory design)
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = strings.delete,
+                    tint = AppColors.TextMuted,
                     modifier = Modifier
-                        .size(28.dp)
-                        .clip(RoundedCornerShape(7.dp))
-                        .background(AppColors.SurfaceVariant.copy(alpha = 0.7f))
+                        .size(20.dp)
                         .pointerHoverIcon(PointerIcon.Hand)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                             onClick = onDelete
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = strings.delete,
-                        tint = AppColors.TextMuted,
-                        modifier = Modifier.size(15.dp)
-                    )
-                }
+                        )
+                )
             }
 
             // 4. Quantity Stepper UI (Preserved in code, hidden per user request)

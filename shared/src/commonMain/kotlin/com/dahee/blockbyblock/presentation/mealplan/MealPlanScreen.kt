@@ -31,7 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -93,6 +93,10 @@ fun MealPlanScreen(
             onMemoChange = { viewModel.onMemoInputChange(it) },
             onMoveToTop = { viewModel.onMoveBlockToTop(it) },
             onMoveToBottom = { viewModel.onMoveBlockToBottom(it) },
+            savedPresets = uiState.savedPresets,
+            onSaveCurrentAsPreset = { viewModel.onSaveCurrentAsPreset(it) },
+            onApplyPreset = { viewModel.onApplyPreset(it) },
+            onDeletePreset = { viewModel.onDeletePreset(it) },
             onSave = { viewModel.onSaveSlot() },
             onDismiss = { viewModel.onCloseSlotDialog() }
         )
@@ -200,6 +204,9 @@ fun MealPlanScreen(
                 onPromptDeleteSlot = { mealType ->
                     pendingDeleteMealType = mealType
                     pendingDeleteDateString = uiState.selectedDateString
+                },
+                onSavePresetSlot = { mealType ->
+                    viewModel.onSaveSlotAsPreset(uiState.selectedDateString, mealType)
                 }
             )
             MealPlanTab.WEEK -> WeekMealView(
@@ -224,6 +231,7 @@ private fun MealPlanTabSwitcher(
     selectedTab: MealPlanTab,
     onSelectTab: (MealPlanTab) -> Unit
 ) {
+    val strings = LocalStrings.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -233,6 +241,10 @@ private fun MealPlanTabSwitcher(
     ) {
         MealPlanTab.entries.forEach { tab ->
             val isSelected = tab == selectedTab
+            val tabTitle = when (tab) {
+                MealPlanTab.TODAY -> strings.mealPlanTabDaily
+                MealPlanTab.WEEK -> strings.mealPlanTabWeekly
+            }
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -253,7 +265,7 @@ private fun MealPlanTabSwitcher(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = tab.title,
+                    text = tabTitle,
                     fontSize = 14.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                     color = if (isSelected) AppColors.PrimaryDark else AppColors.TextSecondary
@@ -273,7 +285,8 @@ private fun TodayMealView(
     onNextDay: () -> Unit,
     onResetToToday: () -> Unit,
     onOpenSlot: (MealType) -> Unit,
-    onPromptDeleteSlot: (MealType) -> Unit
+    onPromptDeleteSlot: (MealType) -> Unit,
+    onSavePresetSlot: (MealType) -> Unit
 ) {
     val strings = LocalStrings.current
     Column(
@@ -382,6 +395,7 @@ private fun TodayMealView(
                     mealType = mealType,
                     slot = slotRecord,
                     onClick = { onOpenSlot(mealType) },
+                    onSavePresetClick = { onSavePresetSlot(mealType) },
                     onDeleteClick = { onPromptDeleteSlot(mealType) },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -397,6 +411,7 @@ private fun MealSlotCard(
     mealType: MealType,
     slot: MealSlotRecord,
     onClick: () -> Unit,
+    onSavePresetClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -433,42 +448,52 @@ private fun MealSlotCard(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // 1. Header: Plain Black Meal Type Text (hidden when unrecorded add slot) + Delete Button
+            // 1. Header: Plain Black Meal Type Text (or disabled '식사 추가' on top-left) + Save Preset + Delete Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (!isUnrecordedAddSlot) {
-                    Text(
-                        text = titleText,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = AppColors.TextPrimary
-                    )
-                } else {
-                    Spacer(modifier = Modifier.size(1.dp))
-                }
+                Text(
+                    text = titleText,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isUnrecordedAddSlot) AppColors.TextMuted.copy(alpha = 0.7f) else AppColors.TextPrimary
+                )
 
                 if (hasContent) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color(0xFFFFEBEE))
-                            .pointerHoverIcon(PointerIcon.Hand)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onDeleteClick
-                            ),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        if (hasBlocks) {
+                            Text(
+                                text = strings.saveMealPreset,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.Primary,
+                                modifier = Modifier
+                                    .pointerHoverIcon(PointerIcon.Hand)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = onSavePresetClick
+                                    )
+                            )
+                        }
+
                         Icon(
-                            imageVector = Icons.Default.DeleteOutline,
+                            imageVector = Icons.Default.Close,
                             contentDescription = strings.delete,
-                            tint = Color(0xFFE53935),
-                            modifier = Modifier.size(14.dp)
+                            tint = AppColors.TextMuted,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .pointerHoverIcon(PointerIcon.Hand)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = onDeleteClick
+                                )
                         )
                     }
                 }
@@ -482,7 +507,7 @@ private fun MealSlotCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // [Left 50%] Bento Box Container (식단 기록 다이얼로그와 동일한 BentoLunchBoxView 컴포넌트 재사용)
+                // [Left 50%] Bento Box Container
                 BentoLunchBoxView(
                     blocks = slot.blocks,
                     modifier = Modifier
@@ -493,19 +518,19 @@ private fun MealSlotCard(
                         if (isUnrecordedAddSlot) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(2.dp),
-                                modifier = Modifier.alpha(0.22f)
+                                verticalArrangement = Arrangement.spacedBy(3.dp),
+                                modifier = Modifier.alpha(0.55f)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Add,
                                     contentDescription = null,
                                     tint = AppColors.TextMuted,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(22.dp)
                                 )
                                 Text(
                                     text = strings.addMealSlot,
-                                    fontSize = 10.5.sp,
-                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Bold,
                                     color = AppColors.TextMuted
                                 )
                             }
@@ -520,7 +545,7 @@ private fun MealSlotCard(
                     }
                 )
 
-                // [Right 50%] List of blocks grouped by name + total ml (블록명 × N개, 총 000ml)
+                // [Right 50%] List of blocks grouped by name + total ml
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -532,18 +557,15 @@ private fun MealSlotCard(
                             slot.blocks.groupBy { it.blockId to it.moldCapacityMl }
                                 .map { (_, items) ->
                                     val first = items.first()
-                                    Triple(first, items.size, items.sumOf { it.moldCapacityMl })
+                                    Pair(first, items.size)
                                 }
-                        }
-                        val totalCapacityMl = remember(slot.blocks) {
-                            slot.blocks.sumOf { it.moldCapacityMl }
                         }
 
                         Column(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(3.5.dp)
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            groupedBlocks.forEach { (sampleBlock, count, _) ->
+                            groupedBlocks.forEach { (sampleBlock, count) ->
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
@@ -578,18 +600,15 @@ private fun MealSlotCard(
                                     )
                                 }
                             }
-
-                            Spacer(modifier = Modifier.height(1.dp))
-
-                            // Total Capacity "총 000ml"
-                            Text(
-                                text = strings.totalCapacity(totalCapacityMl),
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AppColors.Primary
-                            )
                         }
-                    } else if (!isUnrecordedAddSlot) {
+                    } else if (isUnrecordedAddSlot) {
+                        Text(
+                            text = strings.addMealSlot,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.TextMuted.copy(alpha = 0.45f)
+                        )
+                    } else {
                         Text(
                             text = strings.mealPlanHint,
                             fontSize = 13.sp,
@@ -614,7 +633,6 @@ private fun MealSlotCard(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun WeekMealView(
     currentWeekLabel: String,
@@ -626,265 +644,179 @@ private fun WeekMealView(
     onOpenDaySlot: (String, String, MealType) -> Unit
 ) {
     val strings = LocalStrings.current
-    LazyColumn(
+
+    // Check if any day in the week has an extra meal/snack recorded
+    val hasAnyExtraMeal = weekDays.any { day ->
+        val record = day.mealRecord
+        record != null && (
+            record.snack.blocks.isNotEmpty() ||
+            record.snack.memo.isNotBlank() ||
+            record.snack.customTitle.isNotBlank()
+        )
+    }
+
+    val displayMealTypes = if (hasAnyExtraMeal) {
+        listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER, MealType.SNACK)
+    } else {
+        listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER)
+    }
+
+    Column(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        // Week Navigator
-        item {
-            AppCard(
-                modifier = Modifier.fillMaxWidth(),
-                padding = 10.dp
+        // 1. Slim Week Navigator (Flat Header bar without white elevated AppCard)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(AppColors.SurfaceVariant.copy(alpha = 0.8f))
+                    .pointerHoverIcon(PointerIcon.Hand)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onPreviousWeek
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.SurfaceVariant)
-                            .pointerHoverIcon(PointerIcon.Hand)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onPreviousWeek
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Previous Week",
-                            tint = AppColors.TextPrimary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Previous Week",
+                    tint = AppColors.TextPrimary,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
 
-                    Text(
-                        text = currentWeekLabel,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = AppColors.TextPrimary
-                    )
+            Text(
+                text = currentWeekLabel,
+                fontSize = 14.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextPrimary
+            )
 
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.SurfaceVariant)
-                            .pointerHoverIcon(PointerIcon.Hand)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onNextWeek
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Next Week",
-                            tint = AppColors.TextPrimary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(AppColors.SurfaceVariant.copy(alpha = 0.8f))
+                    .pointerHoverIcon(PointerIcon.Hand)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onNextWeek
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = "Next Week",
+                    tint = AppColors.TextPrimary,
+                    modifier = Modifier.size(15.dp)
+                )
             }
         }
 
-        // 7 Day Cards (Tapping on card switches to Day View for that date to edit all 4 meals)
-        items(weekDays, key = { it.dateString }) { dayModel ->
+        // 2. 7 Days Compact Bento Rows (일별 식단과 동일한 은은한 배경 톤 & 미세 테두리)
+        weekDays.forEach { dayModel ->
             val record = dayModel.mealRecord
             val isToday = dayModel.isToday
+            val hasBlocksInDay = record != null && (
+                record.breakfast.blocks.isNotEmpty() ||
+                record.lunch.blocks.isNotEmpty() ||
+                record.dinner.blocks.isNotEmpty() ||
+                record.snack.blocks.isNotEmpty()
+            )
 
             AppCard(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .weight(1f)
                     .pointerHoverIcon(PointerIcon.Hand)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = { onSelectDate(dayModel.dateString) }
                     ),
-                backgroundColor = if (isToday) AppColors.PrimaryLight.copy(alpha = 0.25f) else AppColors.Surface,
-                borderColor = if (isToday) AppColors.Primary else AppColors.Border,
+                backgroundColor = when {
+                    isToday -> AppColors.PrimaryLight.copy(alpha = 0.35f)
+                    hasBlocksInDay -> AppColors.SurfaceVariant.copy(alpha = 0.35f)
+                    else -> AppColors.SurfaceVariant.copy(alpha = 0.18f)
+                },
+                borderColor = if (isToday) AppColors.Primary else AppColors.Border.copy(alpha = 0.45f),
                 borderWidth = if (isToday) 1.5.dp else 0.5.dp,
-                padding = 14.dp
+                elevation = 0.dp,
+                cornerRadius = 14.dp,
+                padding = 6.dp
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    // Header: Day + Date + Total count + Hint
+                BoxWithConstraints(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val computedHeight = (maxHeight - 8.dp).coerceIn(34.dp, 56.dp)
+
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxSize(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        // Left: Date Badge (요일 + 월/일)
+                        Column(
+                            modifier = Modifier
+                                .width(50.dp)
+                                .fillMaxHeight(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        when {
-                                            isToday -> AppColors.Primary
-                                            dayModel.dayOfWeekName == "일" -> Color(0xFFEF5350).copy(alpha = 0.15f)
-                                            dayModel.dayOfWeekName == "토" -> Color(0xFF42A5F5).copy(alpha = 0.15f)
-                                            else -> AppColors.SurfaceVariant
-                                        }
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = dayModel.dayOfWeekName,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = when {
-                                        isToday -> Color.White
-                                        dayModel.dayOfWeekName == "일" -> Color(0xFFD32F2F)
-                                        dayModel.dayOfWeekName == "토" -> Color(0xFF1976D2)
-                                        else -> AppColors.TextPrimary
-                                    }
-                                )
-                            }
-
                             Text(
-                                text = "${dayModel.monthDayDisplay} (${dayModel.dayOfWeekName})",
-                                fontSize = 14.sp,
+                                text = dayModel.dayOfWeekName,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = AppColors.TextPrimary
+                                color = when {
+                                    isToday -> AppColors.Primary
+                                    dayModel.dayOfWeekName == "일" -> Color(0xFFD32F2F)
+                                    dayModel.dayOfWeekName == "토" -> Color(0xFF1976D2)
+                                    else -> AppColors.TextPrimary
+                                }
                             )
-
-                            if (isToday) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(AppColors.Primary)
-                                        .padding(horizontal = 4.dp, vertical = 1.dp)
-                                ) {
-                                    Text(
-                                        text = "TODAY",
-                                        fontSize = 8.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White
-                                    )
-                                }
-                            }
+                            Text(
+                                text = dayModel.monthDayDisplay,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = if (isToday) AppColors.Primary else AppColors.TextSecondary
+                            )
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                        // Right: Authentic Bento Slots (아침 / 점심 / 저녁 / 추가 - BentoLunchBoxView 공용 컴포넌트 재사용)
+                        displayMealTypes.forEach { mealType ->
+                            val slot = record?.getSlot(mealType)
+                            val blocks = slot?.blocks.orEmpty()
 
-                    val hasExtraMeal = record != null && (
-                        record.snack.blocks.isNotEmpty() ||
-                        record.snack.memo.isNotBlank() ||
-                        record.snack.customTitle.isNotBlank()
-                    )
-
-                    val displayMealTypes = if (hasExtraMeal) {
-                        listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER, MealType.SNACK)
-                    } else {
-                        listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER)
-                    }
-
-                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                        val totalWidth = maxWidth
-                        val slotWidth = ((totalWidth - 20.dp) / 3).coerceAtLeast(88.dp)
-
-                        Row(
-                            modifier = if (hasExtraMeal) {
-                                Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState())
-                            } else {
-                                Modifier.fillMaxWidth()
-                            },
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            displayMealTypes.forEach { mealType ->
-                                val slot = record?.getSlot(mealType)
-                                val blocks = slot?.blocks.orEmpty()
-                                val hasBlocks = blocks.isNotEmpty()
-
-                                val title = when {
-                                    mealType == MealType.SNACK -> slot?.customTitle?.ifBlank { "추가" } ?: "추가"
-                                    else -> strings.mealTypeName(mealType)
-                                }
-
-                                Column(
-                                    modifier = if (hasExtraMeal) {
-                                        Modifier.width(slotWidth)
-                                    } else {
-                                        Modifier.weight(1f)
-                                    },
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    // 1. Meal Type Header Label Above the Box (배경색 없는 검정색 라벨)
-                                    Text(
-                                        text = title,
-                                        fontSize = 12.5.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = AppColors.TextPrimary,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-
-                                    Spacer(modifier = Modifier.height(6.dp))
-
-                                    // 2. Meal Slot Box
+                            BentoLunchBoxView(
+                                blocks = blocks,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight(),
+                                emptyPlaceholder = {
                                     Box(
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(68.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(if (hasBlocks) AppColors.SurfaceVariant.copy(alpha = 0.75f) else AppColors.SurfaceVariant.copy(alpha = 0.35f))
-                                            .border(
-                                                width = if (hasBlocks) 1.dp else 0.5.dp,
-                                                color = if (hasBlocks) AppColors.Border else AppColors.Border.copy(alpha = 0.4f),
-                                                shape = RoundedCornerShape(12.dp)
-                                            )
-                                            .padding(horizontal = 4.dp, vertical = 4.dp),
-                                        contentAlignment = if (hasBlocks) Alignment.CenterStart else Alignment.Center
-                                    ) {
-                                        if (hasBlocks) {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .horizontalScroll(rememberScrollState()),
-                                                horizontalArrangement = Arrangement.Start,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                blocks.forEach { item ->
-                                                    FoodBlockTopView(
-                                                        colorHex = item.blockColorHex,
-                                                        moldCapacityMl = item.moldCapacityMl,
-                                                        height = 54.dp
-                                                    )
-                                                    Spacer(modifier = Modifier.width(3.dp))
-                                                }
-                                            }
-                                        } else {
-                                            Text(
-                                                text = "-",
-                                                fontSize = 15.sp,
-                                                color = AppColors.TextMuted.copy(alpha = 0.4f)
-                                            )
-                                        }
-                                    }
+                                            .size(4.dp)
+                                            .clip(CircleShape)
+                                            .background(AppColors.TextMuted.copy(alpha = 0.3f))
+                                    )
                                 }
-                            }
+                            )
                         }
                     }
                 }
             }
         }
-
-        item {
-            Spacer(modifier = Modifier.height(20.dp))
-        }
+        Spacer(modifier = Modifier.height(6.dp))
     }
 }

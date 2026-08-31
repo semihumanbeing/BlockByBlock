@@ -220,17 +220,39 @@
   - `MY` 탭에서 언제든 **`[튜토리얼 다시 보기]`** 지원
 - **패키지**: `com.dahee.blockbyblock.presentation.tutorial` (`TutorialStep.kt`, `WelcomeProfileScreen.kt`, `TutorialGuideBanner.kt`)
 
+#### 8) 인증 & 프로필 & 아바타 시스템 (Auth & Profile Management)
+- **앱 진입 및 인증 라우팅 플로우 (`App.kt`)**:
+  - 앱 첫 실행 시 미로그인 상태(`isLoggedIn = false`)로 **`AuthScreen`이 첫 화면으로 렌더링**.
+  - **로그인 (`AuthMode.LOGIN`)**:
+    - 3D 푸드 블록 스택 히어로 + `[G] Google 계정으로 계속하기` + 이메일/비밀번호 입력 + `[로그인]` 버튼.
+    - 하단 *"아직 계정이 없으신가요? 회원가입"* 링크를 통해 즉시 회원가입 화면으로 전환.
+    - 로그인 성공 시: **최초 진입 시 온보딩 페이지(`WelcomeProfileScreen`)로 라우팅**, 이미 온보딩을 완료한 상태면 **오늘의 식단(`NavTab.MEAL_PLAN`)으로 즉시 진입**.
+  - **회원가입 (`AuthMode.SIGN_UP`)**:
+    - `[← 뒤로가기]` + `[G] Google 계정으로 빠른 가입` + 이메일/비밀번호/비밀번호 확인(실시간 일치 체크) + 약관 전체 동의 체크박스 + `[가입 완료하기]` 버튼.
+    - 가입 완료 시 즉시 온보딩 페이지(`WelcomeProfileScreen`)로 직행.
+- **3D 토이 블록 아바타 4종 (`3d_profile.png` 레퍼런스 기반)**:
+  - 1번 **기본 사람 (`PERSON`, 좌측 상단 - 기본값)**: 옐로우 블록 사람 실루엣 (`profile_avatar_person.png`)
+  - 2번 **쉐프 (`CHEF`, 우측 상단)**: 화이트 조리복과 쉐프 모자 블록 (`profile_avatar_chef.png`)
+  - 3번 **외계인 (`ALIEN`, 좌측 하단)**: 더듬이가 달린 그린 블록 (`profile_avatar_alien.png`)
+  - 4번 **고양이 (`CAT`, 우측 하단)**: 뾰족한 귀가 돋보이는 옐로우 냥이 블록 (`profile_avatar_cat.png`)
+- **내 정보 수정 다이얼로그 (`ProfileEditDialog.kt`)**:
+  - `MY` (`MeScreen.kt`) 상단 프로필 카드 및 펜슬 수정 뱃지 터치 시 오픈.
+  - 상단 대형 80dp 원형 아바타 프리뷰 + 4종 3D 블록 아바타 원터치 선택 그리드 + 닉네임 입력(`2~12자`) + 연동 계정 정보 + `[취소]` / `[저장하기]`.
+- **계정 관리 (`MeScreen.kt`)**:
+  - 화면 하단에 **`[로그아웃]`** 및 **`[회원 탈퇴]`** 카드 추가 (클릭 시 2차 안전 확인 다이얼로그 노출 ➔ 로그아웃 시 다시 첫 로그인 화면으로 복귀).
+- **패키지**: `com.dahee.blockbyblock.presentation.auth` (`AuthScreen.kt`) 및 `com.dahee.blockbyblock.presentation.me.components` (`ProfileEditDialog.kt`, `BlockAvatarView.kt`)
+
 ---
 
 ## 4. 핵심 코드 맵 (Codebase Map)
 
 ```
 shared/src/commonMain/kotlin/com/dahee/blockbyblock/
-├── App.kt                                # 앱 진입점, 네비게이션 탭, i18n CompositionLocalProvider
+├── App.kt                                # 앱 진입점, 로그인/온보딩 라우팅, 네비게이션 탭, i18n
 ├── core/
 │   ├── i18n/
 │   │   ├── AppLanguage.kt                # KO / EN enum
-│   │   ├── AppStrings.kt                 # 다국어 인터페이스
+│   │   ├── AppStrings.kt                 # 다국어 인터페이스 (Auth, Profile, Avatar 포함)
 │   │   ├── KoStrings.kt                  # 한국어 리소스
 │   │   ├── EnStrings.kt                  # 영어 리소스
 │   │   └── I18n.kt                       # CompositionLocal 및 LanguageToggleChip
@@ -242,6 +264,8 @@ shared/src/commonMain/kotlin/com/dahee/blockbyblock/
 │       ├── AppButton.kt, AppCard.kt, AppChip.kt, AppTextField.kt
 ├── domain/
 │   ├── model/
+│   │   ├── ProfileAvatarType.kt          # PERSON, CHEF, ALIEN, CAT
+│   │   ├── UserProfile.kt                # nickname, avatarType, email
 │   │   ├── Equipment.kt                  # 장비/몰드 엔티티
 │   │   ├── EquipmentCategory.kt          # MOLD, COOKING_TOOL
 │   │   ├── MoldGridPreset.kt             # ML_500, ML_250, ML_125, ML_75, CUSTOM

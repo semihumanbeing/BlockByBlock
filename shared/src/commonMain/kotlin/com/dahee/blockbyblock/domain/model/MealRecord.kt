@@ -58,3 +58,15 @@ data class DayMealRecord(
         MealType.SNACK -> copy(snack = slot)
     }
 }
+
+/**
+ * Saved reusable meal preset / combination (식단 프리셋 / 세트).
+ */
+data class MealPreset(
+    val id: String,
+    val name: String,
+    val blocks: List<MealBlockItem> = emptyList(),
+    val memo: String = "",
+    val createdAt: Long = 0L
+)
+

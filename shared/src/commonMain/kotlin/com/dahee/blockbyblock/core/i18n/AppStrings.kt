@@ -140,6 +140,7 @@ interface AppStrings {
     val createBlockFreezer: String
     val createBlockFridge: String
     val createBlockShelfLifeLabel: String
+    val createBlockSectionOther: String
     fun createBlockDaysLabel(days: Int): String
     val createBlockSubmitBtn: String
     val createBlockNamePlaceholder: String
@@ -213,6 +214,8 @@ interface AppStrings {
     val deleteMealRecordTitle: String
     fun deleteMealRecordConfirm(mealType: String): String
     val backToToday: String
+    val mealPlanTabDaily: String
+    val mealPlanTabWeekly: String
     val mealPlanHint: String
     fun addMealBlockHint(mealType: String): String
     fun memoPrefix(memo: String): String
@@ -235,6 +238,14 @@ interface AppStrings {
     val mealTitlePlaceholder: String
     fun totalCapacity(ml: Int): String
     fun blockCountSuffix(count: Int): String
+    val saveMealPreset: String
+    val savedMealPresets: String
+    val noSavedMealPresets: String
+    val enterPresetName: String
+    val presetNamePlaceholder: String
+    val applyPreset: String
+    val deletePreset: String
+    val presetSaved: String
 
     // Tutorial & Onboarding
     val tutorialWelcomeTitle: String
@@ -254,4 +265,46 @@ interface AppStrings {
     val tutorialStepCompleteBtn: String
     val tutorialCongratulationsMsg: String
     val tutorialRestartBtn: String
+
+    // Auth & Profile
+    val authLoginTitle: String
+    val authLoginSubtitle: String
+    val authGoogleLoginBtn: String
+    val authGoogleSignUpBtn: String
+    val authOrDivider: String
+    val authEmailLabel: String
+    val authEmailPlaceholder: String
+    val authPasswordLabel: String
+    val authPasswordPlaceholder: String
+    val authPasswordConfirmLabel: String
+    val authPasswordConfirmPlaceholder: String
+    val authLoginBtn: String
+    val authSignUpTitle: String
+    val authSignUpBtn: String
+    val authNoAccountPrompt: String
+    val authSignUpLink: String
+    val authHasAccountPrompt: String
+    val authLoginLink: String
+    val authTermsAgreeAll: String
+    val authTermsService: String
+    val authTermsPrivacy: String
+    val authTermsRequiredBadge: String
+    val authErrorInvalidEmail: String
+    val authErrorPasswordPolicy: String
+    val authErrorPasswordMismatch: String
+
+    // Profile Edit & Avatars
+    val profileEditTitle: String
+    val profileEditSubtitle: String
+    val profileAvatarSectionTitle: String
+    val profileNicknameLabel: String
+    val profileNicknamePlaceholder: String
+    val profileAccountLabel: String
+    fun profileAvatarName(avatarType: com.dahee.blockbyblock.domain.model.ProfileAvatarType): String
+    val profileLogoutBtn: String
+    val profileDeleteAccountBtn: String
+    val profileLogoutConfirmTitle: String
+    val profileLogoutConfirmMsg: String
+    val profileDeleteAccountConfirmTitle: String
+    val profileDeleteAccountConfirmMsg: String
 }

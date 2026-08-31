@@ -19,12 +19,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,18 +49,134 @@ import com.dahee.blockbyblock.core.i18n.LocalAppLanguage
 import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.theme.AppColors
 import com.dahee.blockbyblock.core.ui.AppCard
+import com.dahee.blockbyblock.domain.model.UserProfile
+import com.dahee.blockbyblock.presentation.me.components.BlockAvatarView
+import com.dahee.blockbyblock.presentation.me.components.ProfileEditDialog
 
 @Composable
 fun MeScreen(
-    nickname: String = "나만의 쉐프",
-    onNicknameChange: (String) -> Unit = {},
+    userProfile: UserProfile = UserProfile(),
+    onProfileChange: (UserProfile) -> Unit = {},
     onLanguageChange: (AppLanguage) -> Unit,
     onNavigateToEquipment: () -> Unit = {},
     onRestartTutorial: () -> Unit = {},
+    onLogout: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
     val currentLang = LocalAppLanguage.current
+
+    var isEditProfileDialogOpen by remember { mutableStateOf(false) }
+    var isLogoutDialogOpen by remember { mutableStateOf(false) }
+    var isDeleteAccountDialogOpen by remember { mutableStateOf(false) }
+
+    // Edit Profile Modal Dialog
+    if (isEditProfileDialogOpen) {
+        ProfileEditDialog(
+            initialProfile = userProfile,
+            onSave = { updatedProfile ->
+                onProfileChange(updatedProfile)
+                isEditProfileDialogOpen = false
+            },
+            onDismiss = { isEditProfileDialogOpen = false }
+        )
+    }
+
+    // Logout Confirmation Dialog
+    if (isLogoutDialogOpen) {
+        AlertDialog(
+            onDismissRequest = { isLogoutDialogOpen = false },
+            title = {
+                Text(
+                    text = strings.profileLogoutConfirmTitle,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = strings.profileLogoutConfirmMsg,
+                    fontSize = 14.sp,
+                    color = AppColors.TextSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        isLogoutDialogOpen = false
+                        onLogout()
+                    }
+                ) {
+                    Text(
+                        text = strings.profileLogoutBtn,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFE53935)
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { isLogoutDialogOpen = false }) {
+                    Text(
+                        text = strings.cancel,
+                        fontSize = 14.sp,
+                        color = AppColors.TextSecondary
+                    )
+                }
+            },
+            containerColor = AppColors.Surface,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    // Delete Account Confirmation Dialog
+    if (isDeleteAccountDialogOpen) {
+        AlertDialog(
+            onDismissRequest = { isDeleteAccountDialogOpen = false },
+            title = {
+                Text(
+                    text = strings.profileDeleteAccountConfirmTitle,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = strings.profileDeleteAccountConfirmMsg,
+                    fontSize = 14.sp,
+                    color = AppColors.TextSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        isDeleteAccountDialogOpen = false
+                        onLogout()
+                    }
+                ) {
+                    Text(
+                        text = strings.profileDeleteAccountBtn,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFE53935)
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { isDeleteAccountDialogOpen = false }) {
+                    Text(
+                        text = strings.cancel,
+                        fontSize = 14.sp,
+                        color = AppColors.TextSecondary
+                    )
+                }
+            },
+            containerColor = AppColors.Surface,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
 
     Column(
         modifier = modifier
@@ -67,7 +187,7 @@ fun MeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
                 Spacer(modifier = Modifier.height(14.dp))
@@ -88,55 +208,77 @@ fun MeScreen(
                 }
             }
 
-            // 1. Profile Section
+            // 1. Profile Section with 3D Block Avatar & Edit Badge
             item {
                 AppCard(
                     modifier = Modifier.fillMaxWidth(),
+                    onClick = { isEditProfileDialogOpen = true },
                     padding = 16.dp
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Avatar Icon
+                        // 3D Block Avatar (Pure avatar without green circle)
                         Box(
-                            modifier = Modifier
-                                .size(60.dp)
-                                .shadow(2.dp, CircleShape, spotColor = AppColors.Shadow)
-                                .clip(CircleShape)
-                                .background(AppColors.PrimaryLight),
+                            modifier = Modifier.size(56.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = strings.meProfileSection,
-                                tint = AppColors.PrimaryDark,
-                                modifier = Modifier.size(32.dp)
+                            BlockAvatarView(
+                                avatarType = userProfile.avatarType,
+                                size = 54.dp
                             )
                         }
 
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(14.dp))
 
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = nickname,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AppColors.TextPrimary
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = userProfile.nickname,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.TextPrimary
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .clip(CircleShape)
+                                        .background(AppColors.PrimaryLight),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit Profile",
+                                        tint = AppColors.PrimaryDark,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
+                            }
+
                             Spacer(modifier = Modifier.height(3.dp))
                             Text(
-                                text = strings.meProfileDesc,
+                                text = userProfile.email,
                                 fontSize = 12.sp,
-                                color = AppColors.TextSecondary,
-                                lineHeight = 16.sp
+                                color = AppColors.TextSecondary
                             )
                         }
+
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Edit",
+                            tint = AppColors.TextMuted,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }
 
-            // 2. Equipment Management Section (Moved from Bottom Nav to ME screen)
+            // 2. Equipment Management Section
             item {
                 AppCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -189,7 +331,7 @@ fun MeScreen(
                 }
             }
 
-            // 2. Language Settings Section
+            // 3. Language Settings Section
             item {
                 AppCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -210,7 +352,6 @@ fun MeScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Language Option Buttons (Korean / English)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -238,7 +379,7 @@ fun MeScreen(
                 }
             }
 
-            // 3. Tutorial Restart Section
+            // 4. Tutorial Restart Section
             item {
                 AppCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -267,7 +408,73 @@ fun MeScreen(
                 }
             }
 
-            // 4. App Info
+            // 5. Account Management (Logout & Delete Account)
+            item {
+                AppCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    padding = 14.dp
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        // Logout Row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .pointerHoverIcon(PointerIcon.Hand)
+                                .clickable(
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    onClick = { isLogoutDialogOpen = true }
+                                )
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                contentDescription = strings.profileLogoutBtn,
+                                tint = AppColors.TextSecondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = strings.profileLogoutBtn,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = AppColors.TextSecondary
+                            )
+                        }
+
+                        // Delete Account Row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .pointerHoverIcon(PointerIcon.Hand)
+                                .clickable(
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    onClick = { isDeleteAccountDialogOpen = true }
+                                )
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PersonRemove,
+                                contentDescription = strings.profileDeleteAccountBtn,
+                                tint = Color(0xFFE53935).copy(alpha = 0.8f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = strings.profileDeleteAccountBtn,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFFE53935).copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 6. App Info
             item {
                 AppCard(
                     modifier = Modifier.fillMaxWidth(),

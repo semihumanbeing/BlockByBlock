@@ -41,6 +41,7 @@ import com.dahee.blockbyblock.presentation.equipment.state.EquipmentScreenMode
 fun EquipmentScreen(
     viewModel: EquipmentViewModel,
     onNavigateBack: (() -> Unit)? = null,
+    onSaved: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
@@ -111,7 +112,8 @@ fun EquipmentScreen(
                 // Screen 2: Mold configuration + cooking tool selector + [Save]
                 EquipmentSetupScreen(
                     uiState = uiState,
-                    viewModel = viewModel
+                    viewModel = viewModel,
+                    onSaved = onSaved
                 )
             }
             EquipmentScreenMode.LIST -> {

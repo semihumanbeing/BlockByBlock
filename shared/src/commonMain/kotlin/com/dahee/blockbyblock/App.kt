@@ -23,6 +23,9 @@ import com.dahee.blockbyblock.data.repository.InMemoryEquipmentRepository
 import com.dahee.blockbyblock.data.repository.InMemoryFoodBlockRepository
 import com.dahee.blockbyblock.data.repository.InMemoryIngredientRepository
 import com.dahee.blockbyblock.data.repository.InMemoryMealRecordRepository
+import com.dahee.blockbyblock.domain.model.ProfileAvatarType
+import com.dahee.blockbyblock.domain.model.UserProfile
+import com.dahee.blockbyblock.presentation.auth.AuthScreen
 import com.dahee.blockbyblock.presentation.block.BlockInventoryScreen
 import com.dahee.blockbyblock.presentation.block.BlockViewModel
 import com.dahee.blockbyblock.presentation.equipment.EquipmentScreen
@@ -40,10 +43,18 @@ import com.dahee.blockbyblock.presentation.tutorial.WelcomeProfileScreen
 
 @Composable
 fun App() {
+    // Auth & Onboarding State
+    var isLoggedIn by remember { mutableStateOf(false) }
+    var hasCompletedOnboarding by remember { mutableStateOf(false) }
+    var userProfile by remember {
+        mutableStateOf(
+            UserProfile()
+        )
+    }
+
     var currentTab by remember { mutableStateOf(NavTab.MEAL_PLAN) }
     var isManagingEquipment by remember { mutableStateOf(false) }
     var tutorialStep by remember { mutableStateOf(TutorialStep.WELCOME_PROFILE) }
-    var userNickname by remember { mutableStateOf("나만의 쉐프") }
 
     val equipmentRepository = remember { InMemoryEquipmentRepository() }
     val equipmentViewModel = remember { EquipmentViewModel(equipmentRepository) }
@@ -97,124 +108,170 @@ fun App() {
         LocalAppLanguage provides currentLanguage,
         LocalStrings provides getStrings(currentLanguage)
     ) {
-        val strings = LocalStrings.current
-
         BlockByBlockTheme {
-            // 0. Full Screen Welcome & Nickname Setup (First Onboarding Step with pure background and stacked food blocks)
-            if (tutorialStep == TutorialStep.WELCOME_PROFILE) {
+            // 1. Unauthenticated: Auth Screen (Login / Sign Up)
+            if (!isLoggedIn) {
+                AuthScreen(
+                    onLoginSuccess = { email ->
+                        isLoggedIn = true
+                        userProfile = userProfile.copy(email = email)
+                        if (!hasCompletedOnboarding) {
+                            tutorialStep = TutorialStep.WELCOME_PROFILE
+                        } else {
+                            tutorialStep = TutorialStep.COMPLETED
+                            currentTab = NavTab.MEAL_PLAN
+                        }
+                    },
+                    onSignUpSuccess = { email ->
+                        isLoggedIn = true
+                        hasCompletedOnboarding = false
+                        userProfile = userProfile.copy(email = email)
+                        tutorialStep = TutorialStep.WELCOME_PROFILE
+                    }
+                )
+            }
+            // 2. First-time Onboarding: Full Screen Welcome & Nickname Setup
+            else if (tutorialStep == TutorialStep.WELCOME_PROFILE) {
                 WelcomeProfileScreen(
                     onStart = { name ->
-                        userNickname = name
+                        userProfile = userProfile.copy(nickname = name)
+                        hasCompletedOnboarding = true
                         tutorialStep = TutorialStep.EQUIPMENT_SETUP
                         isManagingEquipment = true
-                        currentTab = NavTab.ME
+                        currentTab = NavTab.INVENTORY
                     },
                     onSkip = {
+                        hasCompletedOnboarding = true
                         tutorialStep = TutorialStep.COMPLETED
                         isManagingEquipment = false
                         currentTab = NavTab.MEAL_PLAN
                     }
                 )
-            } else {
+            }
+            // 3. Main Authenticated App Flow
+            else {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(AppColors.Background)
                         .safeDrawingPadding()
                 ) {
-                // Top Interactive Tutorial Guide Banner (Active during tutorial)
-                TutorialGuideBanner(
-                    currentStep = tutorialStep,
-                    hasAddedIngredient = hasAddedIngredient,
-                    hasCreatedBlock = hasCreatedBlock,
-                    onNextStep = {
-                        when (tutorialStep) {
-                            TutorialStep.EQUIPMENT_SETUP -> {
-                                tutorialStep = TutorialStep.INVENTORY_SETUP
-                                isManagingEquipment = false
-                                currentTab = NavTab.INVENTORY
-                            }
-                            TutorialStep.INVENTORY_SETUP -> {
-                                tutorialStep = TutorialStep.CREATE_BLOCK
-                                isManagingEquipment = false
-                                currentTab = NavTab.BLOCK
-                                blockViewModel.onOpenCreateScreen()
-                            }
-                            TutorialStep.CREATE_BLOCK -> {
-                                tutorialStep = TutorialStep.MEAL_PLAN
-                                isManagingEquipment = false
-                                currentTab = NavTab.MEAL_PLAN
-                                blockViewModel.onCloseCreateScreen()
-                            }
-                            TutorialStep.MEAL_PLAN -> {
-                                tutorialStep = TutorialStep.CONGRATULATIONS
-                            }
-                            else -> {}
-                        }
-                    },
-                    onSkip = {
-                        tutorialStep = TutorialStep.COMPLETED
-                        isManagingEquipment = false
-                    }
-                )
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxSize()
-                ) {
-                    if (isManagingEquipment) {
-                        EquipmentScreen(
-                            viewModel = equipmentViewModel,
-                            onNavigateBack = { isManagingEquipment = false }
-                        )
-                    } else {
-                        when (currentTab) {
-                            NavTab.MEAL_PLAN -> MealPlanScreen(
-                                viewModel = mealPlanViewModel
-                            )
-                            NavTab.BLOCK -> BlockInventoryScreen(
-                                viewModel = blockViewModel,
-                                onNavigateToInventory = {
+                    // Top Interactive Tutorial Guide Banner (Active during tutorial)
+                    TutorialGuideBanner(
+                        currentStep = tutorialStep,
+                        hasAddedIngredient = hasAddedIngredient,
+                        hasCreatedBlock = hasCreatedBlock,
+                        onNextStep = {
+                            when (tutorialStep) {
+                                TutorialStep.EQUIPMENT_SETUP -> {
+                                    tutorialStep = TutorialStep.INVENTORY_SETUP
                                     isManagingEquipment = false
                                     currentTab = NavTab.INVENTORY
-                                },
-                                onNavigateToEquipment = { isManagingEquipment = true }
-                            )
-                            NavTab.INVENTORY -> InventoryScreen(
-                                viewModel = ingredientViewModel,
-                                onCookClick = {
-                                    if (tutorialStep == TutorialStep.INVENTORY_SETUP) {
-                                        tutorialStep = TutorialStep.CREATE_BLOCK
-                                    }
+                                }
+                                TutorialStep.INVENTORY_SETUP -> {
+                                    tutorialStep = TutorialStep.CREATE_BLOCK
                                     isManagingEquipment = false
                                     currentTab = NavTab.BLOCK
                                     blockViewModel.onOpenCreateScreen()
                                 }
-                            )
-                            NavTab.ME -> MeScreen(
-                                nickname = userNickname,
-                                onNicknameChange = { userNickname = it },
-                                onLanguageChange = { currentLanguage = it },
-                                onNavigateToEquipment = { isManagingEquipment = true },
-                                onRestartTutorial = {
+                                TutorialStep.CREATE_BLOCK -> {
+                                    tutorialStep = TutorialStep.MEAL_PLAN
                                     isManagingEquipment = false
-                                    tutorialStep = TutorialStep.WELCOME_PROFILE
+                                    currentTab = NavTab.MEAL_PLAN
+                                    blockViewModel.onCloseCreateScreen()
+                                }
+                                TutorialStep.MEAL_PLAN -> {
+                                    tutorialStep = TutorialStep.CONGRATULATIONS
+                                }
+                                else -> {}
+                            }
+                        },
+                        onSkip = {
+                            hasCompletedOnboarding = true
+                            tutorialStep = TutorialStep.COMPLETED
+                            isManagingEquipment = false
+                        }
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize()
+                    ) {
+                        if (isManagingEquipment) {
+                            EquipmentScreen(
+                                viewModel = equipmentViewModel,
+                                onNavigateBack = {
+                                    if (tutorialStep == TutorialStep.EQUIPMENT_SETUP) {
+                                        tutorialStep = TutorialStep.INVENTORY_SETUP
+                                        currentTab = NavTab.INVENTORY
+                                    }
+                                    isManagingEquipment = false
+                                },
+                                onSaved = {
+                                    if (tutorialStep == TutorialStep.EQUIPMENT_SETUP) {
+                                        tutorialStep = TutorialStep.INVENTORY_SETUP
+                                        currentTab = NavTab.INVENTORY
+                                    }
+                                    isManagingEquipment = false
                                 }
                             )
+                        } else {
+                            when (currentTab) {
+                                NavTab.MEAL_PLAN -> MealPlanScreen(
+                                    viewModel = mealPlanViewModel
+                                )
+                                NavTab.BLOCK -> BlockInventoryScreen(
+                                    viewModel = blockViewModel,
+                                    onNavigateToInventory = {
+                                        isManagingEquipment = false
+                                        currentTab = NavTab.INVENTORY
+                                    },
+                                    onNavigateToEquipment = {
+                                        equipmentViewModel.onOpenDirectSetup()
+                                        isManagingEquipment = true
+                                    }
+                                )
+                                NavTab.INVENTORY -> InventoryScreen(
+                                    viewModel = ingredientViewModel,
+                                    onCookClick = {
+                                        if (tutorialStep == TutorialStep.INVENTORY_SETUP) {
+                                            tutorialStep = TutorialStep.CREATE_BLOCK
+                                        }
+                                        isManagingEquipment = false
+                                        currentTab = NavTab.BLOCK
+                                        blockViewModel.onOpenCreateScreen()
+                                    }
+                                )
+                                NavTab.ME -> MeScreen(
+                                    userProfile = userProfile,
+                                    onProfileChange = { userProfile = it },
+                                    onLanguageChange = { currentLanguage = it },
+                                    onNavigateToEquipment = {
+                                        equipmentViewModel.onOpenDirectSetup()
+                                        isManagingEquipment = true
+                                    },
+                                    onRestartTutorial = {
+                                        isManagingEquipment = false
+                                        tutorialStep = TutorialStep.WELCOME_PROFILE
+                                    },
+                                    onLogout = {
+                                        isLoggedIn = false
+                                    }
+                                )
+                            }
                         }
                     }
-                }
 
-                AppBottomNav(
-                    currentTab = currentTab,
-                    onTabSelected = {
-                        currentTab = it
-                        isManagingEquipment = false
-                    }
-                )
+                    AppBottomNav(
+                        currentTab = currentTab,
+                        onTabSelected = {
+                            currentTab = it
+                            isManagingEquipment = false
+                        }
+                    )
+                }
             }
         }
     }
-}
 }

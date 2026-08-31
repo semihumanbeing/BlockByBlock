@@ -3,6 +3,7 @@ package com.dahee.blockbyblock.presentation.mealplan
 import com.dahee.blockbyblock.domain.model.DayMealRecord
 import com.dahee.blockbyblock.domain.model.FoodBlock
 import com.dahee.blockbyblock.domain.model.MealBlockItem
+import com.dahee.blockbyblock.domain.model.MealPreset
 import com.dahee.blockbyblock.domain.model.MealSlotRecord
 import com.dahee.blockbyblock.domain.model.MealType
 import com.dahee.blockbyblock.domain.repository.FoodBlockRepository
@@ -43,12 +44,20 @@ class MealPlanViewModel(
     private val _navState = MutableStateFlow(DateNavigationState())
     private val _dialogState = MutableStateFlow(SlotDialogInternalState())
 
+    @Suppress("UNCHECKED_CAST")
     val uiState: StateFlow<MealPlanUiState> = combine(
         mealRecordRepository.observeMealRecords(),
         foodBlockRepository.observeFoodBlocks(),
+        mealRecordRepository.observeMealPresets(),
         _navState,
         _dialogState
-    ) { records, foodBlocks, nav, dialog ->
+    ) { params ->
+        val records = params[0] as List<DayMealRecord>
+        val foodBlocks = params[1] as List<FoodBlock>
+        val presets = params[2] as List<MealPreset>
+        val nav = params[3] as DateNavigationState
+        val dialog = params[4] as SlotDialogInternalState
+
         val currentDayRecord = records.find { it.dateString == nav.selectedDateString }
 
         val weekDates = generate7Days(nav.weekStartDate)
@@ -86,7 +95,8 @@ class MealPlanViewModel(
             slotSelectedBlocks = dialog.selectedBlocks,
             slotAvailableBlocks = dialog.availablePieces,
             slotTitleInput = dialog.title,
-            slotMemoInput = dialog.memo
+            slotMemoInput = dialog.memo,
+            savedPresets = presets
         )
     }.stateIn(
         scope = viewModelScope,
@@ -294,6 +304,91 @@ class MealPlanViewModel(
             } else {
                 mealRecordRepository.saveMealRecord(updatedDay)
             }
+        }
+    }
+
+    fun onSaveCurrentAsPreset(presetName: String) {
+        val dialog = _dialogState.value
+        if (dialog.selectedBlocks.isEmpty()) return
+        val defaultName = if (dialog.title.isNotBlank()) dialog.title.trim()
+        else dialog.selectedBlocks.joinToString(" + ") { it.blockName }
+        val finalName = presetName.trim().ifBlank { defaultName }
+
+        viewModelScope.launch {
+            val newPreset = MealPreset(
+                id = "preset-${currentTimeMillis()}",
+                name = finalName,
+                blocks = dialog.selectedBlocks,
+                memo = dialog.memo.trim(),
+                createdAt = currentTimeMillis()
+            )
+            mealRecordRepository.saveMealPreset(newPreset)
+        }
+    }
+
+    fun onSaveSlotAsPreset(dateString: String, mealType: MealType, presetName: String? = null) {
+        viewModelScope.launch {
+            val dayRecord = mealRecordRepository.getMealRecordByDate(dateString) ?: return@launch
+            val slot = dayRecord.getSlot(mealType)
+            if (slot.blocks.isEmpty()) return@launch
+            val defaultName = if (slot.customTitle.isNotBlank()) slot.customTitle
+            else "${slot.mealType.title} 식단 (${slot.blocks.joinToString(", ") { it.blockName }})"
+            val finalName = presetName?.trim()?.ifBlank { defaultName } ?: defaultName
+
+            val newPreset = MealPreset(
+                id = "preset-${currentTimeMillis()}",
+                name = finalName,
+                blocks = slot.blocks,
+                memo = slot.memo,
+                createdAt = currentTimeMillis()
+            )
+            mealRecordRepository.saveMealPreset(newPreset)
+        }
+    }
+
+    fun onApplyPreset(preset: MealPreset) {
+        viewModelScope.launch {
+            val allFoodBlocks = foodBlockRepository.getFoodBlocks()
+            val allPieces = mutableListOf<AvailableBlockPiece>()
+            allFoodBlocks.forEach { block ->
+                for (i in 1..block.quantity.coerceAtLeast(1)) {
+                    allPieces.add(
+                        AvailableBlockPiece(
+                            instanceId = "${block.id}-piece-$i",
+                            blockId = block.id,
+                            blockName = block.name,
+                            blockColorHex = block.blockColorHex,
+                            moldCapacityMl = block.moldCapacityMl,
+                            moldCellCount = block.moldCellCount
+                        )
+                    )
+                }
+            }
+
+            val newSelected = preset.blocks.mapIndexed { index, blockItem ->
+                blockItem.copy(instanceId = "${blockItem.blockId}-preset-${currentTimeMillis()}-$index")
+            }
+
+            val availableList = allPieces.toMutableList()
+            newSelected.forEach { sel ->
+                val matchIdx = availableList.indexOfFirst { it.blockId == sel.blockId }
+                if (matchIdx >= 0) {
+                    availableList.removeAt(matchIdx)
+                }
+            }
+
+            _dialogState.value = _dialogState.value.copy(
+                selectedBlocks = newSelected,
+                availablePieces = availableList,
+                title = if (_dialogState.value.title.isBlank()) preset.name else _dialogState.value.title,
+                memo = if (_dialogState.value.memo.isBlank()) preset.memo else _dialogState.value.memo
+            )
+        }
+    }
+
+    fun onDeletePreset(presetId: String) {
+        viewModelScope.launch {
+            mealRecordRepository.deleteMealPreset(presetId)
         }
     }
 

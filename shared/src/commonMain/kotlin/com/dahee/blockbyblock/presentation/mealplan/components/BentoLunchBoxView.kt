@@ -89,10 +89,15 @@ fun BentoLunchBoxView(
             .padding(horizontal = 6.dp, vertical = 2.dp)
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = if (isDynamicExpandable) modifier.fillMaxWidth() else modifier,
         contentAlignment = Alignment.Center
     ) {
+        val containerHeight = maxHeight
+        val latchHeight = if (isDynamicExpandable) 28.dp else (containerHeight * 0.48f).coerceIn(16.dp, 28.dp)
+        val outerCornerRadius = if (isDynamicExpandable) 20.dp else (containerHeight * 0.22f).coerceIn(10.dp, 20.dp)
+        val innerCornerRadius = if (isDynamicExpandable) 14.dp else (containerHeight * 0.16f).coerceIn(7.dp, 14.dp)
+
         Box(
             modifier = bentoModifier,
             contentAlignment = Alignment.Center
@@ -100,19 +105,19 @@ fun BentoLunchBoxView(
             // Main Bento Body (도시락 외관 본체 - 웜 아이보리 베이지)
             Box(
                 modifier = bodyModifier
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(outerCornerRadius))
                     .background(Color(0xFFEBE6DF))
-                    .border(1.5.dp, Color(0xFFDBD3C8), RoundedCornerShape(20.dp))
-                    .padding(if (isDynamicExpandable) 5.dp else 3.5.dp),
+                    .border(1.5.dp, Color(0xFFDBD3C8), RoundedCornerShape(outerCornerRadius))
+                    .padding(if (isDynamicExpandable) 5.dp else 3.dp),
                 contentAlignment = Alignment.Center
             ) {
                 // Bento Inner Tray Floor (도시락 내부 바닥 - 소프트 화이트)
                 Box(
                     modifier = trayModifier
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(innerCornerRadius))
                         .background(Color(0xFFFAF8F5))
-                        .border(1.dp, Color(0xFFE2DDD5), RoundedCornerShape(14.dp))
-                        .padding(horizontal = 5.dp, vertical = 3.dp),
+                        .border(1.dp, Color(0xFFE2DDD5), RoundedCornerShape(innerCornerRadius))
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
                     contentAlignment = if (blocks.isNotEmpty()) Alignment.CenterStart else Alignment.Center
                 ) {
                     if (blocks.isNotEmpty()) {
@@ -152,27 +157,27 @@ fun BentoLunchBoxView(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.CenterStart
                             ) {
-                                val computedHeight = (maxHeight - 2.dp).coerceAtLeast(48.dp)
+                                val computedHeight = (maxHeight - 2.dp).coerceAtLeast(20.dp)
 
                                 Row(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.Start),
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.Start),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     blocks.forEach { item ->
                                         val blockModifier = if (onBlockClick != null) {
                                             Modifier
                                                 .pointerHoverIcon(PointerIcon.Hand)
-                                                .clip(RoundedCornerShape(8.dp))
+                                                .clip(RoundedCornerShape(6.dp))
                                                 .clickable(
                                                     interactionSource = remember { MutableInteractionSource() },
                                                     indication = null,
                                                     onClick = { onBlockClick(item) }
                                                 )
                                         } else {
-                                            Modifier.clip(RoundedCornerShape(8.dp))
+                                            Modifier.clip(RoundedCornerShape(6.dp))
                                         }
 
                                         Box(modifier = blockModifier) {
@@ -204,10 +209,10 @@ fun BentoLunchBoxView(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .offset(x = if (isDynamicExpandable) (-1).dp else 0.dp)
-                    .size(width = 5.dp, height = 28.dp)
-                    .clip(RoundedCornerShape(2.5.dp))
+                    .size(width = 4.dp, height = latchHeight)
+                    .clip(RoundedCornerShape(2.dp))
                     .background(Color(0xFFDBD3C8))
-                    .border(0.75.dp, Color(0xFFC7BEB2), RoundedCornerShape(2.5.dp))
+                    .border(0.75.dp, Color(0xFFC7BEB2), RoundedCornerShape(2.dp))
             )
 
             // Right Side Latch / Buckle (오른쪽 잠금 버클 - 베이지 그레이)
@@ -215,10 +220,10 @@ fun BentoLunchBoxView(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .offset(x = if (isDynamicExpandable) 1.dp else 0.dp)
-                    .size(width = 5.dp, height = 28.dp)
-                    .clip(RoundedCornerShape(2.5.dp))
+                    .size(width = 4.dp, height = latchHeight)
+                    .clip(RoundedCornerShape(2.dp))
                     .background(Color(0xFFDBD3C8))
-                    .border(0.75.dp, Color(0xFFC7BEB2), RoundedCornerShape(2.5.dp))
+                    .border(0.75.dp, Color(0xFFC7BEB2), RoundedCornerShape(2.dp))
             )
         }
     }

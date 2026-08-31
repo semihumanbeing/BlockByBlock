@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -22,11 +23,19 @@ class EquipmentViewModel(
     private val repository: EquipmentRepository
 ) : ViewModel() {
 
-    private val _screenMode = MutableStateFlow(EquipmentScreenMode.ONBOARDING)
+    private val _screenMode = MutableStateFlow(EquipmentScreenMode.SETUP)
     private val _moldDrafts = MutableStateFlow(EquipmentUiState.defaultMoldDrafts)
     private val _selectedCookingTools = MutableStateFlow<Set<CookingToolType>>(emptySet())
     private val _editingMold = MutableStateFlow<Equipment?>(null)
     private val _errorMessage = MutableStateFlow<String?>(null)
+
+    init {
+        // Pre-populate drafts from repository so setup is ready immediately
+        viewModelScope.launch {
+            val currentEquipments = repository.getEquipments().first()
+            populateDraftsFromEquipments(currentEquipments)
+        }
+    }
 
     @Suppress("UNCHECKED_CAST")
     val uiState: StateFlow<EquipmentUiState> = combine(
@@ -72,11 +81,29 @@ class EquipmentViewModel(
         _screenMode.value = EquipmentScreenMode.SETUP
     }
 
+    // Direct transition to setup screen (skipping onboarding)
+    fun onOpenDirectSetup() {
+        _errorMessage.value = null
+        _screenMode.value = EquipmentScreenMode.SETUP
+        viewModelScope.launch {
+            val currentEquipments = repository.getEquipments().first()
+            populateDraftsFromEquipments(currentEquipments)
+            _screenMode.value = EquipmentScreenMode.SETUP
+        }
+    }
+
     // Transition from Screen 3 (List) to Screen 2 (Setup/Edit All)
     fun onOpenEditScreen() {
         _errorMessage.value = null
-        val currentEquipments = uiState.value.allEquipments
+        _screenMode.value = EquipmentScreenMode.SETUP
+        viewModelScope.launch {
+            val currentEquipments = repository.getEquipments().first()
+            populateDraftsFromEquipments(currentEquipments)
+            _screenMode.value = EquipmentScreenMode.SETUP
+        }
+    }
 
+    private fun populateDraftsFromEquipments(currentEquipments: List<Equipment>) {
         // 1. Standard presets
         val standardDrafts = listOf(
             Triple(MoldGridPreset.ML_500, "#BAE6FD", 2),
@@ -143,7 +170,6 @@ class EquipmentViewModel(
 
         _moldDrafts.value = standardDrafts + customDrafts
         _selectedCookingTools.value = existingToolTypes
-        _screenMode.value = EquipmentScreenMode.SETUP
     }
 
     // Cancel setup and return to list or onboarding
@@ -260,7 +286,7 @@ class EquipmentViewModel(
     }
 
     // Save all equipment changes from Screen 2
-    fun onSaveAllEquipment() {
+    fun onSaveAllEquipment(onSuccess: (() -> Unit)? = null) {
         val selectedMolds = _moldDrafts.value.filter { it.isSelected }
         if (selectedMolds.isEmpty()) {
             _errorMessage.value = "Please select at least 1 mold."
@@ -309,6 +335,7 @@ class EquipmentViewModel(
 
             _errorMessage.value = null
             _screenMode.value = EquipmentScreenMode.LIST
+            onSuccess?.invoke()
         }
     }
 

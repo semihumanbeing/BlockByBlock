@@ -3,11 +3,12 @@ package com.dahee.blockbyblock.presentation.mealplan
 import com.dahee.blockbyblock.domain.model.DayMealRecord
 import com.dahee.blockbyblock.domain.model.FoodBlock
 import com.dahee.blockbyblock.domain.model.MealBlockItem
+import com.dahee.blockbyblock.domain.model.MealPreset
 import com.dahee.blockbyblock.domain.model.MealType
 
 enum class MealPlanTab(val title: String) {
     TODAY("일별 식단"),
-    WEEK("이번 주")
+    WEEK("주별 식단")
 }
 
 /**
@@ -60,5 +61,6 @@ data class MealPlanUiState(
     val slotSelectedBlocks: List<MealBlockItem> = emptyList(), // Blocks currently placed in the slot (Top)
     val slotAvailableBlocks: List<AvailableBlockPiece> = emptyList(), // Blocks available to pick (Bottom)
     val slotTitleInput: String = "",
-    val slotMemoInput: String = ""
+    val slotMemoInput: String = "",
+    val savedPresets: List<MealPreset> = emptyList()
 )

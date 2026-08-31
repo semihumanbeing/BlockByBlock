@@ -25,7 +25,7 @@ data class MoldDraftConfig(
 }
 
 data class EquipmentUiState(
-    val screenMode: EquipmentScreenMode = EquipmentScreenMode.ONBOARDING,
+    val screenMode: EquipmentScreenMode = EquipmentScreenMode.SETUP,
     val allEquipments: List<Equipment> = emptyList(),
     val moldDrafts: List<MoldDraftConfig> = defaultMoldDrafts,
     val selectedCookingTools: Set<CookingToolType> = emptySet(),

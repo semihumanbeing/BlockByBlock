@@ -69,6 +69,7 @@ import com.dahee.blockbyblock.presentation.equipment.state.MoldDraftConfig
 fun EquipmentSetupScreen(
     uiState: EquipmentUiState,
     viewModel: EquipmentViewModel,
+    onSaved: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
@@ -298,7 +299,7 @@ fun EquipmentSetupScreen(
         ) {
             AppButton(
                 text = strings.setupSaveBtn,
-                onClick = { viewModel.onSaveAllEquipment() },
+                onClick = { viewModel.onSaveAllEquipment(onSuccess = onSaved) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp)

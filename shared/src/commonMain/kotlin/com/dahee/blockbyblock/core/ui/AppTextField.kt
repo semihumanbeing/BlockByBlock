@@ -49,6 +49,7 @@ fun AppTextField(
     leadingIcon: (@Composable () -> Unit)? = null,
     trailingIcon: (@Composable () -> Unit)? = null,
     singleLine: Boolean = true,
+    visualTransformation: androidx.compose.ui.text.input.VisualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default
 ) {
@@ -121,6 +122,7 @@ fun AppTextField(
                             }
                         },
                         singleLine = singleLine,
+                        visualTransformation = visualTransformation,
                         textStyle = TextStyle(
                             fontSize = 14.sp,
                             color = AppColors.TextPrimary,
