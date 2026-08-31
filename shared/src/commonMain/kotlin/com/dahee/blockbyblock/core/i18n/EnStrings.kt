@@ -60,24 +60,7 @@ object EnStrings : AppStrings {
     override val customCapacityLabel = "Capacity per slot (ml)"
     override val customCapacityPlaceholder = "Enter ml"
     override val moldColor = "Mold Color"
-    override val moldQuickAddTitle = "Quick Add Standard Molds"
-    override val moldQuickAddSubtitle = "Tap to add immediately (+1)"
     override fun blockSizeName(category: BlockSizeCategory) = category.titleEn
-
-    // Home Screen
-    override val homeAppSubtitle = "Smart Block Portion Meal Prep"
-    override val homeGreeting = "Hello, Meal Prep Master!"
-    override val homeBannerTitle = "Smart Portion Blocks & Meal Kits"
-    override val homeBannerSubtitle = "Plan your weekly meals easily with your molds and recipes."
-    override val homeQuickAddMoldTitle = "Quick Add Mold"
-    override val homeEquipmentStatusTitle = "My Molds & Cooking Tools"
-    override val homeManageBtn = "Manage >"
-    override val homeRegisteredMolds = "Registered Molds"
-    override val homeCookingTools = "Cooking Tools"
-    override val homeNoEquipmentRegistered = "No equipment registered yet"
-    override val homeRegisterEquipmentNow = "Tap to register molds and cooking tools"
-    override val homeTodayMealTitle = "Today's Meal"
-    override val homeInventoryTitle = "Storage Inventory"
 
     // Equipment Onboarding Screen (Screen 1)
     override val onboardingTitle = "Equipment Setup"
@@ -104,21 +87,13 @@ object EnStrings : AppStrings {
     override val cookingToolListSection = "Cooking Tools"
     override val noMoldsRegistered = "No molds registered."
     override val noToolsRegistered = "No cooking tools registered."
+    override val emptyEquipmentHint = "Tap to register equipment"
+    override val addCustomMoldBtn = "+ Add Custom Mold"
 
-    // Single Mold / Equipment Edit Dialog
+    // Single Mold Edit Dialog
     override val editMoldDialogTitle = "Edit Mold"
     override val editMoldDialogDeleteBtn = "Delete"
     override val editMoldDialogSaveBtn = "Save Changes"
-    override fun moldDetailSummary(capacityMl: Int, cellCount: Int, quantity: Int) =
-        "$cellCount slots each ($quantity molds, ${cellCount * quantity} slots total)"
-    override val equipmentEditTitle = "Edit Equipment"
-    override val equipmentRegisterTitle = "Register Equipment"
-    override val moldPresetLabelText = "Mold Preset"
-    override val slotsPerMoldLabel = "Slots per Mold"
-    override val quantityLabel = "Quantity"
-    override val equipmentColorLabel = "Equipment Color"
-    override val memoLabel = "Memo"
-    override val memoPlaceholder = "Enter memo (optional)"
 
     // ME Screen
     override val meTitle = "My Info & Settings"
@@ -189,6 +164,7 @@ object EnStrings : AppStrings {
     override val historySubtitle = "Load previously made block"
     override val createBlockSectionCookingTool = "Cooking Tool (Optional)"
     override val noCookingToolSelected = "None"
+    override val noOwnedCookingTools = "No owned cooking tools registered"
     override val createBlockNoIngredientTooltip = "No ingredients selected. Tap once more to create anyway"
 
     // Inventory & Ingredients (Phase 3)
@@ -256,8 +232,8 @@ object EnStrings : AppStrings {
     override val deleteMealRecordTitle = "Delete Meal Record"
     override fun deleteMealRecordConfirm(mealType: String) = "Are you sure you want to delete $mealType record?"
     override val backToToday = "Today"
-    override val mealPlanHint = "Tap a slot to record or edit meal blocks"
-    override fun addMealBlockHint(mealType: String) = "+ Tap to select $mealType blocks"
+    override val mealPlanHint = "What shall we eat?"
+    override fun addMealBlockHint(mealType: String) = "What shall we eat?"
     override fun memoPrefix(memo: String) = "Memo: $memo"
     override val editArrow = "Edit >"
     override val addMealPlanBtn = "+ Record Meal"
@@ -265,14 +241,19 @@ object EnStrings : AppStrings {
     override val mealRecordEatingBlocksTitle = "Eating Blocks"
     override val mealRecordRemoveHint = "Tap block to remove"
     override val mealRecordEmptyEatingBlocksHint = "Tap blocks below to stack on your meal tray"
-    override val mealRecordInventoryBlocksTitle = "Stored Blocks"
+    override val mealRecordInventoryBlocksTitle = "Block Inventory"
     override val mealRecordAddHint = "Tap to add 1 piece"
-    override val mealRecordSearchPlaceholder = "Search stored blocks..."
-    override val mealRecordNoBlocksInStock = "No stored blocks available."
+    override val mealRecordSearchPlaceholder = "Search block inventory..."
+    override val mealRecordNoBlocksInStock = "No blocks in inventory."
     override val mealRecordNoMatchingBlocks = "No matching blocks found."
     override val mealRecordMemoLabel = "Memo"
     override val mealRecordMemoPlaceholder = "Add meal notes (e.g., Add fresh salad)"
     override val mealRecordMinBlockRequired = "Please select at least 1 block"
+    override val addMealSlot = "Add Meal"
+    override val mealTitleLabel = "Meal Title"
+    override val mealTitlePlaceholder = "Enter meal title (Max 50 chars, e.g. Snack, Dessert)"
+    override fun totalCapacity(ml: Int) = "Total ${ml}ml"
+    override fun blockCountSuffix(count: Int) = "× $count"
 
     // Tutorial & Onboarding
     override val tutorialWelcomeTitle = "WELCOME!"

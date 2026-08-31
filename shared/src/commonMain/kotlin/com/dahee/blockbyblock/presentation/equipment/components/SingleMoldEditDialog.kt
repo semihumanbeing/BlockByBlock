@@ -70,7 +70,7 @@ fun SingleMoldEditDialog(
     val (presetChips, cellStep, minCellCount) = when (preset) {
         MoldGridPreset.ML_500 -> Triple(listOf(1, 2, 4), 1, 1)
         MoldGridPreset.ML_250 -> Triple(listOf(2, 4, 8), 2, 1)
-        MoldGridPreset.ML_125 -> Triple(listOf(4, 8, 12), 2, 1)
+        MoldGridPreset.ML_125 -> Triple(listOf(4, 6, 8), 2, 1)
         MoldGridPreset.ML_75 -> Triple(listOf(8, 16, 24), 4, 4)
         MoldGridPreset.CUSTOM -> Triple(listOf(8, 16, 24), 4, 4)
     }

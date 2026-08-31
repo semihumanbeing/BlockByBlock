@@ -108,7 +108,7 @@ fun WelcomeProfileScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Stacked 3D Lego Food Blocks Illustration
+            // Stacked 3D Food Blocks Illustration
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -118,7 +118,7 @@ fun WelcomeProfileScreen(
                 // Bottom Layer: 3x4 Red Block (Large)
                 Image(
                     painter = painterResource(Res.drawable.food_block_3d_3x4_red),
-                    contentDescription = "Red Lego Block",
+                    contentDescription = "Red Food Block",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .size(150.dp)
@@ -128,7 +128,7 @@ fun WelcomeProfileScreen(
                 // Middle Layer: 2x4 Orange Block (Medium)
                 Image(
                     painter = painterResource(Res.drawable.food_block_3d_2x4_orange),
-                    contentDescription = "Orange Lego Block",
+                    contentDescription = "Orange Food Block",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .size(130.dp)
@@ -138,7 +138,7 @@ fun WelcomeProfileScreen(
                 // Upper Layer Left: 1x4 Green Block (Small)
                 Image(
                     painter = painterResource(Res.drawable.food_block_3d_1x4_green),
-                    contentDescription = "Green Lego Block",
+                    contentDescription = "Green Food Block",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .size(105.dp)
@@ -148,7 +148,7 @@ fun WelcomeProfileScreen(
                 // Upper Layer Right: 2x2 Yellow Block (Mini)
                 Image(
                     painter = painterResource(Res.drawable.food_block_3d_2x2_yellow),
-                    contentDescription = "Yellow Lego Block",
+                    contentDescription = "Yellow Food Block",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .size(85.dp)

@@ -77,20 +77,63 @@ class EquipmentViewModel(
         _errorMessage.value = null
         val currentEquipments = uiState.value.allEquipments
 
-        // Hydrate drafts from stored equipment state
-        val updatedDrafts = EquipmentUiState.defaultMoldDrafts.map { defaultDraft ->
-            val existing = currentEquipments.find { it.category == EquipmentCategory.MOLD && it.moldPreset == defaultDraft.preset }
+        // 1. Standard presets
+        val standardDrafts = listOf(
+            Triple(MoldGridPreset.ML_500, "#BAE6FD", 2),
+            Triple(MoldGridPreset.ML_250, "#A7F3D0", 4),
+            Triple(MoldGridPreset.ML_125, "#FECDD3", 6),
+            Triple(MoldGridPreset.ML_75, "#FEF08A", 16)
+        ).map { (preset, defaultColor, defaultCells) ->
+            val existing = currentEquipments.find { it.category == EquipmentCategory.MOLD && it.moldPreset == preset }
             if (existing != null) {
-                defaultDraft.copy(
+                MoldDraftConfig(
+                    id = "draft_${preset.name}",
+                    preset = preset,
                     isSelected = true,
                     cellCount = existing.cellCount,
                     quantity = existing.quantity,
-                    customCapacityMl = existing.customCapacityMl ?: 300,
                     moldColorHex = existing.moldColorHex
                 )
             } else {
-                defaultDraft.copy(isSelected = false)
+                MoldDraftConfig(
+                    id = "draft_${preset.name}",
+                    preset = preset,
+                    isSelected = false,
+                    cellCount = defaultCells,
+                    quantity = 1,
+                    moldColorHex = defaultColor
+                )
             }
+        }
+
+        // 2. Custom molds from saved equipments
+        val savedCustomMolds = currentEquipments.filter {
+            it.category == EquipmentCategory.MOLD && (it.moldPreset == MoldGridPreset.CUSTOM || it.moldPreset == null)
+        }
+        val customDrafts = if (savedCustomMolds.isNotEmpty()) {
+            savedCustomMolds.mapIndexed { index, mold ->
+                MoldDraftConfig(
+                    id = "draft_custom_${mold.id}_${index}",
+                    preset = MoldGridPreset.CUSTOM,
+                    isSelected = true,
+                    customCapacityMl = mold.customCapacityMl ?: mold.displayCapacity,
+                    cellCount = mold.cellCount,
+                    quantity = mold.quantity,
+                    moldColorHex = mold.moldColorHex
+                )
+            }
+        } else {
+            listOf(
+                MoldDraftConfig(
+                    id = "draft_CUSTOM_1",
+                    preset = MoldGridPreset.CUSTOM,
+                    isSelected = false,
+                    customCapacityMl = 300,
+                    cellCount = 16,
+                    quantity = 1,
+                    moldColorHex = "#E9D5FF"
+                )
+            )
         }
 
         val existingToolTypes = currentEquipments
@@ -98,7 +141,7 @@ class EquipmentViewModel(
             .mapNotNull { it.toolType }
             .toSet()
 
-        _moldDrafts.value = updatedDrafts
+        _moldDrafts.value = standardDrafts + customDrafts
         _selectedCookingTools.value = existingToolTypes
         _screenMode.value = EquipmentScreenMode.SETUP
     }
@@ -112,12 +155,38 @@ class EquipmentViewModel(
         }
     }
 
+    // Add a new custom mold draft
+    fun onAddCustomMoldDraft() {
+        _errorMessage.value = null
+        val newId = "draft_custom_${kotlin.random.Random.nextInt(1000, 9999)}"
+        _moldDrafts.update { list ->
+            list + MoldDraftConfig(
+                id = newId,
+                preset = MoldGridPreset.CUSTOM,
+                isSelected = true,
+                customCapacityMl = 300,
+                cellCount = 16,
+                quantity = 1,
+                moldColorHex = "#E9D5FF"
+            )
+        }
+    }
+
+    // Remove a custom mold draft
+    fun onRemoveCustomMoldDraft(draftId: String) {
+        _errorMessage.value = null
+        _moldDrafts.update { list ->
+            // If it's the only custom draft and unselected, we can still remove or keep at least standard presets
+            list.filterNot { it.id == draftId }
+        }
+    }
+
     // Toggle mold selection state
-    fun onToggleMoldSelection(preset: MoldGridPreset) {
+    fun onToggleMoldSelection(draftId: String) {
         _errorMessage.value = null
         _moldDrafts.update { list ->
             list.map { draft ->
-                if (draft.preset == preset) {
+                if (draft.id == draftId) {
                     draft.copy(isSelected = !draft.isSelected)
                 } else {
                     draft
@@ -127,10 +196,10 @@ class EquipmentViewModel(
     }
 
     // Adjust mold quantity in setup draft
-    fun onUpdateMoldDraftQuantity(preset: MoldGridPreset, delta: Int) {
+    fun onUpdateMoldDraftQuantity(draftId: String, delta: Int) {
         _moldDrafts.update { list ->
             list.map { draft ->
-                if (draft.preset == preset) {
+                if (draft.id == draftId) {
                     val newQty = (draft.quantity + delta).coerceAtLeast(1)
                     draft.copy(quantity = newQty, isSelected = true)
                 } else {
@@ -141,10 +210,10 @@ class EquipmentViewModel(
     }
 
     // Update mold slot count in setup draft
-    fun onUpdateMoldDraftCellCount(preset: MoldGridPreset, cellCount: Int) {
+    fun onUpdateMoldDraftCellCount(draftId: String, cellCount: Int) {
         _moldDrafts.update { list ->
             list.map { draft ->
-                if (draft.preset == preset) {
+                if (draft.id == draftId) {
                     draft.copy(cellCount = cellCount, isSelected = true)
                 } else {
                     draft
@@ -154,10 +223,10 @@ class EquipmentViewModel(
     }
 
     // Update mold color in setup draft
-    fun onUpdateMoldDraftColor(preset: MoldGridPreset, colorHex: String) {
+    fun onUpdateMoldDraftColor(draftId: String, colorHex: String) {
         _moldDrafts.update { list ->
             list.map { draft ->
-                if (draft.preset == preset) {
+                if (draft.id == draftId) {
                     draft.copy(moldColorHex = colorHex, isSelected = true)
                 } else {
                     draft
@@ -167,10 +236,10 @@ class EquipmentViewModel(
     }
 
     // Update custom mold capacity in setup draft
-    fun onUpdateMoldDraftCustomCapacity(capacityMl: Int) {
+    fun onUpdateMoldDraftCustomCapacity(draftId: String, capacityMl: Int) {
         _moldDrafts.update { list ->
             list.map { draft ->
-                if (draft.preset == MoldGridPreset.CUSTOM) {
+                if (draft.id == draftId) {
                     draft.copy(customCapacityMl = capacityMl, isSelected = true)
                 } else {
                     draft

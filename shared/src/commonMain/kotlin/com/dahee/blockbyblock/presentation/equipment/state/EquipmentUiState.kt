@@ -12,6 +12,7 @@ enum class EquipmentScreenMode {
 }
 
 data class MoldDraftConfig(
+    val id: String = "draft_${preset.name}",
     val preset: MoldGridPreset,
     val isSelected: Boolean = false,
     val customCapacityMl: Int = 300,
@@ -39,11 +40,11 @@ data class EquipmentUiState(
 
     companion object {
         val defaultMoldDrafts = listOf(
-            MoldDraftConfig(preset = MoldGridPreset.ML_500, isSelected = true, cellCount = 2, quantity = 1, moldColorHex = "#BAE6FD"),
-            MoldDraftConfig(preset = MoldGridPreset.ML_250, isSelected = false, cellCount = 4, quantity = 1, moldColorHex = "#A7F3D0"),
-            MoldDraftConfig(preset = MoldGridPreset.ML_125, isSelected = false, cellCount = 8, quantity = 1, moldColorHex = "#FECDD3"),
-            MoldDraftConfig(preset = MoldGridPreset.ML_75, isSelected = false, cellCount = 16, quantity = 1, moldColorHex = "#FEF08A"),
-            MoldDraftConfig(preset = MoldGridPreset.CUSTOM, isSelected = false, customCapacityMl = 300, cellCount = 16, quantity = 1, moldColorHex = "#E9D5FF")
+            MoldDraftConfig(id = "draft_ML_500", preset = MoldGridPreset.ML_500, isSelected = true, cellCount = 2, quantity = 1, moldColorHex = "#BAE6FD"),
+            MoldDraftConfig(id = "draft_ML_250", preset = MoldGridPreset.ML_250, isSelected = false, cellCount = 4, quantity = 1, moldColorHex = "#A7F3D0"),
+            MoldDraftConfig(id = "draft_ML_125", preset = MoldGridPreset.ML_125, isSelected = false, cellCount = 6, quantity = 1, moldColorHex = "#FECDD3"),
+            MoldDraftConfig(id = "draft_ML_75", preset = MoldGridPreset.ML_75, isSelected = false, cellCount = 16, quantity = 1, moldColorHex = "#FEF08A"),
+            MoldDraftConfig(id = "draft_CUSTOM_1", preset = MoldGridPreset.CUSTOM, isSelected = false, customCapacityMl = 300, cellCount = 16, quantity = 1, moldColorHex = "#E9D5FF")
         )
     }
 }

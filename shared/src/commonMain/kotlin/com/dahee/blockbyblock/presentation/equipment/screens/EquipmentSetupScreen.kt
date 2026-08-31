@@ -170,24 +170,36 @@ fun EquipmentSetupScreen(
                 )
             }
 
-            items(uiState.moldDrafts, key = { it.preset.name }) { draft ->
+            items(uiState.moldDrafts, key = { it.id }) { draft ->
                 MoldSetupRow(
                     draft = draft,
-                    onToggleSelect = { viewModel.onToggleMoldSelection(draft.preset) },
-                    onQuantityChange = { delta -> viewModel.onUpdateMoldDraftQuantity(draft.preset, delta) },
+                    onToggleSelect = { viewModel.onToggleMoldSelection(draft.id) },
+                    onQuantityChange = { delta -> viewModel.onUpdateMoldDraftQuantity(draft.id, delta) },
                     onDirectQuantityChange = { qty ->
                         val delta = qty - draft.quantity
-                        viewModel.onUpdateMoldDraftQuantity(draft.preset, delta)
+                        viewModel.onUpdateMoldDraftQuantity(draft.id, delta)
                     },
-                    onCellCountChange = { cellCount -> viewModel.onUpdateMoldDraftCellCount(draft.preset, cellCount) },
-                    onColorChange = { colorHex -> viewModel.onUpdateMoldDraftColor(draft.preset, colorHex) },
-                    onCustomCapacityChange = { cap -> viewModel.onUpdateMoldDraftCustomCapacity(cap) }
+                    onCellCountChange = { cellCount -> viewModel.onUpdateMoldDraftCellCount(draft.id, cellCount) },
+                    onColorChange = { colorHex -> viewModel.onUpdateMoldDraftColor(draft.id, colorHex) },
+                    onCustomCapacityChange = { cap -> viewModel.onUpdateMoldDraftCustomCapacity(draft.id, cap) }
+                )
+            }
+
+            // Add Custom Mold Button
+            item {
+                Spacer(modifier = Modifier.height(2.dp))
+                AppButton(
+                    text = strings.addCustomMoldBtn,
+                    variant = ButtonVariant.SECONDARY,
+                    onClick = { viewModel.onAddCustomMoldDraft() },
+                    modifier = Modifier.fillMaxWidth(),
+                    height = 44.dp
                 )
             }
 
             // 2. Cooking Tool Selection Section
             item {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(14.dp))
                 Text(
                     text = strings.toolsSectionTitle,
                     fontSize = 17.sp,
@@ -321,7 +333,7 @@ private fun MoldSetupRow(
     val (presetChips, cellStep, minCellCount) = when (draft.preset) {
         MoldGridPreset.ML_500 -> Triple(listOf(1, 2, 4), 1, 1)
         MoldGridPreset.ML_250 -> Triple(listOf(2, 4, 8), 2, 1)
-        MoldGridPreset.ML_125 -> Triple(listOf(4, 8, 12), 2, 1)
+        MoldGridPreset.ML_125 -> Triple(listOf(4, 6, 8), 2, 1)
         MoldGridPreset.ML_75 -> Triple(listOf(8, 16, 24), 4, 4)
         MoldGridPreset.CUSTOM -> Triple(listOf(8, 16, 24), 4, 4)
     }
@@ -383,11 +395,12 @@ private fun MoldSetupRow(
 
             // [Right Area] Unselected: Center [+ Add] button; Selected: Stepper / Slot / Color controls
             if (!draft.isSelected) {
-                Box(
+                Row(
                     modifier = Modifier
                         .weight(1f)
                         .height(68.dp),
-                    contentAlignment = Alignment.Center
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

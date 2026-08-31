@@ -135,7 +135,7 @@ fun EquipmentListScreen(
             item {
                 EmptySectionCard(
                     title = strings.noMoldsRegistered,
-                    description = strings.homeRegisterEquipmentNow
+                    description = strings.emptyEquipmentHint
                 )
             }
         } else {
@@ -169,7 +169,7 @@ fun EquipmentListScreen(
             item {
                 EmptySectionCard(
                     title = strings.noToolsRegistered,
-                    description = strings.homeRegisterEquipmentNow
+                    description = strings.emptyEquipmentHint
                 )
             }
         } else {

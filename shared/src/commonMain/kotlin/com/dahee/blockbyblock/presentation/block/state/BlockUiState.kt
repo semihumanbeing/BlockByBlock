@@ -30,7 +30,7 @@ data class BlockUiState(
 
     val blockQuantity: Int = 1,
     val blockQuantityInput: String = "1",
-    val selectedBlockColorHex: String = "#FF7043", // 3D Lego Food Block Color
+    val selectedBlockColorHex: String = "#FF7043", // 3D Food Block Color
     val storageType: StorageType = StorageType.FREEZER,
     val shelfLifeDaysInput: String = "90",
     val customBlockName: String = "",

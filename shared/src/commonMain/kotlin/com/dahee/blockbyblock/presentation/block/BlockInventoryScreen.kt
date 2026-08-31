@@ -1,5 +1,6 @@
 package com.dahee.blockbyblock.presentation.block
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,11 +44,15 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import blockbyblock.shared.generated.resources.Res
+import blockbyblock.shared.generated.resources.empty_block_box
+import org.jetbrains.compose.resources.painterResource
 import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.theme.AppColors
 import com.dahee.blockbyblock.core.ui.AppButton
@@ -189,38 +194,28 @@ fun BlockInventoryScreen(
             // Stored Block List or Empty State
             if (uiState.filteredBlocks.isEmpty()) {
                 item {
-                    Spacer(modifier = Modifier.height(30.dp))
                     AppCard(
                         modifier = Modifier.fillMaxWidth(),
-                        padding = 32.dp
+                        padding = 28.dp
                     ) {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(64.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(AppColors.PrimaryLight.copy(alpha = 0.5f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Widgets,
-                                    contentDescription = "Block",
-                                    tint = AppColors.PrimaryDark,
-                                    modifier = Modifier.size(36.dp)
-                                )
-                            }
+                            Image(
+                                painter = painterResource(Res.drawable.empty_block_box),
+                                contentDescription = strings.blockEmptyTitle,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.size(80.dp)
+                            )
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
 
                             Text(
                                 text = strings.blockEmptyTitle,
-                                fontSize = 16.sp,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = AppColors.TextPrimary,
+                                color = AppColors.TextSecondary,
                                 textAlign = TextAlign.Center
                             )
 
@@ -228,18 +223,18 @@ fun BlockInventoryScreen(
 
                             Text(
                                 text = strings.blockEmptyDesc,
-                                fontSize = 13.sp,
-                                color = AppColors.TextSecondary,
-                                textAlign = TextAlign.Center,
-                                lineHeight = 18.sp
+                                fontSize = 12.sp,
+                                color = AppColors.TextMuted,
+                                textAlign = TextAlign.Center
                             )
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(14.dp))
 
                             AppButton(
                                 text = strings.blockCreateBtn,
+                                variant = ButtonVariant.ACCENT,
                                 onClick = { viewModel.onOpenCreateScreen() },
-                                variant = ButtonVariant.PRIMARY
+                                height = 36.dp
                             )
                         }
                     }

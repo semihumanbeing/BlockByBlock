@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BlockByBlock - 스마트 블록 소분 & 밀키트 식단 관리</title>
     
-    <!-- Preload Korean TTF Font to ensure zero network latency for Compose WASM -->
+    <!-- Preload Korean TTF Font & Splash Food Block Images -->
     <link rel="preload" href="./composeResources/blockbyblock.shared.generated.resources/font/notosans_kr_regular.ttf" as="fetch" type="font/ttf" crossorigin="anonymous">
+    <link rel="preload" href="./composeResources/blockbyblock.shared.generated.resources/drawable/food_block_top_2x4_green.png" as="image" type="image/png">
+    <link rel="preload" href="./composeResources/blockbyblock.shared.generated.resources/drawable/food_block_top_2x4_yellow.png" as="image" type="image/png">
+    <link rel="preload" href="./composeResources/blockbyblock.shared.generated.resources/drawable/food_block_top_2x4_red.png" as="image" type="image/png">
     
     <link type="text/css" rel="stylesheet" href="styles.css">
 </head>
@@ -18,33 +21,11 @@
     <div id="splash-screen">
         <div class="splash-center">
             <div class="splash-card">
-                <!-- 🌿🧀🥩 Sharp Rectangular 3D LEGO Food Bricks (Wide: 4 Studs, Thin: 2 Studs) -->
+                <!-- 🌿🧀🥩 Food Block Top View Assembly -->
                 <div class="food-assembly-track">
-                    <!-- 🌿 250ml 채소 블록 (Wide Rectangular, 4 Studs in 2x2 Grid) -->
-                    <div class="food-brick brick-green brick-wide" title="250ml 채소 레고 브릭">
-                        <div class="stud-grid-2x2">
-                            <div class="lego-stud"></div>
-                            <div class="lego-stud"></div>
-                            <div class="lego-stud"></div>
-                            <div class="lego-stud"></div>
-                        </div>
-                    </div>
-
-                    <!-- 🧀 125ml 곡류/치즈 블록 (Thin Rectangular, 2 Studs in 1x2 Grid) -->
-                    <div class="food-brick brick-yellow brick-thin" title="125ml 곡류/치즈 레고 브릭">
-                        <div class="stud-grid-1x2">
-                            <div class="lego-stud"></div>
-                            <div class="lego-stud"></div>
-                        </div>
-                    </div>
-
-                    <!-- 🥩 125ml 육류 블록 (Thin Rectangular, 2 Studs in 1x2 Grid) -->
-                    <div class="food-brick brick-redbrown brick-thin" title="125ml 육류 레고 브릭">
-                        <div class="stud-grid-1x2">
-                            <div class="lego-stud"></div>
-                            <div class="lego-stud"></div>
-                        </div>
-                    </div>
+                    <img class="food-brick-img brick-green" src="./composeResources/blockbyblock.shared.generated.resources/drawable/food_block_top_2x4_green.png" alt="채소 푸드 블록" />
+                    <img class="food-brick-img brick-yellow" src="./composeResources/blockbyblock.shared.generated.resources/drawable/food_block_top_2x4_yellow.png" alt="곡류 푸드 블록" />
+                    <img class="food-brick-img brick-red" src="./composeResources/blockbyblock.shared.generated.resources/drawable/food_block_top_2x4_red.png" alt="육류 푸드 블록" />
                 </div>
 
                 <h1 class="splash-title">BlockByBlock</h1>
@@ -52,23 +33,19 @@
             </div>
         </div>
 
-        <!-- 📱 Bottom Navigation Bar during Splash (Seamless Transition) -->
+        <!-- 📱 Bottom Navigation Bar during Splash (Seamless Transition with AppBottomNav) -->
         <div class="splash-bottom-nav">
-            <div class="splash-nav-item">
-                <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-                <span>오늘</span>
-            </div>
             <div class="splash-nav-item active">
-                <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
-                <span>보관함</span>
-            </div>
-            <div class="splash-nav-item">
                 <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
                 <span>식단</span>
             </div>
             <div class="splash-nav-item">
-                <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-                <span>장비</span>
+                <svg viewBox="0 0 24 24"><path d="M13 13v8h8v-8h-8zM3 21h8v-8H3v8zM3 3v8h8V3H3zm13.66-1.31L11 7.34 16.66 13l5.66-5.66-5.66-5.65z"/></svg>
+                <span>블록</span>
+            </div>
+            <div class="splash-nav-item">
+                <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                <span>보관함</span>
             </div>
             <div class="splash-nav-item">
                 <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>

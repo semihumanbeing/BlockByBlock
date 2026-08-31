@@ -8,17 +8,21 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -26,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -39,12 +44,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dahee.blockbyblock.core.i18n.LocalStrings
@@ -55,7 +63,8 @@ import com.dahee.blockbyblock.domain.model.MealBlockItem
 import com.dahee.blockbyblock.domain.model.MealSlotRecord
 import com.dahee.blockbyblock.domain.model.MealType
 import com.dahee.blockbyblock.presentation.block.components.FoodBlock3DView
-import com.dahee.blockbyblock.presentation.block.components.LegoTopViewBlock
+import com.dahee.blockbyblock.presentation.block.components.FoodBlockTopView
+import com.dahee.blockbyblock.presentation.mealplan.components.BentoLunchBoxView
 import com.dahee.blockbyblock.presentation.mealplan.components.MealRecordDialog
 
 @Composable
@@ -78,6 +87,8 @@ fun MealPlanScreen(
             dateLabel = uiState.editingDateLabel,
             selectedBlocks = uiState.slotSelectedBlocks,
             availableBlocks = uiState.slotAvailableBlocks,
+            titleInput = uiState.slotTitleInput,
+            onTitleChange = { viewModel.onTitleInputChange(it) },
             memoInput = uiState.slotMemoInput,
             onMemoChange = { viewModel.onMemoInputChange(it) },
             onMoveToTop = { viewModel.onMoveBlockToTop(it) },
@@ -265,152 +276,145 @@ private fun TodayMealView(
     onPromptDeleteSlot: (MealType) -> Unit
 ) {
     val strings = LocalStrings.current
-    LazyColumn(
+    Column(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // Date Navigator (Left: Previous day / Right: Next day)
-        item {
-            AppCard(
-                modifier = Modifier.fillMaxWidth(),
-                padding = 10.dp
+        // Date Navigator (Clean flat header bar without white elevated card)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Previous day button
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(AppColors.SurfaceVariant.copy(alpha = 0.8f))
+                    .pointerHoverIcon(PointerIcon.Hand)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onPreviousDay
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Previous day button
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Previous Day",
+                    tint = AppColors.TextPrimary,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+
+            // Date Label & Today indicator
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = selectedDateFormatted,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary
+                )
+
+                if (!isSelectedDateToday) {
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.SurfaceVariant)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(AppColors.PrimaryLight)
                             .pointerHoverIcon(PointerIcon.Hand)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                                onClick = onPreviousDay
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Previous Day",
-                            tint = AppColors.TextPrimary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-
-                    // Date Label & Today indicator
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                onClick = onResetToToday
+                            )
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = selectedDateFormatted,
-                            fontSize = 15.sp,
+                            text = strings.backToToday,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = AppColors.TextPrimary
-                        )
-
-                        if (!isSelectedDateToday) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(AppColors.PrimaryLight)
-                                    .pointerHoverIcon(PointerIcon.Hand)
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
-                                        onClick = onResetToToday
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = strings.backToToday,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AppColors.PrimaryDark
-                                )
-                            }
-                        }
-                    }
-
-                    // Next day button
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.SurfaceVariant)
-                            .pointerHoverIcon(PointerIcon.Hand)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onNextDay
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Next Day",
-                            tint = AppColors.TextPrimary,
-                            modifier = Modifier.size(16.dp)
+                            color = AppColors.PrimaryDark
                         )
                     }
                 }
             }
+
+            // Next day button
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(AppColors.SurfaceVariant.copy(alpha = 0.8f))
+                    .pointerHoverIcon(PointerIcon.Hand)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onNextDay
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = "Next Day",
+                    tint = AppColors.TextPrimary,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
         }
 
-        // Subtitle hint
-        item {
-            Text(
-                text = strings.mealPlanHint,
-                fontSize = 12.sp,
-                color = AppColors.TextSecondary,
-                modifier = Modifier.padding(horizontal = 4.dp)
-            )
-        }
-
-        // 4 Meal Slots: Breakfast, Lunch, Dinner, Snack
-        items(MealType.entries.toTypedArray(), key = { it.name }) { mealType ->
-            val slotRecord = currentDayRecord?.getSlot(mealType) ?: MealSlotRecord(mealType)
-            MealSlotCard(
-                mealType = mealType,
-                slot = slotRecord,
-                onClick = { onOpenSlot(mealType) },
-                onDeleteClick = { onPromptDeleteSlot(mealType) }
-            )
-        }
-
-        item {
-            Spacer(modifier = Modifier.height(20.dp))
+        // 4 Meal Slots: Breakfast, Lunch, Dinner, Snack closely positioned
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(bottom = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            MealType.entries.forEach { mealType ->
+                val slotRecord = currentDayRecord?.getSlot(mealType) ?: MealSlotRecord(mealType)
+                MealSlotCard(
+                    mealType = mealType,
+                    slot = slotRecord,
+                    onClick = { onOpenSlot(mealType) },
+                    onDeleteClick = { onPromptDeleteSlot(mealType) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                )
+            }
         }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MealSlotCard(
     mealType: MealType,
     slot: MealSlotRecord,
     onClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
     val hasBlocks = slot.blocks.isNotEmpty()
     val hasMemo = slot.memo.isNotBlank()
     val hasContent = hasBlocks || hasMemo
+    val isSnack = mealType == MealType.SNACK
+    val isUnrecordedAddSlot = isSnack && !hasContent
 
-    val badgeColor = when (mealType) {
-        MealType.BREAKFAST -> Color(0xFFFF9800)
-        MealType.LUNCH -> Color(0xFF4CAF50)
-        MealType.DINNER -> Color(0xFF3F51B5)
-        MealType.SNACK -> Color(0xFF9C27B0)
+    val titleText = when {
+        isUnrecordedAddSlot -> strings.addMealSlot
+        isSnack && slot.customTitle.isNotBlank() -> slot.customTitle
+        else -> strings.mealTypeName(mealType)
     }
 
     AppCard(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .pointerHoverIcon(PointerIcon.Hand)
             .clickable(
@@ -418,41 +422,39 @@ private fun MealSlotCard(
                 indication = null,
                 onClick = onClick
             ),
-        borderColor = if (hasBlocks) AppColors.Primary.copy(alpha = 0.5f) else AppColors.Border,
-        borderWidth = if (hasBlocks) 1.dp else 0.5.dp,
-        padding = 14.dp
+        backgroundColor = if (hasBlocks) AppColors.SurfaceVariant.copy(alpha = 0.35f) else AppColors.SurfaceVariant.copy(alpha = 0.18f),
+        borderColor = if (isUnrecordedAddSlot) AppColors.Border.copy(alpha = 0.25f) else AppColors.Border.copy(alpha = 0.45f),
+        borderWidth = 0.5.dp,
+        elevation = 0.dp,
+        cornerRadius = 14.dp,
+        padding = 8.dp
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // 1. Header: Plain Black Meal Type Text (hidden when unrecorded add slot) + Delete Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(badgeColor.copy(alpha = 0.15f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = strings.mealTypeName(mealType),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = badgeColor
-                        )
-                    }
+                if (!isUnrecordedAddSlot) {
+                    Text(
+                        text = titleText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.TextPrimary
+                    )
+                } else {
+                    Spacer(modifier = Modifier.size(1.dp))
                 }
 
-                // Trash Can Delete Icon Button on top right when slot has content
                 if (hasContent) {
                     Box(
                         modifier = Modifier
-                            .size(28.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .size(24.dp)
+                            .clip(RoundedCornerShape(6.dp))
                             .background(Color(0xFFFFEBEE))
                             .pointerHoverIcon(PointerIcon.Hand)
                             .clickable(
@@ -466,79 +468,149 @@ private fun MealSlotCard(
                             imageVector = Icons.Default.DeleteOutline,
                             contentDescription = strings.delete,
                             tint = Color(0xFFE53935),
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            if (hasBlocks) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    slot.blocks.forEach { item ->
-                        SlotBlockMiniBadge(item = item)
-                    }
-                }
-            } else {
-                Box(
+            // 2. Main Content: [Left 50%: Authentic Bento Box with Food Blocks] + [Right 50%: Block list line by line in order]
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // [Left 50%] Bento Box Container (식단 기록 다이얼로그와 동일한 BentoLunchBoxView 컴포넌트 재사용)
+                BentoLunchBoxView(
+                    blocks = slot.blocks,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(AppColors.SurfaceVariant.copy(alpha = 0.6f))
-                        .padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    blockHeight = 76.dp,
+                    emptyPlaceholder = {
+                        if (isUnrecordedAddSlot) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(2.dp),
+                                modifier = Modifier.alpha(0.22f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = AppColors.TextMuted,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = strings.addMealSlot,
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = AppColors.TextMuted
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = "+",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.TextMuted.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+                )
+
+                // [Right 50%] List of blocks grouped by name + total ml (블록명 × N개, 총 000ml)
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Text(
-                        text = strings.addMealBlockHint(strings.mealTypeName(mealType)),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = AppColors.TextMuted
-                    )
+                    if (hasBlocks) {
+                        val groupedBlocks = remember(slot.blocks) {
+                            slot.blocks.groupBy { it.blockId to it.moldCapacityMl }
+                                .map { (_, items) ->
+                                    val first = items.first()
+                                    Triple(first, items.size, items.sumOf { it.moldCapacityMl })
+                                }
+                        }
+                        val totalCapacityMl = remember(slot.blocks) {
+                            slot.blocks.sumOf { it.moldCapacityMl }
+                        }
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(3.5.dp)
+                        ) {
+                            groupedBlocks.forEach { (sampleBlock, count, _) ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    // Color Indicator
+                                    Box(
+                                        modifier = Modifier
+                                            .size(9.dp)
+                                            .clip(CircleShape)
+                                            .background(AppColors.hexToColor(sampleBlock.blockColorHex))
+                                            .border(0.5.dp, Color.Black.copy(alpha = 0.15f), CircleShape)
+                                    )
+
+                                    // Block Name
+                                    Text(
+                                        text = sampleBlock.blockName,
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AppColors.TextPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    )
+
+                                    // Quantity "× N개"
+                                    Text(
+                                        text = strings.blockCountSuffix(count),
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = AppColors.TextSecondary
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(1.dp))
+
+                            // Total Capacity "총 000ml"
+                            Text(
+                                text = strings.totalCapacity(totalCapacityMl),
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.Primary
+                            )
+                        }
+                    } else if (!isUnrecordedAddSlot) {
+                        Text(
+                            text = strings.mealPlanHint,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = AppColors.TextMuted
+                        )
+                    }
                 }
             }
 
+            // 3. Memo if present
             if (hasMemo) {
-                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = strings.memoPrefix(slot.memo),
-                    fontSize = 12.sp,
-                    color = AppColors.TextSecondary
+                    fontSize = 11.sp,
+                    color = AppColors.TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun SlotBlockMiniBadge(item: MealBlockItem) {
-    val shape = RoundedCornerShape(8.dp)
-    Row(
-        modifier = Modifier
-            .clip(shape)
-            .background(AppColors.SurfaceVariant)
-            .border(0.5.dp, AppColors.Border, shape)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        LegoTopViewBlock(
-            colorHex = item.blockColorHex,
-            moldCapacityMl = item.moldCapacityMl,
-            width = 14.dp,
-            height = 26.dp
-        )
-
-        Text(
-            text = item.blockName,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = AppColors.TextPrimary
-        )
     }
 }
 
@@ -625,7 +697,6 @@ private fun WeekMealView(
         items(weekDays, key = { it.dateString }) { dayModel ->
             val record = dayModel.mealRecord
             val isToday = dayModel.isToday
-            val hasAnyBlocks = record != null && record.totalBlockCount > 0
 
             AppCard(
                 modifier = Modifier
@@ -702,49 +773,111 @@ private fun WeekMealView(
                                 }
                             }
                         }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = strings.editArrow,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = AppColors.PrimaryDark
-                            )
-                        }
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    if (record != null && hasAnyBlocks) {
-                        val allDayBlocks = remember(record) {
-                            MealType.entries.flatMap { record.getSlot(it).blocks }
-                        }
-                        // Stacked pure top-view Lego blocks only
+                    val hasExtraMeal = record != null && (
+                        record.snack.blocks.isNotEmpty() ||
+                        record.snack.memo.isNotBlank() ||
+                        record.snack.customTitle.isNotBlank()
+                    )
+
+                    val displayMealTypes = if (hasExtraMeal) {
+                        listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER, MealType.SNACK)
+                    } else {
+                        listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER)
+                    }
+
+                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                        val totalWidth = maxWidth
+                        val slotWidth = ((totalWidth - 20.dp) / 3).coerceAtLeast(88.dp)
+
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = if (hasExtraMeal) {
+                                Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                            } else {
+                                Modifier.fillMaxWidth()
+                            },
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            allDayBlocks.forEach { item ->
-                                LegoTopViewBlock(
-                                    colorHex = item.blockColorHex,
-                                    moldCapacityMl = item.moldCapacityMl,
-                                    width = 28.dp,
-                                    height = 54.dp
-                                )
+                            displayMealTypes.forEach { mealType ->
+                                val slot = record?.getSlot(mealType)
+                                val blocks = slot?.blocks.orEmpty()
+                                val hasBlocks = blocks.isNotEmpty()
+
+                                val title = when {
+                                    mealType == MealType.SNACK -> slot?.customTitle?.ifBlank { "추가" } ?: "추가"
+                                    else -> strings.mealTypeName(mealType)
+                                }
+
+                                Column(
+                                    modifier = if (hasExtraMeal) {
+                                        Modifier.width(slotWidth)
+                                    } else {
+                                        Modifier.weight(1f)
+                                    },
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    // 1. Meal Type Header Label Above the Box (배경색 없는 검정색 라벨)
+                                    Text(
+                                        text = title,
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AppColors.TextPrimary,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    // 2. Meal Slot Box
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(68.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(if (hasBlocks) AppColors.SurfaceVariant.copy(alpha = 0.75f) else AppColors.SurfaceVariant.copy(alpha = 0.35f))
+                                            .border(
+                                                width = if (hasBlocks) 1.dp else 0.5.dp,
+                                                color = if (hasBlocks) AppColors.Border else AppColors.Border.copy(alpha = 0.4f),
+                                                shape = RoundedCornerShape(12.dp)
+                                            )
+                                            .padding(horizontal = 4.dp, vertical = 4.dp),
+                                        contentAlignment = if (hasBlocks) Alignment.CenterStart else Alignment.Center
+                                    ) {
+                                        if (hasBlocks) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .horizontalScroll(rememberScrollState()),
+                                                horizontalArrangement = Arrangement.Start,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                blocks.forEach { item ->
+                                                    FoodBlockTopView(
+                                                        colorHex = item.blockColorHex,
+                                                        moldCapacityMl = item.moldCapacityMl,
+                                                        height = 54.dp
+                                                    )
+                                                    Spacer(modifier = Modifier.width(3.dp))
+                                                }
+                                            }
+                                        } else {
+                                            Text(
+                                                text = "-",
+                                                fontSize = 15.sp,
+                                                color = AppColors.TextMuted.copy(alpha = 0.4f)
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
-                    } else {
-                        Text(
-                            text = strings.addMealPlanBtn,
-                            fontSize = 12.sp,
-                            color = AppColors.TextMuted
-                        )
                     }
                 }
             }

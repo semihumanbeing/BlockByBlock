@@ -14,7 +14,7 @@ data class FoodBlock(
     val moldCellCount: Int,
     val moldColorHex: String,
     val moldPreset: MoldGridPreset? = null,
-    val blockColorHex: String = "#FF7043", // 3D Lego Food Block Color
+    val blockColorHex: String = "#FF7043", // 3D Food Block Color
     val mainIngredients: List<String>,
     val subIngredients: List<String> = emptyList(),
     val quantity: Int = 1,

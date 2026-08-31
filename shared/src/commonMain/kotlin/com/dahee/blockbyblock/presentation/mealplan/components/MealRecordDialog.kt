@@ -1,6 +1,7 @@
 package com.dahee.blockbyblock.presentation.mealplan.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
@@ -14,12 +15,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -51,7 +58,7 @@ import com.dahee.blockbyblock.core.ui.AppTextField
 import com.dahee.blockbyblock.core.ui.ButtonVariant
 import com.dahee.blockbyblock.domain.model.MealBlockItem
 import com.dahee.blockbyblock.domain.model.MealType
-import com.dahee.blockbyblock.presentation.block.components.LegoTopViewBlock
+import com.dahee.blockbyblock.presentation.block.components.FoodBlockTopView
 import com.dahee.blockbyblock.presentation.mealplan.AvailableBlockPiece
 
 import androidx.compose.foundation.layout.imePadding
@@ -75,6 +82,8 @@ fun MealRecordDialog(
     dateLabel: String,
     selectedBlocks: List<MealBlockItem>,
     availableBlocks: List<AvailableBlockPiece>,
+    titleInput: String = "",
+    onTitleChange: (String) -> Unit = {},
     memoInput: String,
     onMemoChange: (String) -> Unit,
     onMoveToTop: (AvailableBlockPiece) -> Unit,
@@ -113,6 +122,7 @@ fun MealRecordDialog(
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.92f)
+                .widthIn(max = 520.dp)
                 .imePadding()
                 .clip(RoundedCornerShape(20.dp))
                 .background(AppColors.Background)
@@ -135,8 +145,13 @@ fun MealRecordDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
+                        val headerMealName = if (mealType == MealType.SNACK) {
+                            titleInput.ifBlank { "추가" }
+                        } else {
+                            strings.mealTypeName(mealType)
+                        }
                         Text(
-                            text = strings.mealRecordDialogTitle(strings.mealTypeName(mealType)),
+                            text = strings.mealRecordDialogTitle(headerMealName),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = AppColors.TextPrimary
@@ -174,82 +189,46 @@ fun MealRecordDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // 2. Top Selected Blocks Area (Pure Lego Blocks Stacked as in Reference)
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = strings.mealRecordEatingBlocksTitle,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AppColors.TextPrimary
-                        )
-                        if (selectedBlocks.isNotEmpty()) {
-                            Text(
-                                text = strings.mealRecordRemoveHint,
-                                fontSize = 11.sp,
-                                color = AppColors.TextMuted
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    if (selectedBlocks.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(116.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(AppColors.SurfaceVariant.copy(alpha = 0.7f))
-                                .border(1.dp, AppColors.Border, RoundedCornerShape(14.dp))
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = strings.mealRecordEmptyEatingBlocksHint,
-                                fontSize = 13.sp,
-                                color = AppColors.TextMuted
-                            )
-                        }
-                    } else {
-                        // Horizontal stacked tray where 2x4 lego blocks attach side by side like the reference!
+                // 1.5 Snack / Extra Meal Title Input (간식 식단 기록 시 식사 제목 입력창 - 최대 50자 제한)
+                if (mealType == MealType.SNACK) {
+                    Column {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(116.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(AppColors.SurfaceVariant.copy(alpha = 0.5f))
-                                .border(1.dp, AppColors.Border, RoundedCornerShape(14.dp))
-                                .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            selectedBlocks.forEach { item ->
-                                Box(
-                                    modifier = Modifier
-                                        .pointerHoverIcon(PointerIcon.Hand)
-                                        .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null,
-                                            onClick = { onMoveToBottom(item) }
-                                        )
-                                ) {
-                                    // Top-view Lego Food Block from drawable resource matching mold capacity
-                                    LegoTopViewBlock(
-                                        colorHex = item.blockColorHex,
-                                        moldCapacityMl = item.moldCapacityMl,
-                                        height = 96.dp
-                                    )
-                                }
-                            }
+                            Text(
+                                text = strings.mealTitleLabel,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.TextPrimary
+                            )
+                            Text(
+                                text = "${titleInput.length}/50",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = if (titleInput.length >= 50) Color(0xFFE53935) else AppColors.TextMuted
+                            )
                         }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        AppTextField(
+                            value = titleInput,
+                            onValueChange = { if (it.length <= 50) onTitleChange(it) },
+                            placeholder = strings.mealTitlePlaceholder,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
+                // 2. Bento Box Tray (Centered lunchbox container)
+                BentoLunchBoxView(
+                    blocks = selectedBlocks,
+                    isDynamicExpandable = true,
+                    blockHeight = 96.dp,
+                    onBlockClick = onMoveToBottom
+                )
 
                 // 3. Bottom Available Blocks Pool (Grouped Grid by Food Block Type)
                 Column {
@@ -439,8 +418,8 @@ private fun AvailableBlockGridCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // 1. Lego Top View Food Block from drawable resource matching mold capacity
-            LegoTopViewBlock(
+            // 1. Food Block Top View from drawable resource matching mold capacity
+            FoodBlockTopView(
                 colorHex = group.blockColorHex,
                 moldCapacityMl = group.moldCapacityMl,
                 width = 30.dp,
@@ -472,3 +451,6 @@ private fun AvailableBlockGridCard(
         }
     }
 }
+
+
+

@@ -23,24 +23,4 @@ data class Equipment(
         } else {
             moldPreset?.capacityMl ?: 0
         }
-
-    val gridRows: Int
-        get() = when (moldPreset) {
-            MoldGridPreset.ML_500 -> 3
-            MoldGridPreset.ML_250 -> 2
-            MoldGridPreset.ML_125 -> 1
-            MoldGridPreset.ML_75 -> 1
-            MoldGridPreset.CUSTOM -> 2
-            null -> 1
-        }
-
-    val gridCols: Int
-        get() = when (moldPreset) {
-            MoldGridPreset.ML_500 -> 3
-            MoldGridPreset.ML_250 -> 3
-            MoldGridPreset.ML_125 -> 3
-            MoldGridPreset.ML_75 -> 1
-            MoldGridPreset.CUSTOM -> 2
-            null -> 1
-        }
 }

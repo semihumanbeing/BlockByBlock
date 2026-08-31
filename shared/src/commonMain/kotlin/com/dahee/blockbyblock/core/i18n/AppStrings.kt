@@ -47,24 +47,7 @@ interface AppStrings {
     val customCapacityLabel: String
     val customCapacityPlaceholder: String
     val moldColor: String
-    val moldQuickAddTitle: String
-    val moldQuickAddSubtitle: String
     fun blockSizeName(category: BlockSizeCategory): String
-
-    // Home Screen
-    val homeAppSubtitle: String
-    val homeGreeting: String
-    val homeBannerTitle: String
-    val homeBannerSubtitle: String
-    val homeQuickAddMoldTitle: String
-    val homeEquipmentStatusTitle: String
-    val homeManageBtn: String
-    val homeRegisteredMolds: String
-    val homeCookingTools: String
-    val homeNoEquipmentRegistered: String
-    val homeRegisterEquipmentNow: String
-    val homeTodayMealTitle: String
-    val homeInventoryTitle: String
 
     // Equipment Onboarding Screen (Screen 1)
     val onboardingTitle: String
@@ -91,20 +74,13 @@ interface AppStrings {
     val cookingToolListSection: String
     val noMoldsRegistered: String
     val noToolsRegistered: String
+    val emptyEquipmentHint: String
+    val addCustomMoldBtn: String
 
-    // Single Mold / Equipment Edit Dialog
+    // Single Mold Edit Dialog
     val editMoldDialogTitle: String
     val editMoldDialogDeleteBtn: String
     val editMoldDialogSaveBtn: String
-    fun moldDetailSummary(capacityMl: Int, cellCount: Int, quantity: Int): String
-    val equipmentEditTitle: String
-    val equipmentRegisterTitle: String
-    val moldPresetLabelText: String
-    val slotsPerMoldLabel: String
-    val quantityLabel: String
-    val equipmentColorLabel: String
-    val memoLabel: String
-    val memoPlaceholder: String
 
     // ME Screen
     val meTitle: String
@@ -175,6 +151,7 @@ interface AppStrings {
     val historySubtitle: String
     val createBlockSectionCookingTool: String
     val noCookingToolSelected: String
+    val noOwnedCookingTools: String
     val createBlockNoIngredientTooltip: String
 
     // Inventory & Ingredients (Phase 3)
@@ -253,6 +230,11 @@ interface AppStrings {
     val mealRecordMemoLabel: String
     val mealRecordMemoPlaceholder: String
     val mealRecordMinBlockRequired: String
+    val addMealSlot: String
+    val mealTitleLabel: String
+    val mealTitlePlaceholder: String
+    fun totalCapacity(ml: Int): String
+    fun blockCountSuffix(count: Int): String
 
     // Tutorial & Onboarding
     val tutorialWelcomeTitle: String

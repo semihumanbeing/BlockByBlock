@@ -4,12 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
@@ -17,11 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dahee.blockbyblock.core.i18n.AppLanguage
 import com.dahee.blockbyblock.core.i18n.LocalAppLanguage
 import com.dahee.blockbyblock.core.i18n.LocalStrings
@@ -36,7 +27,6 @@ import com.dahee.blockbyblock.presentation.block.BlockInventoryScreen
 import com.dahee.blockbyblock.presentation.block.BlockViewModel
 import com.dahee.blockbyblock.presentation.equipment.EquipmentScreen
 import com.dahee.blockbyblock.presentation.equipment.EquipmentViewModel
-import com.dahee.blockbyblock.presentation.home.HomeScreen
 import com.dahee.blockbyblock.presentation.inventory.IngredientViewModel
 import com.dahee.blockbyblock.presentation.inventory.InventoryScreen
 import com.dahee.blockbyblock.presentation.mealplan.MealPlanScreen
@@ -110,7 +100,7 @@ fun App() {
         val strings = LocalStrings.current
 
         BlockByBlockTheme {
-            // 0. Full Screen Welcome & Nickname Setup (First Onboarding Step with pure background and stacked legos)
+            // 0. Full Screen Welcome & Nickname Setup (First Onboarding Step with pure background and stacked food blocks)
             if (tutorialStep == TutorialStep.WELCOME_PROFILE) {
                 WelcomeProfileScreen(
                     onStart = { name ->
@@ -227,36 +217,4 @@ fun App() {
         }
     }
 }
-}
-
-@Composable
-private fun PlaceholderTabScreen(title: String, desc: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AppColors.Background)
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Default.DateRange,
-                contentDescription = title,
-                tint = AppColors.Primary,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-            Text(
-                text = title,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = AppColors.TextPrimary
-            )
-            Text(
-                text = desc,
-                fontSize = 14.sp,
-                color = AppColors.TextSecondary,
-                modifier = Modifier.padding(top = 6.dp)
-            )
-        }
-    }
 }

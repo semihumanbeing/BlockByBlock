@@ -74,13 +74,12 @@ canvas {
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 32px 36px;
+    padding: 0;
     max-width: 340px;
     width: 100%;
-    background: #FFFFFF;
-    border: 1px solid #E5DDD3; /* AppColors.Border */
-    border-radius: 24px;
-    box-shadow: 0 12px 32px -8px rgba(44, 36, 30, 0.08);
+    background: transparent;
+    border: none;
+    box-shadow: none;
     animation: cardFloat 3s ease-in-out infinite alternate;
 }
 
@@ -89,123 +88,39 @@ canvas {
     100% { transform: translateY(-5px); }
 }
 
-/* 🌿🧀🥩 Flat Pastel LEGO Food Bricks (Taller Vertical, Flat Colors, No Gradients) */
+/* 🌿🧀🥩 Top-View Food Blocks (Authentic food_block_top drawables) */
 .food-assembly-track {
-    display: flex;
-    align-items: center; /* Exactly equal height alignment */
-    justify-content: center;
-    height: 72px;
-    margin-bottom: 18px;
-    position: relative;
-    filter: drop-shadow(0 6px 12px rgba(44, 36, 30, 0.08));
-}
-
-.food-brick {
-    position: relative;
-    height: 58px; /* Taller vertical height */
-    margin: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-sizing: border-box;
-    border-radius: 2px;
+    gap: 4px;
+    height: 76px;
+    margin-bottom: 18px;
+    position: relative;
+    filter: drop-shadow(0 6px 14px rgba(44, 36, 30, 0.12));
+}
+
+.food-brick-img {
+    height: 64px;
+    width: auto;
+    object-fit: contain;
     animation: blockSnapIn 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
     will-change: transform, opacity;
 }
 
-/* 🌿 250ml Wide Brick: Width 48px */
-.brick-wide {
-    width: 48px;
-    padding: 7px 5px;
-}
-
-/* 🧀🥩 125ml Thin Brick: Width 24px */
-.brick-thin {
-    width: 24px;
-    padding: 7px 4px;
-}
-
-/* 2x2 Grid for 4 Studs (Wide Brick) */
-.stud-grid-2x2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    gap: 10px 8px;
-    width: 100%;
-    height: 100%;
-    align-items: center;
-    justify-items: center;
-}
-
-/* 1x2 Grid for 2 Studs (Thin Brick) */
-.stud-grid-1x2 {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-}
-
-/* Clean Flat Pastel LEGO Stud (No Gradients, Simple Vector Feel) */
-.lego-stud {
-    width: 11px;
-    height: 11px;
-    border-radius: 50%;
-    position: relative;
-    box-sizing: border-box;
-}
-
-/* 🌿 1. Pastel Sage Green (250ml, 4 Studs): Flat Color */
-.brick-green {
-    background: #78BA99;
-    border: 1.5px solid #589A79;
-    border-right: none;
-    border-radius: 3px 0 0 3px;
-    box-shadow: 0 3px 0 #4B8567;
+.food-brick-img.brick-green {
     animation-delay: 0.0s;
     z-index: 3;
 }
 
-.brick-green .lego-stud {
-    background: #6FAFA0;
-    border: 1.5px solid #589A79;
-    box-shadow: 0 1.5px 0 #4B8567, inset 0 1px 0.5px rgba(255, 255, 255, 0.45);
-}
-
-/* 🧀 2. Pastel Butter Yellow (125ml, 2 Studs): Flat Color */
-.brick-yellow {
-    background: #F7CE65;
-    border: 1.5px solid #D8A935;
-    border-left: none;
-    border-right: none;
-    border-radius: 0;
-    box-shadow: 0 3px 0 #BA8C20;
+.food-brick-img.brick-yellow {
     animation-delay: 0.12s;
     z-index: 2;
 }
 
-.brick-yellow .lego-stud {
-    background: #F2C455;
-    border: 1.5px solid #D8A935;
-    box-shadow: 0 1.5px 0 #BA8C20, inset 0 1px 0.5px rgba(255, 255, 255, 0.45);
-}
-
-/* 🥩 3. Pastel Coral Terracotta (125ml, 2 Studs): Flat Color */
-.brick-redbrown {
-    background: #E5836C;
-    border: 1.5px solid #C4624C;
-    border-left: none;
-    border-radius: 0 3px 3px 0;
-    box-shadow: 0 3px 0 #A84833;
+.food-brick-img.brick-red {
     animation-delay: 0.24s;
     z-index: 1;
-}
-
-.brick-redbrown .lego-stud {
-    background: #DE7760;
-    border: 1.5px solid #C4624C;
-    box-shadow: 0 1.5px 0 #A84833, inset 0 1px 0.5px rgba(255, 255, 255, 0.45);
 }
 
 /* 슉 → 착! 오른쪽에서 왼쪽으로 빠르게 날아와 1~2px 오버슛 후 조립 고정 */
@@ -224,7 +139,7 @@ canvas {
     }
     72% {
         opacity: 1;
-        transform: translateX(0px);  /* 완벽한 트리콜로 레고 블록 유지 */
+        transform: translateX(0px);  /* 완벽한 트리콜로 푸드 블록 유지 */
     }
     82% {
         opacity: 0;

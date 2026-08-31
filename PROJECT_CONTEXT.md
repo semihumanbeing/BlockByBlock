@@ -258,32 +258,31 @@ shared/src/commonMain/kotlin/com/dahee/blockbyblock/
 │   ├── datasource/MasterIngredientCatalog.kt # 60여종 표준 식재료 마스터 DB
 │   └── repository/
 │       ├── InMemoryEquipmentRepository.kt    # 장비 CRUD & Flow 반응형 저장소
-│       └── InMemoryIngredientRepository.kt   # 식재료 CRUD & 상태/수량/단위 관리
+│       ├── InMemoryIngredientRepository.kt   # 식재료 CRUD & 상태/수량/단위 관리
+│       ├── InMemoryFoodBlockRepository.kt    # 푸드 블록 저장소
+│       └── InMemoryMealRecordRepository.kt   # 식단 기록 저장소
 └── presentation/
-    ├── home/
-    │   └── HomeScreen.kt                 # 홈 대시보드 (장비 요약, 오늘 식단, 보관함)
     ├── navigation/
-    │   ├── AppBottomNav.kt               # 하단 4개 탭 (식단, 보관함, 블록, MY)
+    │   ├── AppBottomNav.kt               # 하단 4개 탭 (식단, 블록, 보관함, MY)
     │   └── NavTab.kt
     ├── mealplan/
     │   ├── MealPlanScreen.kt             # 식단 메인 대시보드 (오늘 일별 식단, 이번 주 7일 타임라인)
     │   ├── MealPlanViewModel.kt          # 식단 기록 및 좌우 날짜 이동 뷰모델
     │   └── components/
-    │       └── MealRecordDialog.kt       # 식단 기록 & 위에서 본 2x4 레고 블록 트레이 스택 다이얼로그
+    │       └── MealRecordDialog.kt       # 식단 기록 & 상단 트레이 스택 다이얼로그
     ├── block/
     │   ├── BlockInventoryScreen.kt       # 음식 블록 재고 관리 화면 (Phase 4)
+    │   ├── CreateBlockScreen.kt          # 새 블록 생성 & 히스토리 불러오기
     │   └── components/
     │       ├── FoodBlock3DView.kt        # 3D 음식 블록 이미지 뷰 (drawable)
-    │       └── LegoTopViewBlock.kt       # 위에서 본 2X4 레고 블록 이미지 뷰 (drawable)
+    │       └── FoodBlockTopView.kt       # 탑뷰 푸드 블록 이미지 뷰 (drawable)
     ├── equipment/
     │   ├── EquipmentViewModel.kt         # 장비 MVI 상태 머신
     │   ├── EquipmentScreen.kt            # 장비 화면 컨테이너 (Onboarding -> Setup -> List, 뒤로가기 지원)
     │   ├── components/
     │   │   ├── MoldView.kt               # 실시간 동적 컬러/칸수 실리콘 몰드 뷰
     │   │   ├── CookingToolVisual.kt      # 조리기구 멀티플랫폼 비주얼 컴포넌트
-    │   │   ├── SingleMoldEditDialog.kt   # 단일 몰드 원터치 수정/삭제 팝업
-    │   │   ├── EquipmentItemCard.kt      # 장비 아이템 카드
-    │   │   └── EquipmentAddEditDialog.kt # 장비 등록/수정 모달
+    │   │   └── SingleMoldEditDialog.kt   # 단일 몰드 원터치 수정/삭제 팝업
     │   └── screens/
     │       ├── EquipmentOnboardingScreen.kt  # 1번 온보딩 화면
     │       ├── EquipmentSetupScreen.kt       # 2번 몰드/기구 설정 화면

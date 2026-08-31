@@ -643,71 +643,86 @@ fun CreateBlockScreen(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        val toolOptions = com.dahee.blockbyblock.domain.model.CookingToolType.entries.filter { it != com.dahee.blockbyblock.domain.model.CookingToolType.CUSTOM }
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            toolOptions.forEach { toolType ->
-                                val isSelected = uiState.selectedCookingToolType == toolType
-                                val toolName = strings.cookingToolName(toolType)
+                        val toolOptions = remember(uiState.availableCookingTools) {
+                            uiState.availableCookingTools.mapNotNull { it.toolType }
+                                .distinct()
+                                .filter { it != com.dahee.blockbyblock.domain.model.CookingToolType.CUSTOM }
+                        }
 
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center,
-                                    modifier = Modifier
-                                        .width(72.dp)
-                                        .pointerHoverIcon(PointerIcon.Hand)
-                                        .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null,
-                                            onClick = { viewModel.onSelectCookingTool(toolType) }
-                                        )
-                                ) {
-                                    Box(
-                                        contentAlignment = Alignment.TopEnd
+                        if (toolOptions.isNotEmpty()) {
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.Start),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                toolOptions.forEach { toolType ->
+                                    val isSelected = uiState.selectedCookingToolType == toolType
+                                    val toolName = strings.cookingToolName(toolType)
+
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center,
+                                        modifier = Modifier
+                                            .width(72.dp)
+                                            .pointerHoverIcon(PointerIcon.Hand)
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null,
+                                                onClick = { viewModel.onSelectCookingTool(toolType) }
+                                            )
                                     ) {
-                                        CookingToolVisual(
-                                            type = toolType,
-                                            size = 50.dp,
-                                            modifier = Modifier.graphicsLayer {
-                                                alpha = if (isSelected) 1.0f else 0.42f
-                                                scaleX = if (isSelected) 1.06f else 0.94f
-                                                scaleY = if (isSelected) 1.06f else 0.94f
-                                            }
-                                        )
+                                        Box(
+                                            contentAlignment = Alignment.TopEnd
+                                        ) {
+                                            CookingToolVisual(
+                                                type = toolType,
+                                                size = 50.dp,
+                                                modifier = Modifier.graphicsLayer {
+                                                    alpha = if (isSelected) 1.0f else 0.42f
+                                                    scaleX = if (isSelected) 1.06f else 0.94f
+                                                    scaleY = if (isSelected) 1.06f else 0.94f
+                                                }
+                                            )
 
-                                        if (isSelected) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(18.dp)
-                                                    .clip(CircleShape)
-                                                    .background(AppColors.Primary),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Check,
-                                                    contentDescription = "Selected",
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(12.dp)
-                                                )
+                                            if (isSelected) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(18.dp)
+                                                        .clip(CircleShape)
+                                                        .background(AppColors.Primary),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Check,
+                                                        contentDescription = "Selected",
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(12.dp)
+                                                    )
+                                                }
                                             }
                                         }
+
+                                        Spacer(modifier = Modifier.height(4.dp))
+
+                                        Text(
+                                            text = toolName,
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) AppColors.PrimaryDark else AppColors.TextSecondary,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1
+                                        )
                                     }
-
-                                    Spacer(modifier = Modifier.height(4.dp))
-
-                                    Text(
-                                        text = toolName,
-                                        fontSize = 11.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) AppColors.PrimaryDark else AppColors.TextSecondary,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 1
-                                    )
                                 }
                             }
+                        } else {
+                            Text(
+                                text = strings.noOwnedCookingTools,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = AppColors.TextMuted,
+                                modifier = Modifier.padding(vertical = 6.dp)
+                            )
                         }
                     }
                 }

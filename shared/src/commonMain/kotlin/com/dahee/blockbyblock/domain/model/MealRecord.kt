@@ -25,7 +25,8 @@ data class MealBlockItem(
 data class MealSlotRecord(
     val mealType: MealType,
     val blocks: List<MealBlockItem> = emptyList(),
-    val memo: String = ""
+    val memo: String = "",
+    val customTitle: String = ""
 )
 
 /**

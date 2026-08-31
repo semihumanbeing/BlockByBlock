@@ -29,6 +29,7 @@ private data class SlotDialogInternalState(
     val mealType: MealType = MealType.LUNCH,
     val selectedBlocks: List<MealBlockItem> = emptyList(),
     val availablePieces: List<AvailableBlockPiece> = emptyList(),
+    val title: String = "",
     val memo: String = ""
 )
 
@@ -84,6 +85,7 @@ class MealPlanViewModel(
             editingMealType = dialog.mealType,
             slotSelectedBlocks = dialog.selectedBlocks,
             slotAvailableBlocks = dialog.availablePieces,
+            slotTitleInput = dialog.title,
             slotMemoInput = dialog.memo
         )
     }.stateIn(
@@ -169,6 +171,8 @@ class MealPlanViewModel(
                 }
             }
 
+            val initialTitle = if (slot.customTitle.isNotBlank()) slot.customTitle else ""
+
             _dialogState.value = SlotDialogInternalState(
                 isOpen = true,
                 dateString = dateString,
@@ -176,6 +180,7 @@ class MealPlanViewModel(
                 mealType = mealType,
                 selectedBlocks = currentSelected,
                 availablePieces = availableList,
+                title = initialTitle,
                 memo = slot.memo
             )
         }
@@ -229,6 +234,13 @@ class MealPlanViewModel(
         )
     }
 
+    fun onTitleInputChange(newTitle: String) {
+        // Enforce maximum 50 characters
+        if (newTitle.length <= 50) {
+            _dialogState.value = _dialogState.value.copy(title = newTitle)
+        }
+    }
+
     fun onMemoInputChange(newMemo: String) {
         _dialogState.value = _dialogState.value.copy(memo = newMemo)
     }
@@ -247,10 +259,17 @@ class MealPlanViewModel(
                     dateString = dialog.dateString
                 )
 
+            val customTitleToSave = if (dialog.mealType == MealType.SNACK) {
+                dialog.title.trim().ifBlank { "간식" }
+            } else {
+                dialog.title.trim()
+            }
+
             val updatedSlot = MealSlotRecord(
                 mealType = dialog.mealType,
                 blocks = dialog.selectedBlocks,
-                memo = dialog.memo.trim()
+                memo = dialog.memo.trim(),
+                customTitle = customTitleToSave
             )
 
             val updatedDay = existingDay.updateSlot(updatedSlot).copy(updatedAt = currentTimeMillis())
