@@ -1,5 +1,6 @@
 package com.dahee.blockbyblock
 
+import com.dahee.blockbyblock.core.i18n.AppLanguage
 import web.navigator.navigator
 
 class JsPlatform: Platform {
@@ -10,6 +11,11 @@ class JsPlatform: Platform {
             ?.let { (startIndex) -> userAgent.substring(startIndex).substringBefore(" ") }
             ?: "Unknown"
     override val isWeb: Boolean = true
+    override val defaultLanguage: AppLanguage
+        get() {
+            val lang = navigator.language.lowercase()
+            return if (lang.startsWith("ko")) AppLanguage.KO else AppLanguage.EN
+        }
 }
 
 actual fun getPlatform(): Platform = JsPlatform()

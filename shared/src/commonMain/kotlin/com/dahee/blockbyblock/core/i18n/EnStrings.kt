@@ -21,6 +21,15 @@ object EnStrings : AppStrings {
     override val back = "Back"
     override val inUse = "In Use"
     override val selected = "Selected"
+    override val loadingMessages = listOf(
+        "Thinking about the shopping list..",
+        "Brainstorming meal prep recipes..",
+        "Defrosting food blocks..",
+        "Turning the fridge into blocks..",
+        "Making ingredients into blocks..",
+        "Picking today's food blocks..",
+        "Finding delicious block combos.."
+    )
     override val unitSlot = "s"
     override val unitPiece = " ea"
     override val unitDay = " days"
@@ -78,6 +87,7 @@ object EnStrings : AppStrings {
     override val toolsSectionSubtitle = "Tap to select the tools you have"
     override val setupSaveBtn = "Save"
     override val errorMinMoldRequired = "Please select at least 1 mold."
+    override val errorCustomCapacityRequired = "Please specify the capacity."
 
     // Equipment List Screen (Screen 3)
     override val listTitle = "My Equipment"
@@ -148,7 +158,7 @@ object EnStrings : AppStrings {
     override val createBlockNoMolds = "No molds registered yet"
     override val createBlockGoToEquipment = "Register molds"
     override val createBlockSectionStorage = "Portion Settings"
-    override val createBlockQuantityLabel = "Block Count"
+    override val createBlockQuantityLabel = "Total Block Count"
     override val createBlockStorageTypeLabel = "Storage Method"
     override val createBlockFreezer = "Freezer"
     override val createBlockFridge = "Fridge"
@@ -229,6 +239,7 @@ object EnStrings : AppStrings {
         MealType.LUNCH -> "Lunch"
         MealType.DINNER -> "Dinner"
         MealType.SNACK -> "Snack"
+        MealType.EXTRA -> "Extra"
     }
     override val deleteMealRecordTitle = "Delete Meal Record"
     override fun deleteMealRecordConfirm(mealType: String) = "Are you sure you want to delete $mealType record?"
@@ -269,7 +280,7 @@ object EnStrings : AppStrings {
     // Tutorial & Onboarding
     override val tutorialWelcomeTitle = "WELCOME!"
     override val tutorialWelcomeSubtitle = "Please enter your nickname"
-    override val tutorialNicknamePlaceholder = "Enter nickname (e.g., Master Chef)"
+    override val tutorialNicknamePlaceholder = "Enter nickname"
     override val tutorialStartBtn = "Get Started (1/4 Equipment) >"
     override val tutorialSkipBtn = "Skip"
     override val tutorialStepEquipmentMsg = "1/4 Equipment: Check or add your silicone molds from presets!"
@@ -284,6 +295,11 @@ object EnStrings : AppStrings {
     override val tutorialStepCompleteBtn = "Finish Tutorial"
     override val tutorialCongratulationsMsg = "Congratulations! You completed the tutorial! Enjoy your portion life!"
     override val tutorialRestartBtn = "Restart Tutorial"
+    override val tutorialRestartConfirmTitle = "Restart Tutorial"
+    override val tutorialRestartConfirmMsg = "Would you like to restart the tutorial from the beginning?"
+    override val tutorialSaveEquipmentConfirmTitle = "Save Equipment"
+    override val tutorialSaveEquipmentConfirmMsg = "Do you want to save selected equipment and proceed to the next step?"
+    override val tutorialSaveAndNextBtn = "Save & Continue"
 
     // Auth & Profile
     override val authLoginTitle = "BlockByBlock"
@@ -309,6 +325,7 @@ object EnStrings : AppStrings {
     override val authTermsPrivacy = "Privacy Policy"
     override val authTermsRequiredBadge = "Required"
     override val authErrorInvalidEmail = "Invalid email format"
+    override val authPasswordPolicyHint = "8+ chars, lowercase letters and numbers"
     override val authErrorPasswordPolicy = "Password must be at least 8 characters and include numbers and lowercase letters"
     override val authErrorPasswordMismatch = "Passwords do not match"
 

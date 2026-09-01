@@ -297,7 +297,7 @@ private fun MoldItemCard(
                 onValueChange = onQuantitySet,
                 suffix = strings.unitPiece,
                 step = 1,
-                minValue = 0
+                minValue = 1
             )
 
             Spacer(modifier = Modifier.width(8.dp))

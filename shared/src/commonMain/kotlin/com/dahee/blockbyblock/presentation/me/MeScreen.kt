@@ -69,6 +69,7 @@ fun MeScreen(
     var isEditProfileDialogOpen by remember { mutableStateOf(false) }
     var isLogoutDialogOpen by remember { mutableStateOf(false) }
     var isDeleteAccountDialogOpen by remember { mutableStateOf(false) }
+    var isRestartTutorialDialogOpen by remember { mutableStateOf(false) }
 
     // Edit Profile Modal Dialog
     if (isEditProfileDialogOpen) {
@@ -79,6 +80,54 @@ fun MeScreen(
                 isEditProfileDialogOpen = false
             },
             onDismiss = { isEditProfileDialogOpen = false }
+        )
+    }
+
+    // Restart Tutorial Confirmation Dialog
+    if (isRestartTutorialDialogOpen) {
+        AlertDialog(
+            onDismissRequest = { isRestartTutorialDialogOpen = false },
+            title = {
+                Text(
+                    text = strings.tutorialRestartConfirmTitle,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = strings.tutorialRestartConfirmMsg,
+                    fontSize = 14.sp,
+                    color = AppColors.TextSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        isRestartTutorialDialogOpen = false
+                        onRestartTutorial()
+                    }
+                ) {
+                    Text(
+                        text = strings.done,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.Primary
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { isRestartTutorialDialogOpen = false }) {
+                    Text(
+                        text = strings.cancel,
+                        fontSize = 14.sp,
+                        color = AppColors.TextSecondary
+                    )
+                }
+            },
+            containerColor = AppColors.Surface,
+            shape = RoundedCornerShape(16.dp)
         )
     }
 
@@ -383,7 +432,7 @@ fun MeScreen(
             item {
                 AppCard(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = onRestartTutorial,
+                    onClick = { isRestartTutorialDialogOpen = true },
                     padding = 16.dp
                 ) {
                     Row(

@@ -95,7 +95,8 @@ fun MealRecordDialog(
     onApplyPreset: (MealPreset) -> Unit = {},
     onDeletePreset: (String) -> Unit = {},
     onSave: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onCreateBlockClick: (() -> Unit)? = null
 ) {
     val strings = LocalStrings.current
     val focusManager = LocalFocusManager.current
@@ -153,8 +154,8 @@ fun MealRecordDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        val headerMealName = if (mealType == MealType.SNACK) {
-                            titleInput.ifBlank { "추가" }
+                        val headerMealName = if (mealType == MealType.SNACK || mealType == MealType.EXTRA) {
+                            titleInput.ifBlank { if (mealType == MealType.SNACK) "간식" else "추가" }
                         } else {
                             strings.mealTypeName(mealType)
                         }
@@ -197,8 +198,8 @@ fun MealRecordDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                // 1.5 Snack / Extra Meal Title Input (간식 식단 기록 시 식사 제목 입력창 - 최대 50자 제한)
-                if (mealType == MealType.SNACK) {
+                // 1.5 Snack / Extra Meal Title Input (간식 / 추가 식단 기록 시 식사 제목 입력창 - 최대 50자 제한)
+                if (mealType == MealType.SNACK || mealType == MealType.EXTRA) {
                     Column {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -421,11 +422,23 @@ fun MealRecordDialog(
                                 .padding(16.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = strings.mealRecordNoBlocksInStock,
-                                fontSize = 13.sp,
-                                color = AppColors.TextMuted
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = strings.mealRecordNoBlocksInStock,
+                                    fontSize = 13.sp,
+                                    color = AppColors.TextMuted
+                                )
+                                if (onCreateBlockClick != null) {
+                                    AppButton(
+                                        text = strings.blockCreateBtn,
+                                        variant = ButtonVariant.SECONDARY,
+                                        onClick = onCreateBlockClick
+                                    )
+                                }
+                            }
                         }
                     } else if (blockGroups.isEmpty()) {
                         Box(
@@ -665,28 +678,8 @@ private fun SavedMealPresetCard(
                 blocks = preset.blocks,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(60.dp)
+                    .height(84.dp)
             )
-
-            // Bottom Apply Tag
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "${preset.blocks.size}개 블록",
-                    fontSize = 10.5.sp,
-                    color = AppColors.TextSecondary
-                )
-
-                Text(
-                    text = strings.applyPreset,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AppColors.Primary
-                )
-            }
         }
     }
 }

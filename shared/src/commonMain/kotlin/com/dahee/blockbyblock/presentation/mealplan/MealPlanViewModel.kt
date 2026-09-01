@@ -269,8 +269,8 @@ class MealPlanViewModel(
                     dateString = dialog.dateString
                 )
 
-            val customTitleToSave = if (dialog.mealType == MealType.SNACK) {
-                dialog.title.trim().ifBlank { "간식" }
+            val customTitleToSave = if (dialog.mealType == MealType.SNACK || dialog.mealType == MealType.EXTRA) {
+                dialog.title.trim().ifBlank { if (dialog.mealType == MealType.SNACK) "간식" else "추가" }
             } else {
                 dialog.title.trim()
             }
@@ -298,7 +298,8 @@ class MealPlanViewModel(
                 updatedDay.breakfast.memo.isBlank() &&
                 updatedDay.lunch.memo.isBlank() &&
                 updatedDay.dinner.memo.isBlank() &&
-                updatedDay.snack.memo.isBlank()
+                updatedDay.snack.memo.isBlank() &&
+                updatedDay.extra.memo.isBlank()
             ) {
                 mealRecordRepository.deleteMealRecord(updatedDay.id)
             } else {

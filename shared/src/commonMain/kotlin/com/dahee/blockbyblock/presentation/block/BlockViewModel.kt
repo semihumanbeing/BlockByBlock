@@ -90,36 +90,56 @@ class BlockViewModel(
 
     fun onApplyHistoryBlock(history: FoodBlock) {
         _uiState.update { state ->
-            val matchedIngredientIds = state.inStockIngredients
-                .filter { history.mainIngredients.contains(it.name) }
-                .map { it.id }
-                .toSet()
-            val moldId = history.moldId.takeIf { id -> state.availableMolds.any { it.id == id } }
-                ?: state.selectedMoldId
-            val mold = state.availableMolds.find { it.id == moldId }
-            val moldCellCount = (mold?.cellCount ?: history.moldCellCount).coerceAtLeast(1)
-            val moldCount = (history.quantity / moldCellCount).coerceAtLeast(1)
+            if (state.customBlockName == history.name) {
+                // Deselect / Reset to blank
+                val mold = state.availableMolds.find { it.id == state.selectedMoldId } ?: state.availableMolds.firstOrNull()
+                val initialQty = (mold?.cellCount ?: 1)
+                state.copy(
+                    customBlockName = "",
+                    selectedBlockColorHex = FoodBlockPalette.defaultColorHex,
+                    selectedCookingToolType = null,
+                    selectedIngredientIds = emptySet(),
+                    subIngredients = emptyList(),
+                    selectedMoldCount = 1,
+                    blockQuantity = initialQty,
+                    blockQuantityInput = initialQty.toString(),
+                    shelfLifeDaysInput = "90"
+                )
+            } else {
+                val matchedIngredientIds = state.inStockIngredients
+                    .filter { history.mainIngredients.contains(it.name) }
+                    .map { it.id }
+                    .toSet()
+                val moldId = history.moldId.takeIf { id -> state.availableMolds.any { it.id == id } }
+                    ?: state.selectedMoldId
+                val mold = state.availableMolds.find { it.id == moldId }
+                val moldCellCount = (mold?.cellCount ?: history.moldCellCount).coerceAtLeast(1)
+                val moldCount = (history.quantity / moldCellCount).coerceAtLeast(1)
 
-            state.copy(
-                customBlockName = history.name,
-                selectedBlockColorHex = history.blockColorHex,
-                selectedCookingToolType = history.cookingToolType,
-                selectedIngredientIds = matchedIngredientIds,
-                subIngredients = history.subIngredients,
-                selectedMoldId = moldId,
-                selectedMoldCount = moldCount,
-                blockQuantity = history.quantity,
-                blockQuantityInput = history.quantity.toString(),
-                storageType = history.storageType,
-                shelfLifeDaysInput = history.shelfLifeDays.toString()
-            )
+                state.copy(
+                    customBlockName = history.name,
+                    selectedBlockColorHex = history.blockColorHex,
+                    selectedCookingToolType = history.cookingToolType,
+                    selectedIngredientIds = matchedIngredientIds,
+                    subIngredients = history.subIngredients,
+                    selectedMoldId = moldId,
+                    selectedMoldCount = moldCount,
+                    blockQuantity = history.quantity,
+                    blockQuantityInput = history.quantity.toString(),
+                    storageType = history.storageType,
+                    shelfLifeDaysInput = history.shelfLifeDays.toString()
+                )
+            }
         }
     }
 
     fun onOpenCreateScreen() {
         _uiState.update { state ->
-            val firstMold = state.availableMolds.firstOrNull()
-            val initialMoldId = state.selectedMoldId ?: firstMold?.id
+            val matchingMold = if (state.selectedCapacityMl != null) {
+                state.availableMolds.find { it.displayCapacity == state.selectedCapacityMl }
+            } else null
+            val initialMold = matchingMold ?: state.availableMolds.firstOrNull()
+            val initialMoldId = initialMold?.id ?: state.selectedMoldId
             val mold = state.availableMolds.find { it.id == initialMoldId }
             val initialMoldCount = 1
             val initialQty = (mold?.cellCount ?: 1) * initialMoldCount

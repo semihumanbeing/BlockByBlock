@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -46,6 +47,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -70,6 +79,7 @@ import com.dahee.blockbyblock.presentation.mealplan.components.MealRecordDialog
 @Composable
 fun MealPlanScreen(
     viewModel: MealPlanViewModel,
+    onCreateBlockClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
@@ -79,6 +89,22 @@ fun MealPlanScreen(
     // Delete Confirmation Dialog State
     var pendingDeleteMealType by remember { mutableStateOf<MealType?>(null) }
     var pendingDeleteDateString by remember { mutableStateOf<String?>(null) }
+
+    // Meal Saved Transient Notice Toast State
+    var showSavedNotice by remember { mutableStateOf(false) }
+
+    LaunchedEffect(viewModel) {
+        viewModel.onSlotSavedListener = {
+            showSavedNotice = true
+        }
+    }
+
+    LaunchedEffect(showSavedNotice) {
+        if (showSavedNotice) {
+            delay(2000)
+            showSavedNotice = false
+        }
+    }
 
     // Meal Slot Edit Dialog
     if (uiState.isSlotDialogOpen) {
@@ -98,7 +124,11 @@ fun MealPlanScreen(
             onApplyPreset = { viewModel.onApplyPreset(it) },
             onDeletePreset = { viewModel.onDeletePreset(it) },
             onSave = { viewModel.onSaveSlot() },
-            onDismiss = { viewModel.onCloseSlotDialog() }
+            onDismiss = { viewModel.onCloseSlotDialog() },
+            onCreateBlockClick = {
+                viewModel.onCloseSlotDialog()
+                onCreateBlockClick?.invoke()
+            }
         )
     }
 
@@ -162,66 +192,106 @@ fun MealPlanScreen(
         )
     }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(AppColors.Background)
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) {
-                focusManager.clearFocus()
-            }
-            .padding(horizontal = 16.dp)
     ) {
-        Spacer(modifier = Modifier.height(12.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) {
+                    focusManager.clearFocus()
+                }
+                .padding(horizontal = 16.dp)
+        ) {
+            Spacer(modifier = Modifier.height(12.dp))
 
-        // 1. Top Segmented Tab Switcher [오늘/일별 식단] | [이번 주]
-        MealPlanTabSwitcher(
-            selectedTab = uiState.selectedTab,
-            onSelectTab = { viewModel.onSelectTab(it) }
-        )
+            // 1. Top Segmented Tab Switcher [오늘/일별 식단] | [이번 주]
+            MealPlanTabSwitcher(
+                selectedTab = uiState.selectedTab,
+                onSelectTab = { viewModel.onSelectTab(it) }
+            )
 
-        Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-        // 2. Tab Content
-        when (uiState.selectedTab) {
-            MealPlanTab.TODAY -> TodayMealView(
-                selectedDateFormatted = uiState.selectedDateFormatted,
-                selectedDateString = uiState.selectedDateString,
-                isSelectedDateToday = uiState.isSelectedDateToday,
-                currentDayRecord = uiState.currentDayMealRecord,
-                onPreviousDay = { viewModel.onPreviousDay() },
-                onNextDay = { viewModel.onNextDay() },
-                onResetToToday = { viewModel.onResetToToday() },
-                onOpenSlot = { mealType ->
-                    viewModel.onOpenSlotDialog(
-                        dateString = uiState.selectedDateString,
-                        dateLabel = uiState.selectedDateFormatted,
-                        mealType = mealType
+            // 2. Tab Content
+            when (uiState.selectedTab) {
+                MealPlanTab.TODAY -> TodayMealView(
+                    selectedDateFormatted = uiState.selectedDateFormatted,
+                    selectedDateString = uiState.selectedDateString,
+                    isSelectedDateToday = uiState.isSelectedDateToday,
+                    currentDayRecord = uiState.currentDayMealRecord,
+                    onPreviousDay = { viewModel.onPreviousDay() },
+                    onNextDay = { viewModel.onNextDay() },
+                    onResetToToday = { viewModel.onResetToToday() },
+                    onOpenSlot = { mealType ->
+                        viewModel.onOpenSlotDialog(
+                            dateString = uiState.selectedDateString,
+                            dateLabel = uiState.selectedDateFormatted,
+                            mealType = mealType
+                        )
+                    },
+                    onPromptDeleteSlot = { mealType ->
+                        pendingDeleteMealType = mealType
+                        pendingDeleteDateString = uiState.selectedDateString
+                    },
+                    onSavePresetSlot = { mealType ->
+                        viewModel.onSaveSlotAsPreset(uiState.selectedDateString, mealType)
+                    }
+                )
+                MealPlanTab.WEEK -> WeekMealView(
+                    currentWeekLabel = uiState.currentWeekLabel,
+                    weekDays = uiState.weekDays,
+                    onPreviousWeek = { viewModel.onPreviousWeek() },
+                    onNextWeek = { viewModel.onNextWeek() },
+                    onCurrentWeek = { viewModel.onCurrentWeek() },
+                    onSelectDate = { dateString ->
+                        viewModel.onSelectDateAndOpenDayView(dateString)
+                    },
+                    onOpenDaySlot = { dateString, dateLabel, mealType ->
+                        viewModel.onOpenSlotDialog(dateString, dateLabel, mealType)
+                    }
+                )
+            }
+        }
+
+        // Small Toast/Notice Badge: "식단이 저장되었습니다"
+        AnimatedVisibility(
+            visible = showSavedNotice,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { 30 }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { 30 }),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF2C241E).copy(alpha = 0.92f))
+                    .padding(horizontal = 16.dp, vertical = 9.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = AppColors.Primary,
+                        modifier = Modifier.size(15.dp)
                     )
-                },
-                onPromptDeleteSlot = { mealType ->
-                    pendingDeleteMealType = mealType
-                    pendingDeleteDateString = uiState.selectedDateString
-                },
-                onSavePresetSlot = { mealType ->
-                    viewModel.onSaveSlotAsPreset(uiState.selectedDateString, mealType)
+                    Text(
+                        text = strings.presetSaved,
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
+                    )
                 }
-            )
-            MealPlanTab.WEEK -> WeekMealView(
-                currentWeekLabel = uiState.currentWeekLabel,
-                weekDays = uiState.weekDays,
-                onPreviousWeek = { viewModel.onPreviousWeek() },
-                onNextWeek = { viewModel.onNextWeek() },
-                onCurrentWeek = { viewModel.onCurrentWeek() },
-                onSelectDate = { dateString ->
-                    viewModel.onSelectDateAndOpenDayView(dateString)
-                },
-                onOpenDaySlot = { dateString, dateLabel, mealType ->
-                    viewModel.onOpenSlotDialog(dateString, dateLabel, mealType)
-                }
-            )
+            }
         }
     }
 }
@@ -381,7 +451,18 @@ private fun TodayMealView(
             }
         }
 
-        // 4 Meal Slots: Breakfast, Lunch, Dinner, Snack closely positioned
+        // 5 Meal Slots: Breakfast, Lunch, Dinner, Snack, Extra (up to 5 meals)
+        val visibleSlots = remember(currentDayRecord) {
+            val list = mutableListOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER)
+            val snackRecord = currentDayRecord?.snack
+            val hasSnack = snackRecord != null && (snackRecord.blocks.isNotEmpty() || snackRecord.memo.isNotBlank())
+            list.add(MealType.SNACK)
+            if (hasSnack) {
+                list.add(MealType.EXTRA)
+            }
+            list
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -389,8 +470,14 @@ private fun TodayMealView(
                 .padding(bottom = 4.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            MealType.entries.forEach { mealType ->
+            visibleSlots.forEach { mealType ->
                 val slotRecord = currentDayRecord?.getSlot(mealType) ?: MealSlotRecord(mealType)
+                val hasBlocks = slotRecord.blocks.isNotEmpty()
+                val hasMemo = slotRecord.memo.isNotBlank()
+                val hasContent = hasBlocks || hasMemo
+                val isAddSlotType = mealType == MealType.SNACK || mealType == MealType.EXTRA
+                val isUnrecordedAddSlot = isAddSlotType && !hasContent
+
                 MealSlotCard(
                     mealType = mealType,
                     slot = slotRecord,
@@ -399,7 +486,7 @@ private fun TodayMealView(
                     onDeleteClick = { onPromptDeleteSlot(mealType) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)
+                        .weight(if (isUnrecordedAddSlot) 0.45f else 1f)
                 )
             }
         }
@@ -419,14 +506,53 @@ private fun MealSlotCard(
     val hasBlocks = slot.blocks.isNotEmpty()
     val hasMemo = slot.memo.isNotBlank()
     val hasContent = hasBlocks || hasMemo
-    val isSnack = mealType == MealType.SNACK
-    val isUnrecordedAddSlot = isSnack && !hasContent
+    val isAddSlotType = mealType == MealType.SNACK || mealType == MealType.EXTRA
+    val isUnrecordedAddSlot = isAddSlotType && !hasContent
 
-    val titleText = when {
-        isUnrecordedAddSlot -> strings.addMealSlot
-        isSnack && slot.customTitle.isNotBlank() -> slot.customTitle
-        else -> strings.mealTypeName(mealType)
+    if (isUnrecordedAddSlot) {
+        AppCard(
+            modifier = modifier
+                .fillMaxWidth()
+                .pointerHoverIcon(PointerIcon.Hand)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onClick
+                ),
+            backgroundColor = AppColors.SurfaceVariant.copy(alpha = 0.25f),
+            borderColor = AppColors.Border.copy(alpha = 0.6f),
+            borderWidth = 1.dp,
+            elevation = 0.dp,
+            cornerRadius = 14.dp,
+            padding = 8.dp
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        tint = AppColors.TextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = strings.addMealSlot,
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.TextSecondary
+                    )
+                }
+            }
+        }
+        return
     }
+
+    val titleText = if (isAddSlotType && slot.customTitle.isNotBlank()) slot.customTitle else strings.mealTypeName(mealType)
 
     AppCard(
         modifier = modifier
@@ -438,7 +564,7 @@ private fun MealSlotCard(
                 onClick = onClick
             ),
         backgroundColor = if (hasBlocks) AppColors.SurfaceVariant.copy(alpha = 0.35f) else AppColors.SurfaceVariant.copy(alpha = 0.18f),
-        borderColor = if (isUnrecordedAddSlot) AppColors.Border.copy(alpha = 0.25f) else AppColors.Border.copy(alpha = 0.45f),
+        borderColor = AppColors.Border.copy(alpha = 0.45f),
         borderWidth = 0.5.dp,
         elevation = 0.dp,
         cornerRadius = 14.dp,
@@ -448,7 +574,7 @@ private fun MealSlotCard(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // 1. Header: Plain Black Meal Type Text (or disabled '식사 추가' on top-left) + Save Preset + Delete Button
+            // 1. Header: Plain Black Meal Type Text + Save Preset + Delete Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -458,7 +584,7 @@ private fun MealSlotCard(
                     text = titleText,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isUnrecordedAddSlot) AppColors.TextMuted.copy(alpha = 0.7f) else AppColors.TextPrimary
+                    color = AppColors.TextPrimary
                 )
 
                 if (hasContent) {
@@ -515,33 +641,12 @@ private fun MealSlotCard(
                         .fillMaxHeight(),
                     blockHeight = 76.dp,
                     emptyPlaceholder = {
-                        if (isUnrecordedAddSlot) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(3.dp),
-                                modifier = Modifier.alpha(0.55f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = null,
-                                    tint = AppColors.TextMuted,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Text(
-                                    text = strings.addMealSlot,
-                                    fontSize = 13.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AppColors.TextMuted
-                                )
-                            }
-                        } else {
-                            Text(
-                                text = "+",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AppColors.TextMuted.copy(alpha = 0.5f)
-                            )
-                        }
+                        Text(
+                            text = "+",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.TextMuted.copy(alpha = 0.5f)
+                        )
                     }
                 )
 
@@ -568,27 +673,29 @@ private fun MealSlotCard(
                             groupedBlocks.forEach { (sampleBlock, count) ->
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
+                                    verticalAlignment = Alignment.Top,
                                     horizontalArrangement = Arrangement.spacedBy(5.dp)
                                 ) {
-                                    // Color Indicator
+                                    // Color Indicator (aligned with the first line of text)
                                     Box(
                                         modifier = Modifier
-                                            .size(9.dp)
+                                            .padding(top = 4.dp)
+                                            .size(8.dp)
                                             .clip(CircleShape)
                                             .background(AppColors.hexToColor(sampleBlock.blockColorHex))
                                             .border(0.5.dp, Color.Black.copy(alpha = 0.15f), CircleShape)
                                     )
 
-                                    // Block Name
+                                    // Block Name (Wraps to line below when long)
                                     Text(
                                         text = sampleBlock.blockName,
-                                        fontSize = 12.5.sp,
+                                        fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = AppColors.TextPrimary,
-                                        maxLines = 1,
+                                        lineHeight = 15.sp,
+                                        maxLines = 2,
                                         overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f, fill = false)
+                                        modifier = Modifier.weight(1f)
                                     )
 
                                     // Quantity "× N개"
@@ -596,18 +703,12 @@ private fun MealSlotCard(
                                         text = strings.blockCountSuffix(count),
                                         fontSize = 11.5.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = AppColors.TextSecondary
+                                        color = AppColors.TextSecondary,
+                                        modifier = Modifier.padding(top = 1.dp)
                                     )
                                 }
                             }
                         }
-                    } else if (isUnrecordedAddSlot) {
-                        Text(
-                            text = strings.addMealSlot,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AppColors.TextMuted.copy(alpha = 0.45f)
-                        )
                     } else {
                         Text(
                             text = strings.mealPlanHint,
@@ -645,21 +746,7 @@ private fun WeekMealView(
 ) {
     val strings = LocalStrings.current
 
-    // Check if any day in the week has an extra meal/snack recorded
-    val hasAnyExtraMeal = weekDays.any { day ->
-        val record = day.mealRecord
-        record != null && (
-            record.snack.blocks.isNotEmpty() ||
-            record.snack.memo.isNotBlank() ||
-            record.snack.customTitle.isNotBlank()
-        )
-    }
-
-    val displayMealTypes = if (hasAnyExtraMeal) {
-        listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER, MealType.SNACK)
-    } else {
-        listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER)
-    }
+    val mainMealTypes = listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER)
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -723,7 +810,7 @@ private fun WeekMealView(
             }
         }
 
-        // 2. 7 Days Compact Bento Rows (일별 식단과 동일한 은은한 배경 톤 & 미세 테두리)
+        // 2. 7 Days Compact Bento Rows
         weekDays.forEach { dayModel ->
             val record = dayModel.mealRecord
             val isToday = dayModel.isToday
@@ -731,13 +818,20 @@ private fun WeekMealView(
                 record.breakfast.blocks.isNotEmpty() ||
                 record.lunch.blocks.isNotEmpty() ||
                 record.dinner.blocks.isNotEmpty() ||
-                record.snack.blocks.isNotEmpty()
+                record.snack.blocks.isNotEmpty() ||
+                record.extra.blocks.isNotEmpty()
             )
+
+            val extraMealTypes = listOf(MealType.SNACK, MealType.EXTRA).filter { type ->
+                val slot = record?.getSlot(type)
+                slot != null && (slot.blocks.isNotEmpty() || slot.memo.isNotBlank())
+            }
+            val hasExtra = extraMealTypes.isNotEmpty()
 
             AppCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
+                    .weight(if (hasExtra) 1.45f else 1f)
                     .pointerHoverIcon(PointerIcon.Hand)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -755,65 +849,118 @@ private fun WeekMealView(
                 cornerRadius = 14.dp,
                 padding = 6.dp
             ) {
-                BoxWithConstraints(
+                Row(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    val computedHeight = (maxHeight - 8.dp).coerceIn(34.dp, 56.dp)
-
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    // Left: Date Badge (요일 + 월/일)
+                    Column(
+                        modifier = Modifier
+                            .width(46.dp)
+                            .fillMaxHeight(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        // Left: Date Badge (요일 + 월/일)
-                        Column(
+                        Text(
+                            text = dayModel.dayOfWeekName,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = when {
+                                isToday -> AppColors.Primary
+                                dayModel.dayOfWeekName == "일" -> Color(0xFFD32F2F)
+                                dayModel.dayOfWeekName == "토" -> Color(0xFF1976D2)
+                                else -> AppColors.TextPrimary
+                            }
+                        )
+                        Text(
+                            text = dayModel.monthDayDisplay,
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = if (isToday) AppColors.Primary else AppColors.TextSecondary
+                        )
+                    }
+
+                    // Right: Authentic Bento Slots (Line 1: Main 3 meals / Line 2: Extra meals if recorded)
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        // Line 1: Main 3 meals (아침, 점심, 저녁 - 3 Bento Boxes)
+                        Row(
                             modifier = Modifier
-                                .width(50.dp)
-                                .fillMaxHeight(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                                .fillMaxWidth()
+                                .weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = dayModel.dayOfWeekName,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = when {
-                                    isToday -> AppColors.Primary
-                                    dayModel.dayOfWeekName == "일" -> Color(0xFFD32F2F)
-                                    dayModel.dayOfWeekName == "토" -> Color(0xFF1976D2)
-                                    else -> AppColors.TextPrimary
-                                }
-                            )
-                            Text(
-                                text = dayModel.monthDayDisplay,
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = if (isToday) AppColors.Primary else AppColors.TextSecondary
-                            )
+                            mainMealTypes.forEach { mealType ->
+                                val slot = record?.getSlot(mealType)
+                                val blocks = slot?.blocks.orEmpty()
+
+                                BentoLunchBoxView(
+                                    blocks = blocks,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight(),
+                                    emptyPlaceholder = {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(4.dp)
+                                                .clip(CircleShape)
+                                                .background(AppColors.TextMuted.copy(alpha = 0.3f))
+                                        )
+                                    }
+                                )
+                            }
                         }
 
-                        // Right: Authentic Bento Slots (아침 / 점심 / 저녁 / 추가 - BentoLunchBoxView 공용 컴포넌트 재사용)
-                        displayMealTypes.forEach { mealType ->
-                            val slot = record?.getSlot(mealType)
-                            val blocks = slot?.blocks.orEmpty()
-
-                            BentoLunchBoxView(
-                                blocks = blocks,
+                        // Line 2 (Only if 4th/5th meals exist): Extra meals shown on next line
+                        if (hasExtra) {
+                            Spacer(modifier = Modifier.height(3.dp))
+                            Row(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight(),
-                                emptyPlaceholder = {
-                                    Box(
+                                    .fillMaxWidth()
+                                    .weight(0.9f),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                extraMealTypes.forEach { mealType ->
+                                    val slot = record?.getSlot(mealType)
+                                    val blocks = slot?.blocks.orEmpty()
+
+                                    BentoLunchBoxView(
+                                        blocks = blocks,
                                         modifier = Modifier
-                                            .size(4.dp)
-                                            .clip(CircleShape)
-                                            .background(AppColors.TextMuted.copy(alpha = 0.3f))
+                                            .weight(1f)
+                                            .fillMaxHeight(),
+                                        emptyPlaceholder = {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(4.dp)
+                                                    .clip(CircleShape)
+                                                    .background(AppColors.TextMuted.copy(alpha = 0.3f))
+                                            )
+                                        }
                                     )
                                 }
-                            )
+                                if (extraMealTypes.size == 1) {
+                                    Spacer(modifier = Modifier.weight(2f))
+                                } else if (extraMealTypes.size == 2) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
                         }
                     }
+
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "View Day",
+                        tint = if (isToday) AppColors.Primary else AppColors.TextMuted.copy(alpha = 0.4f),
+                        modifier = Modifier.size(15.dp)
+                    )
                 }
             }
         }

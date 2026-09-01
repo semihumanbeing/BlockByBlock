@@ -72,7 +72,7 @@ fun SingleMoldEditDialog(
         MoldGridPreset.ML_250 -> Triple(listOf(2, 4, 8), 2, 1)
         MoldGridPreset.ML_125 -> Triple(listOf(4, 6, 8), 2, 1)
         MoldGridPreset.ML_75 -> Triple(listOf(8, 16, 24), 4, 4)
-        MoldGridPreset.CUSTOM -> Triple(listOf(8, 16, 24), 4, 4)
+        MoldGridPreset.CUSTOM -> Triple(listOf(6, 8, 16), 2, 1)
     }
 
     Dialog(onDismissRequest = onDismiss) {

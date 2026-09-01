@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -76,6 +78,7 @@ enum class AuthMode {
 fun AuthScreen(
     onLoginSuccess: (email: String) -> Unit,
     onSignUpSuccess: (email: String) -> Unit,
+    onSkip: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var mode by remember { mutableStateOf(AuthMode.LOGIN) }
@@ -112,27 +115,59 @@ fun AuthScreen(
         modifier = modifier
             .fillMaxSize()
             .background(AppColors.Background)
+            .safeDrawingPadding()
             .imePadding()
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
             ) {
                 focusManager.clearFocus()
-            }
+            },
+        contentAlignment = Alignment.Center
     ) {
+        // Skip Button for LOGIN mode (pinned comfortably at top right)
+        if (mode == AuthMode.LOGIN && onSkip != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopEnd)
+                    .padding(top = 16.dp, end = 16.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Text(
+                    text = strings.tutorialSkipBtn,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AppColors.TextMuted,
+                    modifier = Modifier
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() },
+                            onClick = onSkip
+                        )
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                )
+            }
+        }
+
+        // Center Content Container
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .widthIn(max = 440.dp)
+                .fillMaxWidth()
+                .align(Alignment.Center)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 24.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Spacer(modifier = Modifier.height(10.dp))
-
             // Top Header: Back button for SIGN_UP mode
             if (mode == AuthMode.SIGN_UP) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -165,8 +200,6 @@ fun AuthScreen(
                         color = AppColors.TextPrimary
                     )
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
             } else {
                 // Stacked 3D Food Blocks Hero Visual for LOGIN mode
                 Box(
@@ -374,6 +407,27 @@ fun AuthScreen(
                                 fontWeight = FontWeight.Medium,
                                 color = Color(0xFFE53935)
                             )
+                        } else if (mode == AuthMode.SIGN_UP) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                if (isPasswordPolicyMet) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = AppColors.Primary,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
+                                Text(
+                                    text = strings.authPasswordPolicyHint,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = if (isPasswordPolicyMet) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (isPasswordPolicyMet) AppColors.Primary else AppColors.TextMuted
+                                )
+                            }
                         }
                     }
 

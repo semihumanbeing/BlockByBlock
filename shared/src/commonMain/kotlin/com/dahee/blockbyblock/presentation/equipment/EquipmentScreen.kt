@@ -113,7 +113,8 @@ fun EquipmentScreen(
                 EquipmentSetupScreen(
                     uiState = uiState,
                     viewModel = viewModel,
-                    onSaved = onSaved
+                    onSaved = onSaved,
+                    showCloseButton = onNavigateBack == null
                 )
             }
             EquipmentScreenMode.LIST -> {

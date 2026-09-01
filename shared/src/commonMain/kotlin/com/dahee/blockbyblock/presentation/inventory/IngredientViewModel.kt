@@ -53,7 +53,7 @@ class IngredientViewModel(
                     }
                     val matchesCat = cat == null || item.category == cat
                     matchesTab && matchesCat
-                }.sortedBy { it.status == IngredientStatus.CONSUMED } // Consumed items appear sorted at bottom in ALL list
+                }
 
                 _uiState.update { current ->
                     current.copy(
@@ -367,7 +367,7 @@ class IngredientViewModel(
                     }
                     val matchesCat = cat == null || item.category == cat
                     matchesTab && matchesCat
-                }.sortedBy { it.status == IngredientStatus.CONSUMED }
+                }
 
                 _uiState.update { current ->
                     current.copy(

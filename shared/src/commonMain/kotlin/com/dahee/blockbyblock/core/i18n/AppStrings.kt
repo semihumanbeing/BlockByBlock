@@ -22,6 +22,7 @@ interface AppStrings {
     val back: String
     val inUse: String
     val selected: String
+    val loadingMessages: List<String>
     val unitSlot: String // slot(s)
     val unitPiece: String // piece(s)
     val unitDay: String // day(s)
@@ -65,6 +66,7 @@ interface AppStrings {
     val toolsSectionSubtitle: String
     val setupSaveBtn: String
     val errorMinMoldRequired: String
+    val errorCustomCapacityRequired: String
 
     // Equipment List Screen (Screen 3)
     val listTitle: String
@@ -265,6 +267,11 @@ interface AppStrings {
     val tutorialStepCompleteBtn: String
     val tutorialCongratulationsMsg: String
     val tutorialRestartBtn: String
+    val tutorialRestartConfirmTitle: String
+    val tutorialRestartConfirmMsg: String
+    val tutorialSaveEquipmentConfirmTitle: String
+    val tutorialSaveEquipmentConfirmMsg: String
+    val tutorialSaveAndNextBtn: String
 
     // Auth & Profile
     val authLoginTitle: String
@@ -290,6 +297,7 @@ interface AppStrings {
     val authTermsPrivacy: String
     val authTermsRequiredBadge: String
     val authErrorInvalidEmail: String
+    val authPasswordPolicyHint: String
     val authErrorPasswordPolicy: String
     val authErrorPasswordMismatch: String
 

@@ -212,12 +212,24 @@ fun ProfileEditDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.Start
                 ) {
-                    Text(
-                        text = strings.profileNicknameLabel,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = AppColors.TextSecondary
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = strings.profileNicknameLabel,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AppColors.TextSecondary
+                        )
+                        Text(
+                            text = "${nicknameInput.length}/12",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = AppColors.TextMuted
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(6.dp))
 

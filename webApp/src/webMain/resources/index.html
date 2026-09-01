@@ -29,7 +29,7 @@
                 </div>
 
                 <h1 class="splash-title">BlockByBlock</h1>
-                <p class="splash-loading-text">식재료 목록 로딩 중<span class="dots">...</span></p>
+                <p class="splash-loading-text" id="splash-loading-text">식재료 목록 로딩 중<span class="dots">...</span></p>
             </div>
         </div>
 
@@ -54,11 +54,41 @@
         </div>
     </div>
 
-    <!-- Smart Splash Controller Script (Instant Reactive Bridge) -->
     <script>
+        var LOADING_MESSAGES = {
+            ko: [
+                "장바구니 목록 생각 중..",
+                "밀프렙 레시피 고민 중..",
+                "블록 해동 중..",
+                "냉장고를 블록으로 바꾸는 중..",
+                "재료를 블록으로 만드는 중..",
+                "오늘 먹을 블록 고르는 중..",
+                "맛있는 블록 조합 찾는 중.."
+            ],
+            en: [
+                "Thinking about the shopping list..",
+                "Brainstorming meal prep recipes..",
+                "Defrosting food blocks..",
+                "Turning the fridge into blocks..",
+                "Making ingredients into blocks..",
+                "Picking today's food blocks..",
+                "Finding delicious block combos.."
+            ]
+        };
+
         (function() {
             var splash = document.getElementById('splash-screen');
+            var loadingTextEl = document.getElementById('splash-loading-text');
             var isHidden = false;
+
+            var savedLang = localStorage.getItem('blockbyblock_language');
+            var userLang = (savedLang || navigator.language || '').toLowerCase().startsWith('ko') ? 'ko' : 'en';
+            var list = LOADING_MESSAGES[userLang] || LOADING_MESSAGES.ko;
+
+            if (loadingTextEl && list && list.length > 0) {
+                var randomIndex = Math.floor(Math.random() * list.length);
+                loadingTextEl.innerHTML = list[randomIndex] + '<span class="dots">...</span>';
+            }
 
             function hideSplash() {
                 if (isHidden || !splash) return;
@@ -72,15 +102,10 @@
                 }, 150);
             }
 
-            // Expose global callback: Compose calls this directly the instant App() renders!
             window.__hideSplash = hideSplash;
-
-            // Safety timeout: only if Wasm fails
             setTimeout(hideSplash, 6000);
         })();
     </script>
-
-    <!-- Kotlin/Wasm Compose Multiplatform Entry Point -->
     <script type="application/javascript" src="webApp.js"></script>
 </body>
 </html>

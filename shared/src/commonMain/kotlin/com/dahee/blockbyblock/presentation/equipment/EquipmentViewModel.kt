@@ -155,8 +155,8 @@ class EquipmentViewModel(
                     id = "draft_CUSTOM_1",
                     preset = MoldGridPreset.CUSTOM,
                     isSelected = false,
-                    customCapacityMl = 300,
-                    cellCount = 16,
+                    customCapacityMl = 200,
+                    cellCount = 6,
                     quantity = 1,
                     moldColorHex = "#E9D5FF"
                 )
@@ -190,8 +190,8 @@ class EquipmentViewModel(
                 id = newId,
                 preset = MoldGridPreset.CUSTOM,
                 isSelected = true,
-                customCapacityMl = 300,
-                cellCount = 16,
+                customCapacityMl = 200,
+                cellCount = 6,
                 quantity = 1,
                 moldColorHex = "#E9D5FF"
             )
@@ -285,14 +285,27 @@ class EquipmentViewModel(
         }
     }
 
-    // Save all equipment changes from Screen 2
-    fun onSaveAllEquipment(onSuccess: (() -> Unit)? = null) {
+    // Returns true if at least one mold is selected and valid; otherwise sets error message and returns false
+    fun validateEquipmentSelection(): Boolean {
         val selectedMolds = _moldDrafts.value.filter { it.isSelected }
         if (selectedMolds.isEmpty()) {
-            _errorMessage.value = "Please select at least 1 mold."
-            return
+            _errorMessage.value = "MIN_MOLD_REQUIRED"
+            return false
         }
+        val hasInvalidCustom = selectedMolds.any { it.preset == MoldGridPreset.CUSTOM && it.customCapacityMl <= 0 }
+        if (hasInvalidCustom) {
+            _errorMessage.value = "CUSTOM_CAPACITY_REQUIRED"
+            return false
+        }
+        _errorMessage.value = null
+        return true
+    }
 
+    // Save all equipment changes from Screen 2
+    fun onSaveAllEquipment(onSuccess: (() -> Unit)? = null) {
+        if (!validateEquipmentSelection()) return
+
+        val selectedMolds = _moldDrafts.value.filter { it.isSelected }
         viewModelScope.launch {
             // Replace entire list with new selection
             val currentList = uiState.value.allEquipments

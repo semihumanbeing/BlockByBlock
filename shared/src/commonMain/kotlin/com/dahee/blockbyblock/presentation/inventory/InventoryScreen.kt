@@ -494,44 +494,6 @@ fun InventoryScreen(
                 }
             }
         }
-
-        // Mobile Floating Cooking FAB (Bottom-Right circular button with pan icon)
-        if (!isWeb) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 18.dp, bottom = 18.dp)
-                    .shadow(6.dp, CircleShape, spotColor = AppColors.Shadow)
-                    .clip(CircleShape)
-                    .background(AppColors.Primary)
-                    .border(1.5.dp, AppColors.PrimaryDark, CircleShape)
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onCookClick
-                    )
-                    .size(60.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Image(
-                        painter = painterResource(Res.drawable.other_utensils),
-                        contentDescription = strings.cookBtn,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Text(
-                        text = strings.cookBtn,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-            }
-        }
     }
 }
 

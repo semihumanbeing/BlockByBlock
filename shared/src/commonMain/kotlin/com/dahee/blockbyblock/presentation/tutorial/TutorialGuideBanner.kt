@@ -127,7 +127,7 @@ fun TutorialGuideBanner(
                         )
                     }
 
-                    if (!isCongratulations) {
+                    if (!isCongratulations && currentStep != TutorialStep.EQUIPMENT_SETUP) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp),

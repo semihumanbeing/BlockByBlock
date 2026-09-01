@@ -21,6 +21,15 @@ object KoStrings : AppStrings {
     override val back = "뒤로"
     override val inUse = "사용 중"
     override val selected = "선택됨"
+    override val loadingMessages = listOf(
+        "장바구니 목록 생각 중..",
+        "밀프렙 레시피 고민 중..",
+        "블록 해동 중..",
+        "냉장고를 블록으로 바꾸는 중..",
+        "재료를 블록으로 만드는 중..",
+        "오늘 먹을 블록 고르는 중..",
+        "맛있는 블록 조합 찾는 중.."
+    )
     override val unitSlot = "칸"
     override val unitPiece = "개"
     override val unitDay = "일"
@@ -78,6 +87,7 @@ object KoStrings : AppStrings {
     override val toolsSectionSubtitle = "보유 중인 조리 도구를 선택하세요"
     override val setupSaveBtn = "저장하기"
     override val errorMinMoldRequired = "최소 1개 이상의 몰드를 선택해주세요."
+    override val errorCustomCapacityRequired = "용량을 지정해주세요."
 
     // Equipment List Screen (Screen 3)
     override val listTitle = "내 장비 목록"
@@ -110,7 +120,7 @@ object KoStrings : AppStrings {
     override val meEquipmentSummaryTitle = "내 등록 장비 현황"
     override val meEquipmentManageTitle = "내 장비 및 몰드 관리"
     override val meEquipmentManageSubtitle = "보유 중인 몰드 규격과 조리기구를 설정합니다"
-    override fun meEquipmentSummaryDesc(moldCount: Int, toolCount: Int) = "몰드 ${moldCount}개 · 조리도구 ${toolCount}개 등록됨"
+    override fun meEquipmentSummaryDesc(moldCount: Int, toolCount: Int) = "몰드 ${moldCount}개 · 조리도구 ${toolCount}개"
     override val meAppVersion = "앱 버전 1.0.0"
 
     // Food Block Inventory (Phase 4)
@@ -148,7 +158,7 @@ object KoStrings : AppStrings {
     override val createBlockNoMolds = "등록된 몰드가 없습니다"
     override val createBlockGoToEquipment = "몰드 등록하기"
     override val createBlockSectionStorage = "소분 설정"
-    override val createBlockQuantityLabel = "블록 수량"
+    override val createBlockQuantityLabel = "총 블록 개수"
     override val createBlockStorageTypeLabel = "보관 방식"
     override val createBlockFreezer = "냉동 보관"
     override val createBlockFridge = "냉장 보관"
@@ -204,8 +214,8 @@ object KoStrings : AppStrings {
     override val catalogTargetCart = "장바구니로 추가"
     override val addInStockBtn = "+ 보유중"
     override val addCartBtn = "+ 장바구니"
-    override val alreadyAddedInStock = "보유중 등록됨"
-    override val alreadyAddedCart = "장바구니 등록됨"
+    override val alreadyAddedInStock = "보유중"
+    override val alreadyAddedCart = "장바구니"
     override val alreadyAddedConsumed = "소진됨"
     override val markAsConsumedBtn = "소진"
     override val moveToCartBtn = "장바구니로"
@@ -229,6 +239,7 @@ object KoStrings : AppStrings {
         MealType.LUNCH -> "점심"
         MealType.DINNER -> "저녁"
         MealType.SNACK -> "간식"
+        MealType.EXTRA -> "추가"
     }
     override val deleteMealRecordTitle = "식단 기록 삭제"
     override fun deleteMealRecordConfirm(mealType: String) = "${mealType} 식단 기록을 삭제하시겠습니까?"
@@ -269,7 +280,7 @@ object KoStrings : AppStrings {
     // Tutorial & Onboarding
     override val tutorialWelcomeTitle = "WELCOME!"
     override val tutorialWelcomeSubtitle = "닉네임을 정해주세요"
-    override val tutorialNicknamePlaceholder = "닉네임 입력 (예: 소분마스터)"
+    override val tutorialNicknamePlaceholder = "닉네임 입력"
     override val tutorialStartBtn = "시작하기 (1/4 장비 선택) >"
     override val tutorialSkipBtn = "건너뛰기"
     override val tutorialStepEquipmentMsg = "1/4 장비 설정: 집에 있는 몰드를 체크하거나 프리셋에서 추가해보세요!"
@@ -284,6 +295,11 @@ object KoStrings : AppStrings {
     override val tutorialStepCompleteBtn = "튜토리얼 완료"
     override val tutorialCongratulationsMsg = "축하합니다 튜토리얼을 완료했습니다! 즐거운 소분 라이프 되세요!"
     override val tutorialRestartBtn = "튜토리얼 다시 보기"
+    override val tutorialRestartConfirmTitle = "튜토리얼 다시 보기"
+    override val tutorialRestartConfirmMsg = "튜토리얼을 처음부터 다시 진행하시겠습니까?"
+    override val tutorialSaveEquipmentConfirmTitle = "장비 저장"
+    override val tutorialSaveEquipmentConfirmMsg = "선택한 장비를 저장하고 다음 단계(식재료 등록)로 이동하시겠습니까?"
+    override val tutorialSaveAndNextBtn = "저장하고 계속"
 
     // Auth & Profile
     override val authLoginTitle = "BlockByBlock"
@@ -309,6 +325,7 @@ object KoStrings : AppStrings {
     override val authTermsPrivacy = "개인정보 수집 및 이용 동의"
     override val authTermsRequiredBadge = "필수"
     override val authErrorInvalidEmail = "이메일 형식이 맞지 않습니다"
+    override val authPasswordPolicyHint = "8자 이상, 영문 소문자와 숫자 포함"
     override val authErrorPasswordPolicy = "비밀번호는 숫자와 소문자를 포함하여 8자 이상이어야 합니다"
     override val authErrorPasswordMismatch = "입력된 비밀번호가 다릅니다"
 

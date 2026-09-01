@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -56,7 +58,6 @@ import org.jetbrains.compose.resources.painterResource
 @Composable
 fun WelcomeProfileScreen(
     onStart: (String) -> Unit,
-    onSkip: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
@@ -67,52 +68,32 @@ fun WelcomeProfileScreen(
         modifier = modifier
             .fillMaxSize()
             .background(AppColors.Background)
+            .safeDrawingPadding()
             .imePadding()
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
             ) {
                 focusManager.clearFocus()
-            }
-            .padding(horizontal = 24.dp, vertical = 16.dp)
+            },
+        contentAlignment = Alignment.Center
     ) {
-        // Top Right Skip Button
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopEnd),
-            horizontalArrangement = Arrangement.End
-        ) {
-            Text(
-                text = strings.tutorialSkipBtn,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = AppColors.TextMuted,
-                modifier = Modifier
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() },
-                        onClick = onSkip
-                    )
-                    .padding(8.dp)
-            )
-        }
-
-        // Center Content
+        // Center Content Container (Matching AuthScreen's position & visual hierarchy)
         Column(
             modifier = Modifier
+                .widthIn(max = 440.dp)
                 .fillMaxWidth()
                 .align(Alignment.Center)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Stacked 3D Food Blocks Illustration
+            // Stacked 3D Food Blocks Illustration (Identical height, sizes, and offsets to AuthScreen)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp),
+                    .height(160.dp),
                 contentAlignment = Alignment.Center
             ) {
                 // Bottom Layer: 3x4 Red Block (Large)
@@ -121,8 +102,8 @@ fun WelcomeProfileScreen(
                     contentDescription = "Red Food Block",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
-                        .size(150.dp)
-                        .offset(x = (-10).dp, y = 35.dp)
+                        .size(125.dp)
+                        .offset(x = (-8).dp, y = 28.dp)
                 )
 
                 // Middle Layer: 2x4 Orange Block (Medium)
@@ -131,8 +112,8 @@ fun WelcomeProfileScreen(
                     contentDescription = "Orange Food Block",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
-                        .size(130.dp)
-                        .offset(x = 18.dp, y = (-5).dp)
+                        .size(110.dp)
+                        .offset(x = 15.dp, y = (-4).dp)
                 )
 
                 // Upper Layer Left: 1x4 Green Block (Small)
@@ -141,8 +122,8 @@ fun WelcomeProfileScreen(
                     contentDescription = "Green Food Block",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
-                        .size(105.dp)
-                        .offset(x = (-38).dp, y = (-40).dp)
+                        .size(88.dp)
+                        .offset(x = (-30).dp, y = (-32).dp)
                 )
 
                 // Upper Layer Right: 2x2 Yellow Block (Mini)
@@ -151,44 +132,44 @@ fun WelcomeProfileScreen(
                     contentDescription = "Yellow Food Block",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
-                        .size(85.dp)
-                        .offset(x = 35.dp, y = (-55).dp)
+                        .size(72.dp)
+                        .offset(x = 28.dp, y = (-44).dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Main Title & Subtitle
             Text(
                 text = "WELCOME!",
-                fontSize = 28.sp,
+                fontSize = 26.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = AppColors.TextPrimary,
                 letterSpacing = 0.5.sp
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Text(
                 text = strings.tutorialWelcomeSubtitle,
-                fontSize = 15.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color = AppColors.TextSecondary,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Empty Nickname Input Box (No initial placeholder text that breaks on web)
+            // Nickname Input Box
             AppCard(
                 modifier = Modifier.fillMaxWidth(),
-                padding = 16.dp
+                padding = 18.dp
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     AppTextField(
                         value = nicknameInput,
                         onValueChange = { nicknameInput = it },
-                        placeholder = "",
+                        placeholder = strings.tutorialNicknamePlaceholder,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(
                             onDone = {
