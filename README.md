@@ -79,7 +79,7 @@ BlockByBlock은 최신 **Kotlin Multiplatform (KMP)**과 **Compose Multiplatform
 shared/src/commonMain/kotlin/com/dahee/blockbyblock/
 ├── core/                  # 테마, 색상, 컴포넌트, 다국어(i18n), 유틸리티
 ├── domain/
-│   ├── model/             # FoodBlock, Equipment, Ingredient, MealPlan, StorageType
+│   ├── model/             # FoodBlock, Equipment, Ingredient, MealPlan
 │   └── repository/        # 비즈니스 인터페이스 (FoodBlockRepository 등)
 ├── data/
 │   ├── repository/        # 메모리/로컬 스토리지 구현체

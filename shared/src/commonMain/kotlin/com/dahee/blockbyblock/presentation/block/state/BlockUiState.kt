@@ -6,7 +6,6 @@ import com.dahee.blockbyblock.domain.model.Equipment
 import com.dahee.blockbyblock.domain.model.FoodBlock
 import com.dahee.blockbyblock.domain.model.Ingredient
 import com.dahee.blockbyblock.domain.model.IngredientCategory
-import com.dahee.blockbyblock.domain.model.StorageType
 
 data class CookingToolDraft(
     val toolType: CookingToolType,
@@ -55,7 +54,6 @@ data class BlockUiState(
     val blockQuantity: Int = 1,
     val blockQuantityInput: String = "1",
     val selectedBlockColorHex: String = "#FF7043", // 3D Food Block Color
-    val storageType: StorageType = StorageType.FREEZER,
     val shelfLifeDaysInput: String = "90",
     val customBlockName: String = "",
     val editingBlockId: String? = null

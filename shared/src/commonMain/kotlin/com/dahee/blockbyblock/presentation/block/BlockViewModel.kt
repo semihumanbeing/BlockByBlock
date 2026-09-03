@@ -5,7 +5,6 @@ import com.dahee.blockbyblock.domain.model.EquipmentCategory
 import com.dahee.blockbyblock.domain.model.FoodBlock
 import com.dahee.blockbyblock.domain.model.FoodBlockPalette
 import com.dahee.blockbyblock.domain.model.IngredientStatus
-import com.dahee.blockbyblock.domain.model.StorageType
 import com.dahee.blockbyblock.domain.repository.EquipmentRepository
 import com.dahee.blockbyblock.domain.repository.FoodBlockRepository
 import com.dahee.blockbyblock.domain.repository.IngredientRepository
@@ -128,7 +127,6 @@ class BlockViewModel(
                     selectedMoldCount = moldCount,
                     blockQuantity = history.quantity,
                     blockQuantityInput = history.quantity.toString(),
-                    storageType = history.storageType,
                     shelfLifeDaysInput = history.shelfLifeDays.toString()
                 )
             }
@@ -154,7 +152,6 @@ class BlockViewModel(
                 selectedCookingTools = emptyList(),
                 blockQuantity = totalBlocks,
                 blockQuantityInput = totalBlocks.toString(),
-                storageType = StorageType.FREEZER,
                 shelfLifeDaysInput = "90",
                 customBlockName = ""
             )
@@ -195,7 +192,6 @@ class BlockViewModel(
                 selectedCookingTools = drafts,
                 blockQuantity = block.quantity,
                 blockQuantityInput = block.quantity.toString(),
-                storageType = block.storageType,
                 shelfLifeDaysInput = block.shelfLifeDays.toString(),
                 customBlockName = block.name
             )
@@ -431,7 +427,6 @@ class BlockViewModel(
             mainIngredients = selectedNames,
             subIngredients = state.subIngredients,
             quantity = state.blockQuantity,
-            storageType = state.storageType,
             shelfLifeDays = days,
             cookingInstructions = state.selectedCookingTools.map { it.toCookingInstruction() },
             createdAt = createdAt

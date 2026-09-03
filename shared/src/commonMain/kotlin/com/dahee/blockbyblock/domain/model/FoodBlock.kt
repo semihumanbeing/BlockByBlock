@@ -1,10 +1,5 @@
 package com.dahee.blockbyblock.domain.model
 
-enum class StorageType {
-    FREEZER,
-    FRIDGE
-}
-
 data class CookingInstruction(
     val toolType: CookingToolType,
     val temperature: Int? = null,
@@ -25,7 +20,6 @@ data class FoodBlock(
     val mainIngredients: List<String>,
     val subIngredients: List<String> = emptyList(),
     val quantity: Int = 1,
-    val storageType: StorageType = StorageType.FREEZER,
     val shelfLifeDays: Int = 90,
     val cookingInstructions: List<CookingInstruction> = emptyList(),
     val createdAt: Long = 0L,
