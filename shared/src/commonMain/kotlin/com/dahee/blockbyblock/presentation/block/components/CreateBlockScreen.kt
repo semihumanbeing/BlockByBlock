@@ -164,27 +164,25 @@ fun CreateBlockScreen(
                     padding = 16.dp
                 ) {
                     Column {
-                        // History Recommendation Chips (when user has created blocks before)
-                        if (uiState.historyBlocks.isNotEmpty()) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = strings.historyTitle,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AppColors.Primary
-                                )
-                                Text(
-                                    text = strings.historySubtitle,
-                                    fontSize = 11.sp,
-                                    color = AppColors.TextMuted
-                                )
-                            }
+                        Text(
+                            text = strings.createBlockNameLabel,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.TextPrimary
+                        )
 
-                            Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        AppTextField(
+                            value = uiState.customBlockName,
+                            onValueChange = { viewModel.onCustomBlockNameChange(it) },
+                            placeholder = strings.createBlockNamePlaceholder,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        // History Recommendation Chips (placed right below the name input)
+                        if (uiState.historyBlocks.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
 
                             LazyRow(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -202,25 +200,7 @@ fun CreateBlockScreen(
                                     )
                                 }
                             }
-
-                            Spacer(modifier = Modifier.height(14.dp))
                         }
-
-                        Text(
-                            text = strings.createBlockNameLabel,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AppColors.TextPrimary
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        AppTextField(
-                            value = uiState.customBlockName,
-                            onValueChange = { viewModel.onCustomBlockNameChange(it) },
-                            placeholder = strings.createBlockNamePlaceholder,
-                            modifier = Modifier.fillMaxWidth()
-                        )
                     }
                 }
             }
@@ -547,20 +527,36 @@ fun CreateBlockScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = strings.createBlockSectionIngredients,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AppColors.TextPrimary
-                            )
-                            if (uiState.selectedIngredientIds.isNotEmpty()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
                                 Text(
-                                    text = strings.selectedIngredientsCount(uiState.selectedIngredientIds.size),
-                                    fontSize = 12.sp,
+                                    text = strings.createBlockSectionIngredients,
+                                    fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = AppColors.Primary
+                                    color = AppColors.TextPrimary
                                 )
+                                if (uiState.selectedIngredientIds.isNotEmpty()) {
+                                    Text(
+                                        text = strings.selectedIngredientsCount(uiState.selectedIngredientIds.size),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AppColors.Primary
+                                    )
+                                }
                             }
+
+                            Text(
+                                text = strings.deliveryFoodHint,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = AppColors.TextMuted,
+                                textAlign = TextAlign.End,
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .padding(start = 12.dp)
+                            )
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
@@ -779,9 +775,7 @@ fun CreateBlockScreen(
                             Spacer(modifier = Modifier.height(10.dp))
 
                             val toolOptions = remember(uiState.availableCookingTools) {
-                                uiState.availableCookingTools.mapNotNull { it.toolType }
-                                    .distinct()
-                                    .filter { it != com.dahee.blockbyblock.domain.model.CookingToolType.CUSTOM }
+                                uiState.availableCookingTools.mapNotNull { it.toolType }.distinct()
                             }
 
                             if (toolOptions.isNotEmpty()) {
@@ -870,59 +864,86 @@ fun CreateBlockScreen(
                                                 horizontalArrangement = Arrangement.SpaceBetween,
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                // Left: Tool Icon + Name + Title
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                                ) {
-                                                    CookingToolVisual(type = draft.toolType, size = 22.dp)
-                                                    Text(
-                                                        text = "$toolName ${strings.cookingTimeLabel}",
-                                                        fontSize = 13.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = AppColors.TextPrimary
-                                                    )
-                                                }
-
-                                                // Right: Compact Temperature & Time Inputs
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                                ) {
-                                                    // If Oven, Air Fryer, Slow Cooker: Show Temperature (°C)
-                                                    if (draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.OVEN ||
-                                                        draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.AIR_FRYER ||
-                                                        draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.SLOW_COOKER
+                                                if (draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.BLENDER) {
+                                                    // Blender: Pure prep tool, no timer needed
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                                                     ) {
-                                                        CompactCookingValueField(
-                                                            value = draft.temperatureInput,
-                                                            onValueChange = { viewModel.onCookingToolTempChange(draft.toolType, it) },
-                                                            suffix = strings.temperatureUnitCelsius,
-                                                            placeholder = if (draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.SLOW_COOKER) "90" else "180",
-                                                            width = 48.dp
+                                                        CookingToolVisual(type = draft.toolType, size = 22.dp)
+                                                        Text(
+                                                            text = "$toolName (재료 갈아서 소분)",
+                                                            fontSize = 13.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = AppColors.TextPrimary
                                                         )
                                                     }
 
-                                                    // Minutes Input
-                                                    CompactCookingValueField(
-                                                        value = draft.timeMinutesInput,
-                                                        onValueChange = { viewModel.onCookingToolMinutesChange(draft.toolType, it) },
-                                                        suffix = strings.timeUnitMinutes,
-                                                        placeholder = if (draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.SLOW_COOKER) "120" else if (draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.MICROWAVE) "3" else "15",
-                                                        width = 44.dp
-                                                    )
-
-                                                    // If Microwave or Blender: Show Seconds Input
-                                                    if (draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.MICROWAVE ||
-                                                        draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.BLENDER
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(6.dp))
+                                                            .background(AppColors.PrimaryLight.copy(alpha = 0.6f))
+                                                            .padding(horizontal = 8.dp, vertical = 4.dp)
                                                     ) {
+                                                        Text(
+                                                            text = "전처리 도구",
+                                                            fontSize = 11.sp,
+                                                            fontWeight = FontWeight.SemiBold,
+                                                            color = AppColors.PrimaryDark
+                                                        )
+                                                    }
+                                                } else {
+                                                    // Heating / Reheating Tools: Show Temp & Time Inputs
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                    ) {
+                                                        CookingToolVisual(type = draft.toolType, size = 22.dp)
+                                                        Text(
+                                                            text = "$toolName ${strings.cookingTimeLabel}",
+                                                            fontSize = 13.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = AppColors.TextPrimary
+                                                        )
+                                                    }
+
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                    ) {
+                                                        // If Oven, Air Fryer, Slow Cooker: Show Temperature (°C)
+                                                        if (draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.OVEN ||
+                                                            draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.AIR_FRYER ||
+                                                            draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.SLOW_COOKER
+                                                        ) {
+                                                            CompactCookingValueField(
+                                                                value = draft.temperatureInput,
+                                                                onValueChange = { viewModel.onCookingToolTempChange(draft.toolType, it) },
+                                                                suffix = strings.temperatureUnitCelsius,
+                                                                placeholder = if (draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.SLOW_COOKER) "90" else "180",
+                                                                width = 48.dp
+                                                            )
+                                                        }
+
+                                                        // Minutes Input
                                                         CompactCookingValueField(
-                                                            value = draft.timeSecondsInput,
-                                                            onValueChange = { viewModel.onCookingToolSecondsChange(draft.toolType, it) },
-                                                            suffix = strings.timeUnitSeconds,
-                                                            placeholder = "30",
+                                                            value = draft.timeMinutesInput,
+                                                            onValueChange = { viewModel.onCookingToolMinutesChange(draft.toolType, it) },
+                                                            suffix = strings.timeUnitMinutes,
+                                                            placeholder = if (draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.SLOW_COOKER) "120" else if (draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.MICROWAVE) "3" else "15",
                                                             width = 44.dp
                                                         )
+
+                                                        // If Microwave: Show Seconds Input
+                                                        if (draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.MICROWAVE) {
+                                                            CompactCookingValueField(
+                                                                value = draft.timeSecondsInput,
+                                                                onValueChange = { viewModel.onCookingToolSecondsChange(draft.toolType, it) },
+                                                                suffix = strings.timeUnitSeconds,
+                                                                placeholder = "30",
+                                                                width = 44.dp
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }

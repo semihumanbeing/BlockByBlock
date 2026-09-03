@@ -45,7 +45,6 @@ object EnStrings : AppStrings {
         CookingToolType.BLENDER -> "Blender"
         CookingToolType.AIR_FRYER -> "Air Fryer"
         CookingToolType.MICROWAVE -> "Microwave"
-        CookingToolType.CUSTOM -> "Other Tools"
     }
 
     // Mold Presets & Sizing
@@ -139,15 +138,16 @@ object EnStrings : AppStrings {
     override fun shelfLifeDays(days: Int) = "$days days shelf life"
     override val historyTitle = "History"
     override val historySubtitle = "Load previously made block"
-    override val createBlockSectionCookingTool = "Cooking Tool (Optional)"
+    override val createBlockSectionCookingTool = "Cooking Method (Optional)"
     override val noOwnedCookingTools = "No owned cooking tools registered"
     override val createBlockNoIngredientTooltip = "No ingredients selected. Tap once more to create anyway"
     override val cookingTemperatureLabel = "Temperature"
     override val cookingTimeLabel = "Cooking Time"
     override val temperatureUnitCelsius = "°C"
-    override val timeUnitMinutes = "min"
-    override val timeUnitSeconds = "sec"
-    override val timeUnitHours = "hr"
+    override val timeUnitMinutes = "m"
+    override val timeUnitSeconds = "s"
+    override val timeUnitHours = "h"
+    override val deliveryFoodHint = "🛵 Delivery food or finished dishes? You can skip ingredients and create with just the name!"
 
     // Inventory & Ingredients (Phase 3)
     override val inventoryTitle = "Ingredients & Storage"

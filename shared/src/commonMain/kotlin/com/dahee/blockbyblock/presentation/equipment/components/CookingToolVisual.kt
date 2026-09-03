@@ -27,7 +27,6 @@ fun getCookingToolDrawable(type: CookingToolType): DrawableResource {
         CookingToolType.BLENDER -> Res.drawable.blender
         CookingToolType.AIR_FRYER -> Res.drawable.air_fryer
         CookingToolType.MICROWAVE -> Res.drawable.microwave
-        CookingToolType.CUSTOM -> Res.drawable.other_utensils
     }
 }
 

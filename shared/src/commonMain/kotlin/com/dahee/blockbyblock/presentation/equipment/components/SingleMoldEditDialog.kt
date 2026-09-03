@@ -205,8 +205,13 @@ fun SingleMoldEditDialog(
                                             contentAlignment = Alignment.CenterStart
                                         ) {
                                             if (moldName.isEmpty()) {
+                                                val capacityLabel = if (capacityMl > 0) {
+                                                    MoldCapacityFormatter.formatCapacity(capacityMl, capacityUnit)
+                                                } else {
+                                                    MoldCapacityFormatter.formatPreset(preset, capacityUnit, strings.moldPresetLabel(MoldGridPreset.CUSTOM))
+                                                }
                                                 Text(
-                                                    text = strings.moldPresetLabel(preset) + " " + strings.slotCount(cellCount),
+                                                    text = "$capacityLabel ${strings.slotCount(cellCount)}",
                                                     fontSize = 13.sp,
                                                     fontWeight = FontWeight.SemiBold,
                                                     color = AppColors.TextMuted,

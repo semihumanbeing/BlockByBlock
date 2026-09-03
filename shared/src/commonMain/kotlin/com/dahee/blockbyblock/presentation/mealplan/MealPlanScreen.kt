@@ -17,10 +17,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -429,9 +431,13 @@ private fun TodayMealView(
     onSavePresetSlot: (MealType) -> Unit
 ) {
     val strings = LocalStrings.current
+    val scrollState = rememberScrollState()
+
     Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Date Navigator (Clean flat header bar without white elevated card)
         Row(
@@ -536,17 +542,11 @@ private fun TodayMealView(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
-                .padding(bottom = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+                .padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             visibleSlots.forEach { mealType ->
                 val slotRecord = currentDayRecord?.getSlot(mealType) ?: MealSlotRecord(mealType)
-                val hasBlocks = slotRecord.blocks.isNotEmpty()
-                val hasMemo = slotRecord.memo.isNotBlank()
-                val hasContent = hasBlocks || hasMemo
-                val isAddSlotType = mealType == MealType.SNACK || mealType == MealType.EXTRA
-                val isUnrecordedAddSlot = isAddSlotType && !hasContent
 
                 MealSlotCard(
                     mealType = mealType,
@@ -554,9 +554,7 @@ private fun TodayMealView(
                     onClick = { onOpenSlot(mealType) },
                     onSavePresetClick = { onSavePresetSlot(mealType) },
                     onDeleteClick = { onPromptDeleteSlot(mealType) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(if (isUnrecordedAddSlot) 0.45f else 1f)
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
@@ -583,6 +581,7 @@ private fun MealSlotCard(
         AppCard(
             modifier = modifier
                 .fillMaxWidth()
+                .height(48.dp)
                 .pointerHoverIcon(PointerIcon.Hand)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -638,11 +637,11 @@ private fun MealSlotCard(
         borderWidth = 0.5.dp,
         elevation = 0.dp,
         cornerRadius = 14.dp,
-        padding = 8.dp
+        padding = 10.dp
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // 1. Header: Plain Black Meal Type Text + Save Preset + Delete Button
             Row(
@@ -713,7 +712,7 @@ private fun MealSlotCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .height(84.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -805,14 +804,14 @@ private fun MealSlotCard(
                 }
             }
 
-            // 3. Memo if present
+            // 3. Memo if present (Wraps naturally to multiline below the bento box)
             if (hasMemo) {
                 Text(
                     text = strings.memoPrefix(slot.memo),
-                    fontSize = 11.sp,
+                    fontSize = 11.5.sp,
                     color = AppColors.TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    lineHeight = 15.sp,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }

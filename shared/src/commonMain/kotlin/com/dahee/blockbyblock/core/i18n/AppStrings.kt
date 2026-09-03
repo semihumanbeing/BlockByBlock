@@ -135,6 +135,7 @@ interface AppStrings {
     val timeUnitMinutes: String
     val timeUnitSeconds: String
     val timeUnitHours: String
+    val deliveryFoodHint: String
 
     // Inventory & Ingredients (Phase 3)
     val inventoryTitle: String

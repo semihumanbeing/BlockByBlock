@@ -6,6 +6,5 @@ enum class CookingToolType(val displayName: String) {
     SLOW_COOKER("슬로우쿠커"),
     BLENDER("믹서기"),
     AIR_FRYER("에어프라이어"),
-    MICROWAVE("전자레인지"),
-    CUSTOM("기타 조리도구")
+    MICROWAVE("전자레인지")
 }

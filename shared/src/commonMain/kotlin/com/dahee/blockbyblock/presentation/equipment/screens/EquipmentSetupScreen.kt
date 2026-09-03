@@ -470,8 +470,13 @@ private fun MoldSetupRow(
                                         contentAlignment = Alignment.CenterStart
                                     ) {
                                         if (draft.name.isEmpty()) {
+                                            val capacityLabel = if (draft.capacityMl > 0) {
+                                                MoldCapacityFormatter.formatCapacity(draft.capacityMl, unit)
+                                            } else {
+                                                MoldCapacityFormatter.formatPreset(draft.preset, unit, strings.moldPresetLabel(MoldGridPreset.CUSTOM))
+                                            }
                                             Text(
-                                                text = strings.moldPresetLabel(draft.preset) + " " + strings.slotCount(draft.cellCount),
+                                                text = "$capacityLabel ${strings.slotCount(draft.cellCount)}",
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = AppColors.TextMuted,

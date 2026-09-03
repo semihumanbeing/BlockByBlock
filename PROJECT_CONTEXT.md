@@ -60,7 +60,7 @@
   - **조리기구 원터치 선택**:
     - 사각 테두리 박스 없이 **순수 일러스트 이미지(56dp) + 하단 중앙 정렬 텍스트** 구조
     - 가로 중앙 정렬 (`Arrangement.Center`), 선택 시 체크 뱃지 및 투명도/크기 강조
-    - 7종 (3D 블록 토이 스타일 일러스트): `레인지(GAS_STOVE)`, `오븐(OVEN)`, `슬로우쿠커(SLOW_COOKER)`, `믹서기(BLENDER)`, `에어프라이어(AIR_FRYER)`, `전자레인지(MICROWAVE)`, `기타 조리도구(CUSTOM)`
+    - 6종 (3D 블록 토이 스타일 일러스트): `레인지(GAS_STOVE)`, `오븐(OVEN)`, `슬로우쿠커(SLOW_COOKER)`, `믹서기(BLENDER)`, `에어프라이어(AIR_FRYER)`, `전자레인지(MICROWAVE)`
 - **3번 내 장비 목록 화면 (`EquipmentListScreen.kt`)**:
   - 우측 상단 **[한번에 수정하기]** 버튼 (`ButtonVariant.WARM_YELLOW`, 웜 허니 버터 `#F4D06F`)
   - 섹션 명칭: **`소분 몰드` ➔ `몰드`**로 간결화

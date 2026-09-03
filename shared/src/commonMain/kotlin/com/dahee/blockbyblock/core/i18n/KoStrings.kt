@@ -45,7 +45,6 @@ object KoStrings : AppStrings {
         CookingToolType.BLENDER -> "믹서기"
         CookingToolType.AIR_FRYER -> "에어프라이어"
         CookingToolType.MICROWAVE -> "전자레인지"
-        CookingToolType.CUSTOM -> "기타 조리도구"
     }
 
     // Mold Presets & Sizing
@@ -139,7 +138,7 @@ object KoStrings : AppStrings {
     override fun shelfLifeDays(days: Int) = "소비기한 ${days}일"
     override val historyTitle = "히스토리"
     override val historySubtitle = "이전에 만든 블록 불러오기"
-    override val createBlockSectionCookingTool = "사용 조리도구 (선택)"
+    override val createBlockSectionCookingTool = "조리 방법 (선택)"
     override val noOwnedCookingTools = "보유 중인 조리도구가 없습니다 (장비 관리에서 등록 가능)"
     override val createBlockNoIngredientTooltip = "식재료가 선택되지 않았습니다. 한 번 더 누르면 바로 생성돼요!"
     override val cookingTemperatureLabel = "조리 온도"
@@ -148,6 +147,7 @@ object KoStrings : AppStrings {
     override val timeUnitMinutes = "분"
     override val timeUnitSeconds = "초"
     override val timeUnitHours = "시간"
+    override val deliveryFoodHint = "🛵 배달 음식이나 완제품 소분인가요? 세부 재료 선택 없이 메뉴명만 적고 바로 생성할 수 있어요!"
 
     // Inventory & Ingredients (Phase 3)
     override val inventoryTitle = "식재료 보관함"

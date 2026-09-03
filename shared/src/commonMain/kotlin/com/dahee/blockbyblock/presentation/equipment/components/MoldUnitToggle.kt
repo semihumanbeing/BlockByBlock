@@ -29,11 +29,19 @@ fun MoldUnitToggle(
     onUnitChange: (MoldCapacityUnit) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val nextUnit = if (currentUnit == MoldCapacityUnit.ML) MoldCapacityUnit.CUP else MoldCapacityUnit.ML
+
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
             .background(AppColors.Surface)
             .border(1.dp, AppColors.Border, RoundedCornerShape(20.dp))
+            .pointerHoverIcon(PointerIcon.Hand)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = { onUnitChange(nextUnit) }
+            )
             .padding(2.5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -43,12 +51,6 @@ fun MoldUnitToggle(
                 modifier = Modifier
                     .clip(RoundedCornerShape(16.dp))
                     .background(if (isSelected) AppColors.Primary else Color.Transparent)
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = { onUnitChange(unit) }
-                    )
                     .padding(horizontal = 9.dp, vertical = 3.5.dp),
                 contentAlignment = Alignment.Center
             ) {

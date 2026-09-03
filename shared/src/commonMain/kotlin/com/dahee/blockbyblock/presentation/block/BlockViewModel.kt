@@ -338,8 +338,7 @@ class BlockViewModel(
                     CookingToolType.SLOW_COOKER -> Triple("90", "120", "")
                     CookingToolType.MICROWAVE -> Triple("", "3", "30")
                     CookingToolType.GAS_STOVE -> Triple("", "10", "")
-                    CookingToolType.BLENDER -> Triple("", "1", "0")
-                    CookingToolType.CUSTOM -> Triple("", "10", "")
+                    CookingToolType.BLENDER -> Triple("", "", "")
                 }
                 state.selectedCookingTools + CookingToolDraft(
                     toolType = toolType,

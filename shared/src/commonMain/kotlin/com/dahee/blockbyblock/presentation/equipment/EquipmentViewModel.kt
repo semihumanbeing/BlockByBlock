@@ -2,6 +2,7 @@ package com.dahee.blockbyblock.presentation.equipment
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dahee.blockbyblock.core.utils.MoldCapacityFormatter
 import com.dahee.blockbyblock.domain.model.CookingToolType
 import com.dahee.blockbyblock.domain.model.Equipment
 import com.dahee.blockbyblock.domain.model.EquipmentCategory
@@ -79,7 +80,37 @@ class EquipmentViewModel(
     )
 
     fun onToggleCapacityUnit(unit: MoldCapacityUnit) {
+        val oldUnit = _capacityUnit.value
         _capacityUnit.value = unit
+
+        if (oldUnit != unit) {
+            _moldDrafts.update { list ->
+                list.map { draft ->
+                    if (draft.name.isNotBlank()) {
+                        val oldCapStr = MoldCapacityFormatter.formatCapacity(draft.displayCapacity, oldUnit)
+                        val oldPresetStr = MoldCapacityFormatter.formatPreset(draft.preset, oldUnit)
+                        val newCapStr = MoldCapacityFormatter.formatCapacity(draft.displayCapacity, unit)
+
+                        val oldAutoNames = listOf(
+                            "$oldCapStr ${draft.cellCount}칸",
+                            "$oldPresetStr ${draft.cellCount}칸",
+                            "$oldCapStr ${draft.cellCount} Slot",
+                            "$oldPresetStr ${draft.cellCount} Slot",
+                            oldCapStr,
+                            oldPresetStr
+                        )
+
+                        if (oldAutoNames.contains(draft.name)) {
+                            draft.copy(name = "$newCapStr ${draft.cellCount}칸")
+                        } else {
+                            draft
+                        }
+                    } else {
+                        draft
+                    }
+                }
+            }
+        }
     }
 
     // Transition from Screen 1 (Onboarding) to Screen 2 (Setup)
@@ -342,7 +373,12 @@ class EquipmentViewModel(
 
             // Register selected molds
             selectedMolds.forEach { moldDraft ->
-                val fallbackName = "${moldDraft.displayCapacity}ml ${moldDraft.cellCount}칸"
+                val capacityLabel = if (moldDraft.capacityMl > 0) {
+                    MoldCapacityFormatter.formatCapacity(moldDraft.capacityMl, _capacityUnit.value)
+                } else {
+                    MoldCapacityFormatter.formatPreset(moldDraft.preset, _capacityUnit.value)
+                }
+                val fallbackName = "$capacityLabel ${moldDraft.cellCount}칸"
                 val moldName = moldDraft.name.ifBlank { fallbackName }
 
                 val moldEquipment = Equipment(
