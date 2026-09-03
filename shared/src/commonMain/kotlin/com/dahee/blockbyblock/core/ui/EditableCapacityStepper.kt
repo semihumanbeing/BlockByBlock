@@ -48,39 +48,71 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dahee.blockbyblock.core.theme.AppColors
+import com.dahee.blockbyblock.core.utils.MoldCapacityFormatter
+import com.dahee.blockbyblock.domain.model.MoldCapacityUnit
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 /**
- * Stepper component supporting direct number input and - / + buttons.
- * Automatically exits edit mode and commits value when tapping outside or losing focus.
+ * Capacity Stepper matching the exact visual style, sizing and borders of EditableNumberStepper.
+ * Dynamically supports both ML and CUP/TBSP units, stepping and direct numeric input.
  */
 @Composable
-fun EditableNumberStepper(
-    value: Int,
-    onValueChange: (Int) -> Unit,
-    suffix: String = "",
-    step: Int = 1,
-    minValue: Int = 1,
-    maxValue: Int = 99999,
+fun EditableCapacityStepper(
+    capacityMl: Int,
+    unit: MoldCapacityUnit,
+    onCapacityChange: (Int) -> Unit,
+    minCapacityMl: Int = 10,
+    maxCapacityMl: Int = 2000,
     buttonSize: Dp = 26.dp,
     modifier: Modifier = Modifier
 ) {
-    var isEditing by remember { mutableStateOf(false) }
-    var textInput by remember(value) { mutableStateOf(TextFieldValue(value.toString(), selection = TextRange(value.toString().length))) }
-    var hasFocused by remember { mutableStateOf(false) }
-    val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+    val focusRequester = remember { FocusRequester() }
+    var isEditing by remember { mutableStateOf(false) }
+    var hasFocused by remember { mutableStateOf(false) }
+
+    fun computeRawText(): String {
+        return if (unit == MoldCapacityUnit.ML) {
+            capacityMl.toString()
+        } else {
+            if (capacityMl >= 125) {
+                val cups = (capacityMl / 250.0 * 10).roundToInt() / 10.0
+                if (cups % 1.0 == 0.0) cups.toInt().toString() else cups.toString()
+            } else {
+                ((capacityMl / 15.0).roundToInt().coerceAtLeast(1)).toString()
+            }
+        }
+    }
+
+    var textInput by remember(capacityMl, unit, isEditing) {
+        val raw = computeRawText()
+        mutableStateOf(TextFieldValue(raw, selection = TextRange(raw.length)))
+    }
 
     LaunchedEffect(isEditing) {
         if (isEditing) {
-            textInput = TextFieldValue(value.toString(), selection = TextRange(value.toString().length))
+            val raw = computeRawText()
+            textInput = TextFieldValue(raw, selection = TextRange(raw.length))
             hasFocused = false
             delay(30)
             try {
                 focusRequester.requestFocus()
-            } catch (_: Throwable) {
-                // Focus requester may throw if not attached yet
+            } catch (_: Throwable) {}
+        }
+    }
+
+    fun parseAndCommit(text: String) {
+        val num = text.toDoubleOrNull()
+        if (num != null && num > 0) {
+            val computedMl = if (unit == MoldCapacityUnit.ML) {
+                num.toInt()
+            } else if (capacityMl >= 125 || num >= 0.5) {
+                (num * 250.0).roundToInt()
+            } else {
+                (num * 15.0).roundToInt()
             }
+            onCapacityChange(computedMl.coerceIn(minCapacityMl, maxCapacityMl))
         }
     }
 
@@ -105,46 +137,39 @@ fun EditableNumberStepper(
                     indication = null,
                     onClick = {
                         if (isEditing) {
-                            val parsed = textInput.text.toIntOrNull() ?: value
-                            onValueChange(parsed.coerceIn(minValue, maxValue))
+                            parseAndCommit(textInput.text)
                             isEditing = false
                             hasFocused = false
                         }
-                        val newValue = (value - step).coerceAtLeast(minValue)
-                        onValueChange(newValue)
+                        val next = MoldCapacityFormatter.stepCapacity(capacityMl, -1, unit)
+                        onCapacityChange(next.coerceIn(minCapacityMl, maxCapacityMl))
                     }
                 ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Remove,
-                contentDescription = "Decrease",
-                tint = if (value > minValue) AppColors.TextPrimary else AppColors.TextMuted,
+                contentDescription = "Decrease Capacity",
+                tint = if (capacityMl > minCapacityMl) AppColors.TextPrimary else AppColors.TextMuted,
                 modifier = Modifier.size(15.dp)
             )
         }
 
-        // Center text / direct input field
+        // Center formatted text / direct input field
         if (isEditing) {
             BasicTextField(
                 value = textInput,
                 onValueChange = { input ->
-                    if (input.text.all { it.isDigit() } && input.text.length <= 5) {
-                        textInput = input
-                        val parsed = input.text.toIntOrNull()
-                        if (parsed != null && parsed >= minValue && parsed <= maxValue) {
-                            onValueChange(parsed)
-                        }
-                    }
+                    textInput = input
+                    parseAndCommit(input.text)
                 },
                 keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
+                    keyboardType = if (unit == MoldCapacityUnit.ML) KeyboardType.Number else KeyboardType.Decimal,
                     imeAction = ImeAction.Done
                 ),
                 keyboardActions = KeyboardActions(
                     onDone = {
-                        val parsed = textInput.text.toIntOrNull() ?: value
-                        onValueChange(parsed.coerceIn(minValue, maxValue))
+                        parseAndCommit(textInput.text)
                         isEditing = false
                         hasFocused = false
                         focusManager.clearFocus()
@@ -164,8 +189,7 @@ fun EditableNumberStepper(
                         if (focusState.isFocused) {
                             hasFocused = true
                         } else if (hasFocused && isEditing) {
-                            val parsed = textInput.text.toIntOrNull() ?: value
-                            onValueChange(parsed.coerceIn(minValue, maxValue))
+                            parseAndCommit(textInput.text)
                             isEditing = false
                             hasFocused = false
                         }
@@ -175,8 +199,9 @@ fun EditableNumberStepper(
                     .padding(horizontal = 2.dp, vertical = 1.dp)
             )
         } else {
+            val formatted = MoldCapacityFormatter.formatCapacity(capacityMl, unit)
             Text(
-                text = "$value$suffix",
+                text = formatted,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = AppColors.TextPrimary,
@@ -190,9 +215,7 @@ fun EditableNumberStepper(
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = {
-                            isEditing = true
-                        }
+                        onClick = { isEditing = true }
                     )
                     .padding(horizontal = 2.dp, vertical = 1.dp)
             )
@@ -209,20 +232,19 @@ fun EditableNumberStepper(
                     indication = null,
                     onClick = {
                         if (isEditing) {
-                            val parsed = textInput.text.toIntOrNull() ?: value
-                            onValueChange(parsed.coerceIn(minValue, maxValue))
+                            parseAndCommit(textInput.text)
                             isEditing = false
                             hasFocused = false
                         }
-                        val newValue = (value + step).coerceAtMost(maxValue)
-                        onValueChange(newValue)
+                        val next = MoldCapacityFormatter.stepCapacity(capacityMl, 1, unit)
+                        onCapacityChange(next.coerceIn(minCapacityMl, maxCapacityMl))
                     }
                 ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Add,
-                contentDescription = "Increase",
+                contentDescription = "Increase Capacity",
                 tint = AppColors.Primary,
                 modifier = Modifier.size(15.dp)
             )

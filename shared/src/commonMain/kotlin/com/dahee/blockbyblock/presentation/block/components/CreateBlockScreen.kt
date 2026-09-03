@@ -23,8 +23,11 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -848,133 +851,80 @@ fun CreateBlockScreen(
                                     }
                                 }
 
-                                // Cooking Tool Specific Setting: Temperature & Time
-                                val hasOvenOrAirFryerOrSlowCooker = uiState.selectedCookingToolTypes.any {
-                                    it == com.dahee.blockbyblock.domain.model.CookingToolType.OVEN ||
-                                    it == com.dahee.blockbyblock.domain.model.CookingToolType.AIR_FRYER ||
-                                    it == com.dahee.blockbyblock.domain.model.CookingToolType.SLOW_COOKER
-                                }
-                                val hasMicrowaveOnly = !hasOvenOrAirFryerOrSlowCooker && uiState.selectedCookingToolTypes.contains(com.dahee.blockbyblock.domain.model.CookingToolType.MICROWAVE)
-
-                                if (hasOvenOrAirFryerOrSlowCooker) {
+                                // Multi-Tool Specific Settings: One row per selected tool
+                                if (uiState.selectedCookingTools.isNotEmpty()) {
                                     Spacer(modifier = Modifier.height(14.dp))
-                                    Row(
+                                    Column(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        // Temperature Input
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = strings.cookingTemperatureLabel,
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = AppColors.TextSecondary
-                                            )
-                                            Spacer(modifier = Modifier.height(6.dp))
+                                        uiState.selectedCookingTools.forEach { draft ->
+                                            val toolName = strings.cookingToolName(draft.toolType)
                                             Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .background(AppColors.SurfaceVariant.copy(alpha = 0.45f))
+                                                    .border(0.8.dp, AppColors.Border.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                AppTextField(
-                                                    value = uiState.cookingTemperatureInput,
-                                                    onValueChange = { viewModel.onCookingTemperatureChange(it) },
-                                                    placeholder = if (uiState.selectedCookingToolTypes.contains(com.dahee.blockbyblock.domain.model.CookingToolType.SLOW_COOKER)) "90" else "180",
-                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                                Text(
-                                                    text = strings.temperatureUnitCelsius,
-                                                    fontSize = 14.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = AppColors.TextPrimary
-                                                )
-                                            }
-                                        }
+                                                // Left: Tool Icon + Name + Title
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                ) {
+                                                    CookingToolVisual(type = draft.toolType, size = 22.dp)
+                                                    Text(
+                                                        text = "$toolName ${strings.cookingTimeLabel}",
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = AppColors.TextPrimary
+                                                    )
+                                                }
 
-                                        // Time Input (Minutes)
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = strings.cookingTimeLabel,
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = AppColors.TextSecondary
-                                            )
-                                            Spacer(modifier = Modifier.height(6.dp))
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                            ) {
-                                                AppTextField(
-                                                    value = uiState.cookingTimeMinutesInput,
-                                                    onValueChange = { viewModel.onCookingTimeMinutesChange(it) },
-                                                    placeholder = if (uiState.selectedCookingToolTypes.contains(com.dahee.blockbyblock.domain.model.CookingToolType.SLOW_COOKER)) "120" else "15",
-                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                                Text(
-                                                    text = strings.timeUnitMinutes,
-                                                    fontSize = 14.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = AppColors.TextPrimary
-                                                )
-                                            }
-                                        }
-                                    }
-                                } else if (hasMicrowaveOnly) {
-                                    Spacer(modifier = Modifier.height(14.dp))
-                                    Column(modifier = Modifier.fillMaxWidth()) {
-                                        Text(
-                                            text = strings.cookingTimeLabel,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = AppColors.TextSecondary
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            // Minutes
-                                            Row(
-                                                modifier = Modifier.weight(1f),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                            ) {
-                                                AppTextField(
-                                                    value = uiState.cookingTimeMinutesInput,
-                                                    onValueChange = { viewModel.onCookingTimeMinutesChange(it) },
-                                                    placeholder = "3",
-                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                                Text(
-                                                    text = strings.timeUnitMinutes,
-                                                    fontSize = 14.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = AppColors.TextPrimary
-                                                )
-                                            }
+                                                // Right: Compact Temperature & Time Inputs
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    // If Oven, Air Fryer, Slow Cooker: Show Temperature (°C)
+                                                    if (draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.OVEN ||
+                                                        draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.AIR_FRYER ||
+                                                        draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.SLOW_COOKER
+                                                    ) {
+                                                        CompactCookingValueField(
+                                                            value = draft.temperatureInput,
+                                                            onValueChange = { viewModel.onCookingToolTempChange(draft.toolType, it) },
+                                                            suffix = strings.temperatureUnitCelsius,
+                                                            placeholder = if (draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.SLOW_COOKER) "90" else "180",
+                                                            width = 48.dp
+                                                        )
+                                                    }
 
-                                            // Seconds
-                                            Row(
-                                                modifier = Modifier.weight(1f),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                            ) {
-                                                AppTextField(
-                                                    value = uiState.cookingTimeSecondsInput,
-                                                    onValueChange = { viewModel.onCookingTimeSecondsChange(it) },
-                                                    placeholder = "30",
-                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                                Text(
-                                                    text = strings.timeUnitSeconds,
-                                                    fontSize = 14.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = AppColors.TextPrimary
-                                                )
+                                                    // Minutes Input
+                                                    CompactCookingValueField(
+                                                        value = draft.timeMinutesInput,
+                                                        onValueChange = { viewModel.onCookingToolMinutesChange(draft.toolType, it) },
+                                                        suffix = strings.timeUnitMinutes,
+                                                        placeholder = if (draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.SLOW_COOKER) "120" else if (draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.MICROWAVE) "3" else "15",
+                                                        width = 44.dp
+                                                    )
+
+                                                    // If Microwave or Blender: Show Seconds Input
+                                                    if (draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.MICROWAVE ||
+                                                        draft.toolType == com.dahee.blockbyblock.domain.model.CookingToolType.BLENDER
+                                                    ) {
+                                                        CompactCookingValueField(
+                                                            value = draft.timeSecondsInput,
+                                                            onValueChange = { viewModel.onCookingToolSecondsChange(draft.toolType, it) },
+                                                            suffix = strings.timeUnitSeconds,
+                                                            placeholder = "30",
+                                                            width = 44.dp
+                                                        )
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -1357,6 +1307,66 @@ private fun SubIngredientToggleChip(
             fontSize = 12.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
             color = textColor
+        )
+    }
+}
+
+@Composable
+private fun CompactCookingValueField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    suffix: String,
+    placeholder: String = "",
+    width: androidx.compose.ui.unit.Dp = 44.dp,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = modifier
+    ) {
+        Box(
+            modifier = Modifier
+                .width(width)
+                .height(34.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(AppColors.Surface)
+                .border(1.dp, AppColors.Border, RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                textStyle = TextStyle(
+                    color = AppColors.TextPrimary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                ),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                cursorBrush = SolidColor(AppColors.Primary),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                decorationBox = { innerTextField ->
+                    if (value.isEmpty() && placeholder.isNotEmpty()) {
+                        Text(
+                            text = placeholder,
+                            color = AppColors.TextMuted,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    innerTextField()
+                }
+            )
+        }
+        Text(
+            text = suffix,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = AppColors.TextSecondary
         )
     }
 }

@@ -9,8 +9,8 @@ enum class MoldGridPreset(
     ML_500(500, 3, 3, "500ml"),
     ML_250(250, 2, 3, "250ml"),
     ML_125(125, 1, 3, "125ml"),
-    ML_75(75, 1, 1, "75ml"),
-    CUSTOM(-1, 2, 2, "직접 입력");
+    ML_30(30, 1, 1, "30ml"),
+    CUSTOM(-1, 2, 2, "Custom");
 
     companion object {
         fun fromCapacity(capacity: Int): MoldGridPreset {
@@ -18,6 +18,6 @@ enum class MoldGridPreset(
         }
 
         val defaultPresets: List<MoldGridPreset>
-            get() = listOf(ML_500, ML_250, ML_125, ML_75)
+            get() = listOf(ML_500, ML_250, ML_125, ML_30)
     }
 }

@@ -1,11 +1,35 @@
 package com.dahee.blockbyblock.presentation.block.state
 
+import com.dahee.blockbyblock.domain.model.CookingInstruction
 import com.dahee.blockbyblock.domain.model.CookingToolType
 import com.dahee.blockbyblock.domain.model.Equipment
 import com.dahee.blockbyblock.domain.model.FoodBlock
 import com.dahee.blockbyblock.domain.model.Ingredient
 import com.dahee.blockbyblock.domain.model.IngredientCategory
 import com.dahee.blockbyblock.domain.model.StorageType
+
+data class CookingToolDraft(
+    val toolType: CookingToolType,
+    val temperatureInput: String = "",
+    val timeMinutesInput: String = "",
+    val timeSecondsInput: String = ""
+) {
+    val parsedTemperature: Int?
+        get() = temperatureInput.trim().toIntOrNull()
+
+    val parsedTimeMinutes: Int?
+        get() = timeMinutesInput.trim().toIntOrNull()
+
+    val parsedTimeSeconds: Int?
+        get() = timeSecondsInput.trim().toIntOrNull()
+
+    fun toCookingInstruction(): CookingInstruction = CookingInstruction(
+        toolType = toolType,
+        temperature = parsedTemperature,
+        timeMinutes = parsedTimeMinutes,
+        timeSeconds = parsedTimeSeconds
+    )
+}
 
 data class BlockUiState(
     val blocks: List<FoodBlock> = emptyList(),
@@ -26,7 +50,7 @@ data class BlockUiState(
     val selectedMoldCount: Int = 1, // Number of molds to use (1..mold.quantity)
 
     val availableCookingTools: List<Equipment> = emptyList(),
-    val selectedCookingToolType: CookingToolType? = null,
+    val selectedCookingTools: List<CookingToolDraft> = emptyList(),
 
     val blockQuantity: Int = 1,
     val blockQuantityInput: String = "1",
@@ -38,6 +62,9 @@ data class BlockUiState(
 ) {
     val isEditing: Boolean
         get() = editingBlockId != null
+
+    val selectedCookingToolTypes: Set<CookingToolType>
+        get() = selectedCookingTools.map { it.toolType }.toSet()
 
     companion object {
         const val INGREDIENTS_PAGE_SIZE = 4

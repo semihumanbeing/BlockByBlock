@@ -10,6 +10,7 @@ import com.dahee.blockbyblock.domain.repository.EquipmentRepository
 import com.dahee.blockbyblock.domain.repository.FoodBlockRepository
 import com.dahee.blockbyblock.domain.repository.IngredientRepository
 import com.dahee.blockbyblock.presentation.block.state.BlockUiState
+import com.dahee.blockbyblock.presentation.block.state.CookingToolDraft
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -90,8 +91,7 @@ class BlockViewModel(
                 state.copy(
                     customBlockName = "",
                     selectedBlockColorHex = "#FF7043",
-                    selectedCookingToolTypes = emptySet(),
-                    selectedCookingToolType = null,
+                    selectedCookingTools = emptyList(),
                     selectedIngredientIds = emptySet(),
                     subIngredients = emptyList(),
                     selectedMoldCount = 1,

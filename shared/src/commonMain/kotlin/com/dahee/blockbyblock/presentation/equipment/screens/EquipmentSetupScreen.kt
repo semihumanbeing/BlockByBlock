@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -47,17 +48,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.theme.AppColors
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import com.dahee.blockbyblock.core.ui.AppButton
 import com.dahee.blockbyblock.core.ui.AppCard
 import com.dahee.blockbyblock.core.ui.AppChip
 import com.dahee.blockbyblock.core.ui.AppTextField
 import com.dahee.blockbyblock.core.ui.ButtonVariant
 import com.dahee.blockbyblock.core.ui.CustomSlotChip
+import com.dahee.blockbyblock.core.ui.EditableCapacityStepper
 import com.dahee.blockbyblock.core.ui.EditableNumberStepper
+import com.dahee.blockbyblock.core.utils.MoldCapacityFormatter
 import com.dahee.blockbyblock.domain.model.CookingToolType
+import com.dahee.blockbyblock.domain.model.MoldCapacityUnit
 import com.dahee.blockbyblock.domain.model.MoldGridPreset
 import com.dahee.blockbyblock.presentation.equipment.EquipmentViewModel
 import com.dahee.blockbyblock.presentation.equipment.components.CookingToolVisual
+import com.dahee.blockbyblock.presentation.equipment.components.MoldUnitToggle
 import com.dahee.blockbyblock.presentation.equipment.components.MoldView
 import com.dahee.blockbyblock.presentation.equipment.state.EquipmentUiState
 import com.dahee.blockbyblock.presentation.equipment.state.MoldDraftConfig
@@ -118,20 +128,30 @@ fun EquipmentSetupScreen(
                         )
                     }
 
-                    if (showCloseButton && uiState.allEquipments.isNotEmpty()) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = strings.cancel,
-                            tint = AppColors.TextMuted,
-                            modifier = Modifier
-                                .size(24.dp)
-                                .pointerHoverIcon(PointerIcon.Hand)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    onClick = { viewModel.onCancelSetup() }
-                                )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        MoldUnitToggle(
+                            currentUnit = uiState.capacityUnit,
+                            onUnitChange = { viewModel.onToggleCapacityUnit(it) }
                         )
+
+                        if (showCloseButton && uiState.allEquipments.isNotEmpty()) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = strings.cancel,
+                                tint = AppColors.TextMuted,
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .pointerHoverIcon(PointerIcon.Hand)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = { viewModel.onCancelSetup() }
+                                    )
+                            )
+                        }
                     }
                 }
             }
@@ -180,7 +200,10 @@ fun EquipmentSetupScreen(
             items(uiState.moldDrafts, key = { it.id }) { draft ->
                 MoldSetupRow(
                     draft = draft,
+                    unit = uiState.capacityUnit,
                     onToggleSelect = { viewModel.onToggleMoldSelection(draft.id) },
+                    onNameChange = { name -> viewModel.onUpdateMoldDraftName(draft.id, name) },
+                    onCapacityChange = { cap -> viewModel.onUpdateMoldDraftCapacity(draft.id, cap) },
                     onQuantityChange = { delta -> viewModel.onUpdateMoldDraftQuantity(draft.id, delta) },
                     onDirectQuantityChange = { qty ->
                         val delta = qty - draft.quantity
@@ -188,7 +211,6 @@ fun EquipmentSetupScreen(
                     },
                     onCellCountChange = { cellCount -> viewModel.onUpdateMoldDraftCellCount(draft.id, cellCount) },
                     onColorChange = { colorHex -> viewModel.onUpdateMoldDraftColor(draft.id, colorHex) },
-                    onCustomCapacityChange = { cap -> viewModel.onUpdateMoldDraftCustomCapacity(draft.id, cap) },
                     onDeleteCustomMold = if (draft.preset == MoldGridPreset.CUSTOM) {
                         { viewModel.onRemoveCustomMoldDraft(draft.id) }
                     } else null
@@ -224,12 +246,12 @@ fun EquipmentSetupScreen(
                 )
             }
 
-            // Cooking Tools Grid: Pure visual icon + label beneath, centered
             item {
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     CookingToolType.entries.forEach { tool ->
                         val isSelected = uiState.selectedCookingTools.contains(tool)
@@ -298,20 +320,21 @@ fun EquipmentSetupScreen(
             }
         }
 
-        // Bottom [Save] Button Bar
+        // Bottom Fixed CTA Button (Unified with 16dp horizontal padding & matching AppButton height)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(AppColors.Background)
-                .border(0.5.dp, AppColors.Border.copy(alpha = 0.5f), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
             AppButton(
                 text = strings.setupSaveBtn,
-                onClick = { viewModel.onSaveAllEquipment(onSuccess = onSaved) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
+                variant = ButtonVariant.PRIMARY,
+                onClick = {
+                    viewModel.onSaveAllEquipment(onSuccess = onSaved)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                height = 48.dp
             )
         }
     }
@@ -321,17 +344,19 @@ fun EquipmentSetupScreen(
  * Mold Configuration Row:
  * - Tap anywhere on card to toggle selection
  * - [Left]: Large mold visual (68dp) + capacity label beneath
- * - [Right]: Unselected shows [+ Add] center button; Selected shows stepper / slot chips / color palette
+ * - [Right]: Unselected shows [+ Add] center button; Selected shows name / capacity & quantity steppers / slot chips / color palette
  */
 @Composable
 private fun MoldSetupRow(
     draft: MoldDraftConfig,
+    unit: MoldCapacityUnit,
     onToggleSelect: () -> Unit,
+    onNameChange: (String) -> Unit,
+    onCapacityChange: (Int) -> Unit,
     onQuantityChange: (Int) -> Unit,
     onDirectQuantityChange: (Int) -> Unit,
     onCellCountChange: (Int) -> Unit,
     onColorChange: (String) -> Unit,
-    onCustomCapacityChange: (Int) -> Unit,
     onDeleteCustomMold: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -345,7 +370,7 @@ private fun MoldSetupRow(
         MoldGridPreset.ML_500 -> Triple(listOf(1, 2, 4), 1, 1)
         MoldGridPreset.ML_250 -> Triple(listOf(2, 4, 8), 2, 1)
         MoldGridPreset.ML_125 -> Triple(listOf(4, 6, 8), 2, 1)
-        MoldGridPreset.ML_75 -> Triple(listOf(8, 16, 24), 4, 4)
+        MoldGridPreset.ML_30 -> Triple(listOf(8, 16, 24), 4, 4)
         MoldGridPreset.CUSTOM -> Triple(listOf(6, 8, 16), 2, 1)
     }
 
@@ -358,54 +383,113 @@ private fun MoldSetupRow(
             cornerRadius = 18.dp,
             backgroundColor = bgColor,
             padding = 12.dp,
-            onClick = onToggleSelect
+            onClick = if (!draft.isSelected) onToggleSelect else null
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // [Left] Large Mold Visual + Capacity Label underneath (dimmed when unselected)
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .width(70.dp)
-                        .graphicsLayer {
-                            alpha = if (draft.isSelected) 1.0f else 0.40f
-                        }
-                        .pointerHoverIcon(PointerIcon.Hand)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = onToggleSelect
-                        )
+                // [Left Section] Mold Visual + Capacity & Name Input (Vertically centered together)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.graphicsLayer {
+                        alpha = if (draft.isSelected) 1.0f else 0.40f
+                    }
                 ) {
-                    MoldView(
-                        preset = draft.preset,
-                        moldColor = AppColors.hexToColor(draft.moldColorHex),
-                        cellCount = draft.cellCount,
-                        size = 68.dp
-                    )
+                    // Mold Image + Capacity Label
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .width(68.dp)
+                            .then(
+                                if (!draft.isSelected) {
+                                    Modifier
+                                        .pointerHoverIcon(PointerIcon.Hand)
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                            onClick = onToggleSelect
+                                        )
+                                } else {
+                                    Modifier
+                                }
+                            )
+                    ) {
+                        MoldView(
+                            preset = draft.preset,
+                            moldColor = AppColors.hexToColor(draft.moldColorHex),
+                            cellCount = draft.cellCount,
+                            size = 64.dp
+                        )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
-                    Text(
-                        text = if (draft.preset == MoldGridPreset.CUSTOM && draft.isSelected) {
-                            if (draft.customCapacityMl > 0) "${draft.customCapacityMl}ml" else strings.moldPresetLabel(draft.preset)
-                        } else {
-                            strings.moldPresetLabel(draft.preset)
-                        },
-                        fontSize = 12.sp,
-                        fontWeight = if (draft.isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (draft.isSelected) AppColors.TextPrimary else AppColors.TextMuted,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        softWrap = false
-                    )
+                        Text(
+                            text = if (draft.capacityMl > 0) {
+                                MoldCapacityFormatter.formatCapacity(draft.capacityMl, unit)
+                            } else {
+                                MoldCapacityFormatter.formatPreset(draft.preset, unit, strings.moldPresetLabel(MoldGridPreset.CUSTOM))
+                            },
+                            fontSize = 12.sp,
+                            fontWeight = if (draft.isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (draft.isSelected) AppColors.TextPrimary else AppColors.TextMuted,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+
+                    if (draft.isSelected) {
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Name Input Field (Clean white background, enlarged & bold placeholder)
+                        Box(
+                            modifier = Modifier
+                                .offset(y = (-6).dp)
+                                .widthIn(min = 110.dp, max = 150.dp)
+                                .height(34.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.White)
+                                .border(1.dp, AppColors.Border, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 9.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            BasicTextField(
+                                value = draft.name,
+                                onValueChange = onNameChange,
+                                singleLine = true,
+                                textStyle = TextStyle(
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.TextPrimary
+                                ),
+                                cursorBrush = SolidColor(AppColors.Primary),
+                                decorationBox = { innerTextField ->
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        contentAlignment = Alignment.CenterStart
+                                    ) {
+                                        if (draft.name.isEmpty()) {
+                                            Text(
+                                                text = strings.moldPresetLabel(draft.preset) + " " + strings.slotCount(draft.cellCount),
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = AppColors.TextMuted,
+                                                maxLines = 1
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // [Right Area] Unselected: Center [+ Add] button; Selected: Stepper / Slot / Color controls
+                // [Right Area] Unselected: Center [+ Add] button; Selected: Controls
                 if (!draft.isSelected) {
                     Row(
                         modifier = Modifier
@@ -447,9 +531,9 @@ private fun MoldSetupRow(
                 } else {
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        // 1. Top row: Quantity Stepper [▲ 1 piece ▼]
+                        // 1. Top Row: [ Quantity Stepper (1개) ]
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End,
@@ -464,18 +548,20 @@ private fun MoldSetupRow(
                             )
                         }
 
-                        // Custom capacity field when preset is CUSTOM
-                        if (draft.preset == MoldGridPreset.CUSTOM) {
-                            AppTextField(
-                                value = if (draft.customCapacityMl == 0) "" else draft.customCapacityMl.toString(),
-                                onValueChange = { onCustomCapacityChange(it.toIntOrNull() ?: 0) },
-                                placeholder = strings.customCapacityPlaceholder,
-                                label = strings.customCapacityLabel,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        // 2. Second Row: [ 1칸 용량 Stepper (500ml) ]
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            EditableCapacityStepper(
+                                capacityMl = draft.capacityMl,
+                                unit = unit,
+                                onCapacityChange = onCapacityChange
                             )
                         }
 
-                        // 2. Slot count selector (Right-aligned single row: Presets + CustomSlotChip)
+                        // 3. Slot count selector (Right-aligned single row: Presets + CustomSlotChip)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End,
@@ -503,7 +589,7 @@ private fun MoldSetupRow(
                             )
                         }
 
-                        // 3. Mold color selector (Right-aligned dots without label)
+                        // 4. Mold color selector (Right-aligned dots without label)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End,
@@ -548,8 +634,8 @@ private fun MoldSetupRow(
             }
         }
 
-        // [Top-Left] Delete 'X' Button for Custom Mold
-        if (draft.preset == MoldGridPreset.CUSTOM && onDeleteCustomMold != null) {
+        // [Top-Left] Deselect / Delete 'X' Button when mold is selected
+        if (draft.isSelected) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -563,14 +649,20 @@ private fun MoldSetupRow(
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = onDeleteCustomMold
+                        onClick = {
+                            if (draft.preset == MoldGridPreset.CUSTOM && onDeleteCustomMold != null) {
+                                onDeleteCustomMold()
+                            } else {
+                                onToggleSelect()
+                            }
+                        }
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = strings.delete,
-                    tint = AppColors.TextMuted,
+                    tint = AppColors.TextSecondary,
                     modifier = Modifier.size(13.dp)
                 )
             }

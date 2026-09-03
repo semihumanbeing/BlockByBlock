@@ -56,7 +56,7 @@ fun MoldView(
             MoldGridPreset.ML_500 -> Pair(1, 1)
             MoldGridPreset.ML_250 -> Pair(4, 1) // 4 vertical lines
             MoldGridPreset.ML_125 -> Pair(6, 1) // 6 vertical lines
-            MoldGridPreset.ML_75 -> Pair(5, 3)  // 15 slot ice tray
+            MoldGridPreset.ML_30 -> Pair(5, 3)  // 15 slot ice tray
             MoldGridPreset.CUSTOM -> Pair(4, 1) // 4 vertical lines
         }
     }

@@ -18,9 +18,5 @@ data class Equipment(
     val createdAt: Long = 0L
 ) {
     val displayCapacity: Int
-        get() = if (moldPreset == MoldGridPreset.CUSTOM) {
-            customCapacityMl ?: 0
-        } else {
-            moldPreset?.capacityMl ?: 0
-        }
+        get() = customCapacityMl ?: moldPreset?.capacityMl ?: 250
 }

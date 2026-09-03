@@ -5,6 +5,13 @@ enum class StorageType {
     FRIDGE
 }
 
+data class CookingInstruction(
+    val toolType: CookingToolType,
+    val temperature: Int? = null,
+    val timeMinutes: Int? = null,
+    val timeSeconds: Int? = null
+)
+
 data class FoodBlock(
     val id: String,
     val name: String,
@@ -20,7 +27,19 @@ data class FoodBlock(
     val quantity: Int = 1,
     val storageType: StorageType = StorageType.FREEZER,
     val shelfLifeDays: Int = 90,
-    val cookingToolType: CookingToolType? = null,
+    val cookingInstructions: List<CookingInstruction> = emptyList(),
     val createdAt: Long = 0L,
     val memo: String = ""
-)
+) {
+    val cookingToolType: CookingToolType?
+        get() = cookingInstructions.firstOrNull()?.toolType
+
+    val cookingTemperature: Int?
+        get() = cookingInstructions.firstOrNull()?.temperature
+
+    val cookingTimeMinutes: Int?
+        get() = cookingInstructions.firstOrNull()?.timeMinutes
+
+    val cookingTimeSeconds: Int?
+        get() = cookingInstructions.firstOrNull()?.timeSeconds
+}

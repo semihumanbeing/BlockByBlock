@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.dahee.blockbyblock.domain.model.CookingToolType
 import com.dahee.blockbyblock.domain.model.Equipment
 import com.dahee.blockbyblock.domain.model.EquipmentCategory
+import com.dahee.blockbyblock.domain.model.MoldCapacityUnit
 import com.dahee.blockbyblock.domain.model.MoldGridPreset
 import com.dahee.blockbyblock.domain.repository.EquipmentRepository
 import com.dahee.blockbyblock.presentation.equipment.state.EquipmentScreenMode
@@ -27,6 +28,7 @@ class EquipmentViewModel(
     private val _moldDrafts = MutableStateFlow(EquipmentUiState.defaultMoldDrafts)
     private val _selectedCookingTools = MutableStateFlow<Set<CookingToolType>>(emptySet())
     private val _editingMold = MutableStateFlow<Equipment?>(null)
+    private val _capacityUnit = MutableStateFlow(MoldCapacityUnit.ML)
     private val _errorMessage = MutableStateFlow<String?>(null)
 
     init {
@@ -44,6 +46,7 @@ class EquipmentViewModel(
         _moldDrafts,
         _selectedCookingTools,
         _editingMold,
+        _capacityUnit,
         _errorMessage
     ) { params ->
         val equipments = params[0] as List<Equipment>
@@ -51,7 +54,8 @@ class EquipmentViewModel(
         val drafts = params[2] as List<MoldDraftConfig>
         val tools = params[3] as Set<CookingToolType>
         val editing = params[4] as Equipment?
-        val error = params[5] as String?
+        val unit = params[5] as MoldCapacityUnit
+        val error = params[6] as String?
 
         val effectiveMode = if (equipments.isNotEmpty() && currentMode == EquipmentScreenMode.ONBOARDING) {
             EquipmentScreenMode.LIST
@@ -63,6 +67,7 @@ class EquipmentViewModel(
             screenMode = effectiveMode,
             allEquipments = equipments,
             moldDrafts = drafts,
+            capacityUnit = unit,
             selectedCookingTools = tools,
             editingMold = editing,
             errorMessage = error
@@ -72,6 +77,10 @@ class EquipmentViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = EquipmentUiState()
     )
+
+    fun onToggleCapacityUnit(unit: MoldCapacityUnit) {
+        _capacityUnit.value = unit
+    }
 
     // Transition from Screen 1 (Onboarding) to Screen 2 (Setup)
     fun onStartSetupFromOnboarding() {
@@ -109,14 +118,16 @@ class EquipmentViewModel(
             Triple(MoldGridPreset.ML_500, "#BAE6FD", 2),
             Triple(MoldGridPreset.ML_250, "#A7F3D0", 4),
             Triple(MoldGridPreset.ML_125, "#FECDD3", 6),
-            Triple(MoldGridPreset.ML_75, "#FEF08A", 16)
+            Triple(MoldGridPreset.ML_30, "#FEF08A", 16)
         ).map { (preset, defaultColor, defaultCells) ->
             val existing = currentEquipments.find { it.category == EquipmentCategory.MOLD && it.moldPreset == preset }
             if (existing != null) {
                 MoldDraftConfig(
                     id = "draft_${preset.name}",
                     preset = preset,
+                    name = existing.name,
                     isSelected = true,
+                    capacityMl = existing.customCapacityMl ?: preset.capacityMl,
                     cellCount = existing.cellCount,
                     quantity = existing.quantity,
                     moldColorHex = existing.moldColorHex
@@ -125,7 +136,9 @@ class EquipmentViewModel(
                 MoldDraftConfig(
                     id = "draft_${preset.name}",
                     preset = preset,
+                    name = "",
                     isSelected = false,
+                    capacityMl = preset.capacityMl,
                     cellCount = defaultCells,
                     quantity = 1,
                     moldColorHex = defaultColor
@@ -142,8 +155,9 @@ class EquipmentViewModel(
                 MoldDraftConfig(
                     id = "draft_custom_${mold.id}_${index}",
                     preset = MoldGridPreset.CUSTOM,
+                    name = mold.name,
                     isSelected = true,
-                    customCapacityMl = mold.customCapacityMl ?: mold.displayCapacity,
+                    capacityMl = mold.customCapacityMl ?: mold.displayCapacity,
                     cellCount = mold.cellCount,
                     quantity = mold.quantity,
                     moldColorHex = mold.moldColorHex
@@ -154,8 +168,9 @@ class EquipmentViewModel(
                 MoldDraftConfig(
                     id = "draft_CUSTOM_1",
                     preset = MoldGridPreset.CUSTOM,
+                    name = "",
                     isSelected = false,
-                    customCapacityMl = 200,
+                    capacityMl = 200,
                     cellCount = 6,
                     quantity = 1,
                     moldColorHex = "#E9D5FF"
@@ -189,8 +204,9 @@ class EquipmentViewModel(
             list + MoldDraftConfig(
                 id = newId,
                 preset = MoldGridPreset.CUSTOM,
+                name = "",
                 isSelected = true,
-                customCapacityMl = 200,
+                capacityMl = 200,
                 cellCount = 6,
                 quantity = 1,
                 moldColorHex = "#E9D5FF"
@@ -261,12 +277,25 @@ class EquipmentViewModel(
         }
     }
 
-    // Update custom mold capacity in setup draft
-    fun onUpdateMoldDraftCustomCapacity(draftId: String, capacityMl: Int) {
+    // Update mold name in setup draft
+    fun onUpdateMoldDraftName(draftId: String, name: String) {
         _moldDrafts.update { list ->
             list.map { draft ->
                 if (draft.id == draftId) {
-                    draft.copy(customCapacityMl = capacityMl, isSelected = true)
+                    draft.copy(name = name, isSelected = true)
+                } else {
+                    draft
+                }
+            }
+        }
+    }
+
+    // Update mold capacity in setup draft (both preset and custom)
+    fun onUpdateMoldDraftCapacity(draftId: String, capacityMl: Int) {
+        _moldDrafts.update { list ->
+            list.map { draft ->
+                if (draft.id == draftId) {
+                    draft.copy(capacityMl = capacityMl, isSelected = true)
                 } else {
                     draft
                 }
@@ -292,7 +321,7 @@ class EquipmentViewModel(
             _errorMessage.value = "MIN_MOLD_REQUIRED"
             return false
         }
-        val hasInvalidCustom = selectedMolds.any { it.preset == MoldGridPreset.CUSTOM && it.customCapacityMl <= 0 }
+        val hasInvalidCustom = selectedMolds.any { it.capacityMl <= 0 }
         if (hasInvalidCustom) {
             _errorMessage.value = "CUSTOM_CAPACITY_REQUIRED"
             return false
@@ -313,18 +342,15 @@ class EquipmentViewModel(
 
             // Register selected molds
             selectedMolds.forEach { moldDraft ->
-                val moldName = if (moldDraft.preset == MoldGridPreset.CUSTOM) {
-                    "Custom ${moldDraft.displayCapacity}ml ${moldDraft.cellCount}-slot Mold"
-                } else {
-                    "${moldDraft.preset.label} ${moldDraft.cellCount}-slot Mold"
-                }
+                val fallbackName = "${moldDraft.displayCapacity}ml ${moldDraft.cellCount}칸"
+                val moldName = moldDraft.name.ifBlank { fallbackName }
 
                 val moldEquipment = Equipment(
                     id = "mold_${moldDraft.preset.name}_${kotlin.random.Random.nextInt(1000, 9999)}",
                     name = moldName,
                     category = EquipmentCategory.MOLD,
                     moldPreset = moldDraft.preset,
-                    customCapacityMl = if (moldDraft.preset == MoldGridPreset.CUSTOM) moldDraft.customCapacityMl else null,
+                    customCapacityMl = moldDraft.capacityMl,
                     cellCount = moldDraft.cellCount,
                     quantity = moldDraft.quantity,
                     moldColorHex = moldDraft.moldColorHex,

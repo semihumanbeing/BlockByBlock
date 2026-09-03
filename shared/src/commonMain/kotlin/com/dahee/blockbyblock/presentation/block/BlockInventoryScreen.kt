@@ -421,20 +421,21 @@ private fun FoodBlockCard(
                     }
                 }
 
-                val cookingInfo = remember(block.cookingToolTypes, block.cookingToolType, block.cookingTemperature, block.cookingTimeMinutes, block.cookingTimeSeconds) {
-                    val tools = block.effectiveCookingToolTypes
-                    if (tools.isEmpty()) null
+                val cookingInfo = remember(block.cookingInstructions) {
+                    if (block.cookingInstructions.isEmpty()) null
                     else {
-                        val toolNames = tools.joinToString(", ") { strings.cookingToolName(it) }
-                        val tempStr = block.cookingTemperature?.let { "${it}°C" }
-                        val timeStr = buildString {
-                            block.cookingTimeMinutes?.takeIf { it > 0 }?.let { append("${it}${strings.timeUnitMinutes}") }
-                            block.cookingTimeSeconds?.takeIf { it > 0 }?.let {
-                                if (isNotEmpty()) append(" ")
-                                append("${it}${strings.timeUnitSeconds}")
-                            }
-                        }.ifBlank { null }
-                        listOfNotNull(toolNames, tempStr, timeStr).joinToString(" · ")
+                        block.cookingInstructions.joinToString(" · ") { inst ->
+                            val toolName = strings.cookingToolName(inst.toolType)
+                            val tempStr = inst.temperature?.let { "${it}${strings.temperatureUnitCelsius}" }
+                            val timeStr = buildString {
+                                inst.timeMinutes?.takeIf { it > 0 }?.let { append("${it}${strings.timeUnitMinutes}") }
+                                inst.timeSeconds?.takeIf { it > 0 }?.let {
+                                    if (isNotEmpty()) append(" ")
+                                    append("${it}${strings.timeUnitSeconds}")
+                                }
+                            }.ifBlank { null }
+                            listOfNotNull(toolName, tempStr, timeStr).joinToString(" ")
+                        }
                     }
                 }
 
