@@ -3,30 +3,24 @@ package com.dahee.blockbyblock.presentation.mealplan
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -60,19 +54,17 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.theme.AppColors
 import com.dahee.blockbyblock.core.ui.AppCard
+import com.dahee.blockbyblock.core.ui.AppTextField
 import com.dahee.blockbyblock.domain.model.DayMealRecord
-import com.dahee.blockbyblock.domain.model.MealBlockItem
 import com.dahee.blockbyblock.domain.model.MealSlotRecord
 import com.dahee.blockbyblock.domain.model.MealType
-import com.dahee.blockbyblock.presentation.block.components.FoodBlock3DView
-import com.dahee.blockbyblock.presentation.block.components.FoodBlockTopView
 import com.dahee.blockbyblock.presentation.mealplan.components.BentoLunchBoxView
 import com.dahee.blockbyblock.presentation.mealplan.components.MealRecordDialog
 
@@ -89,6 +81,10 @@ fun MealPlanScreen(
     // Delete Confirmation Dialog State
     var pendingDeleteMealType by remember { mutableStateOf<MealType?>(null) }
     var pendingDeleteDateString by remember { mutableStateOf<String?>(null) }
+
+    // Preset Save Dialog State
+    var pendingSavePresetMealType by remember { mutableStateOf<MealType?>(null) }
+    var presetNameInput by remember { mutableStateOf("") }
 
     // Meal Saved Transient Notice Toast State
     var showSavedNotice by remember { mutableStateOf(false) }
@@ -192,6 +188,96 @@ fun MealPlanScreen(
         )
     }
 
+    // Save Preset Dialog Modal
+    if (pendingSavePresetMealType != null) {
+        val targetMealType = pendingSavePresetMealType!!
+
+        AlertDialog(
+            onDismissRequest = {
+                pendingSavePresetMealType = null
+                presetNameInput = ""
+            },
+            title = {
+                Text(
+                    text = strings.saveMealPreset,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = strings.enterPresetName,
+                        fontSize = 13.5.sp,
+                        color = AppColors.TextSecondary
+                    )
+
+                    AppTextField(
+                        value = presetNameInput,
+                        onValueChange = { presetNameInput = it },
+                        placeholder = strings.presetNamePlaceholder,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                viewModel.onSaveSlotAsPreset(
+                                    dateString = uiState.selectedDateString,
+                                    mealType = targetMealType,
+                                    presetName = presetNameInput.trim().ifBlank { null }
+                                )
+                                pendingSavePresetMealType = null
+                                presetNameInput = ""
+                                showSavedNotice = true
+                            }
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.onSaveSlotAsPreset(
+                            dateString = uiState.selectedDateString,
+                            mealType = targetMealType,
+                            presetName = presetNameInput.trim().ifBlank { null }
+                        )
+                        pendingSavePresetMealType = null
+                        presetNameInput = ""
+                        showSavedNotice = true
+                    }
+                ) {
+                    Text(
+                        text = strings.saveMealPreset,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.Primary
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        pendingSavePresetMealType = null
+                        presetNameInput = ""
+                    }
+                ) {
+                    Text(
+                        text = strings.cancel,
+                        fontSize = 14.sp,
+                        color = AppColors.TextSecondary
+                    )
+                }
+            },
+            containerColor = AppColors.Surface,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -240,7 +326,16 @@ fun MealPlanScreen(
                         pendingDeleteDateString = uiState.selectedDateString
                     },
                     onSavePresetSlot = { mealType ->
-                        viewModel.onSaveSlotAsPreset(uiState.selectedDateString, mealType)
+                        val slot = uiState.currentDayMealRecord?.getSlot(mealType)
+                        val defaultName = if (slot != null && slot.customTitle.isNotBlank()) {
+                            slot.customTitle
+                        } else if (slot != null && slot.blocks.isNotEmpty()) {
+                            "${strings.mealTypeName(mealType)} (${slot.blocks.map { it.blockName }.distinct().joinToString(", ")})"
+                        } else {
+                            strings.mealTypeName(mealType)
+                        }
+                        presetNameInput = defaultName
+                        pendingSavePresetMealType = mealType
                     }
                 )
                 MealPlanTab.WEEK -> WeekMealView(
@@ -590,37 +685,51 @@ private fun MealSlotCard(
                 if (hasContent) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         if (hasBlocks) {
-                            Text(
-                                text = strings.saveMealPreset,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AppColors.Primary,
+                            Box(
                                 modifier = Modifier
+                                    .clip(RoundedCornerShape(7.dp))
+                                    .background(AppColors.PrimaryLight.copy(alpha = 0.45f))
+                                    .border(1.dp, AppColors.Primary.copy(alpha = 0.55f), RoundedCornerShape(7.dp))
                                     .pointerHoverIcon(PointerIcon.Hand)
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null,
                                         onClick = onSavePresetClick
                                     )
-                            )
+                                    .padding(horizontal = 9.dp, vertical = 3.5.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = strings.saveMealPreset,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.PrimaryDark
+                                )
+                            }
                         }
 
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = strings.delete,
-                            tint = AppColors.TextMuted,
+                        Box(
                             modifier = Modifier
-                                .size(18.dp)
+                                .size(22.dp)
+                                .clip(CircleShape)
                                 .pointerHoverIcon(PointerIcon.Hand)
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
                                     onClick = onDeleteClick
-                                )
-                        )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = strings.delete,
+                                tint = AppColors.TextMuted,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -640,6 +749,7 @@ private fun MealSlotCard(
                         .weight(1f)
                         .fillMaxHeight(),
                     blockHeight = 76.dp,
+                    onBlockClick = { onClick() },
                     emptyPlaceholder = {
                         Text(
                             text = "+",

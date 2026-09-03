@@ -106,7 +106,7 @@ object KoStrings : AppStrings {
     override val editMoldDialogSaveBtn = "수정 완료"
 
     // ME Screen
-    override val meTitle = "내 정보 & 설정"
+    override val meTitle = "내 정보"
     override val meSubtitle = "프로필과 앱 설정을 관리합니다"
     override val meProfileSection = "프로필"
     override val meProfileName = "닉네임"
@@ -118,7 +118,7 @@ object KoStrings : AppStrings {
     override val meLanguageKo = "한국어"
     override val meLanguageEn = "English"
     override val meEquipmentSummaryTitle = "내 등록 장비 현황"
-    override val meEquipmentManageTitle = "내 장비 및 몰드 관리"
+    override val meEquipmentManageTitle = "내 장비 관리"
     override val meEquipmentManageSubtitle = "보유 중인 몰드 규격과 조리기구를 설정합니다"
     override fun meEquipmentSummaryDesc(moldCount: Int, toolCount: Int) = "몰드 ${moldCount}개 · 조리도구 ${toolCount}개"
     override val meAppVersion = "앱 버전 1.0.0"

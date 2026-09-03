@@ -106,7 +106,7 @@ object EnStrings : AppStrings {
     override val editMoldDialogSaveBtn = "Save Changes"
 
     // ME Screen
-    override val meTitle = "My Info & Settings"
+    override val meTitle = "My Info"
     override val meSubtitle = "Manage your profile and app preferences"
     override val meProfileSection = "Profile"
     override val meProfileName = "Nickname"
@@ -118,7 +118,7 @@ object EnStrings : AppStrings {
     override val meLanguageKo = "한국어"
     override val meLanguageEn = "English"
     override val meEquipmentSummaryTitle = "Registered Equipment"
-    override val meEquipmentManageTitle = "Manage Equipment & Molds"
+    override val meEquipmentManageTitle = "Manage Equipment"
     override val meEquipmentManageSubtitle = "Configure your silicone molds and cooking tools"
     override fun meEquipmentSummaryDesc(moldCount: Int, toolCount: Int) = "$moldCount molds · $toolCount cooking tools"
     override val meAppVersion = "App Version 1.0.0"

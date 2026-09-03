@@ -22,7 +22,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.dahee.blockbyblock.core.i18n.AppLanguage
 import com.dahee.blockbyblock.core.i18n.LocalAppLanguage
 import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.i18n.getStrings
@@ -32,7 +31,6 @@ import com.dahee.blockbyblock.data.repository.InMemoryEquipmentRepository
 import com.dahee.blockbyblock.data.repository.InMemoryFoodBlockRepository
 import com.dahee.blockbyblock.data.repository.InMemoryIngredientRepository
 import com.dahee.blockbyblock.data.repository.InMemoryMealRecordRepository
-import com.dahee.blockbyblock.domain.model.ProfileAvatarType
 import com.dahee.blockbyblock.domain.model.UserProfile
 import com.dahee.blockbyblock.presentation.auth.AuthScreen
 import com.dahee.blockbyblock.presentation.block.BlockInventoryScreen
@@ -208,16 +206,6 @@ fun App() {
                                 hasCompletedOnboarding = false
                                 userProfile = userProfile.copy(email = email)
                                 tutorialStep = TutorialStep.WELCOME_PROFILE
-                            },
-                            onSkip = {
-                                isLoggedIn = true
-                                userProfile = userProfile.copy(email = "guest@blockbyblock.com")
-                                if (!hasCompletedOnboarding) {
-                                    tutorialStep = TutorialStep.WELCOME_PROFILE
-                                } else {
-                                    tutorialStep = TutorialStep.COMPLETED
-                                    currentTab = NavTab.MEAL_PLAN
-                                }
                             }
                         )
                     }

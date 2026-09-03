@@ -53,7 +53,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import blockbyblock.shared.generated.resources.Res
@@ -78,7 +77,6 @@ enum class AuthMode {
 fun AuthScreen(
     onLoginSuccess: (email: String) -> Unit,
     onSignUpSuccess: (email: String) -> Unit,
-    onSkip: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var mode by remember { mutableStateOf(AuthMode.LOGIN) }
@@ -125,32 +123,6 @@ fun AuthScreen(
             },
         contentAlignment = Alignment.Center
     ) {
-        // Skip Button for LOGIN mode (pinned comfortably at top right)
-        if (mode == AuthMode.LOGIN && onSkip != null) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopEnd)
-                    .padding(top = 16.dp, end = 16.dp),
-                horizontalArrangement = Arrangement.End
-            ) {
-                Text(
-                    text = strings.tutorialSkipBtn,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = AppColors.TextMuted,
-                    modifier = Modifier
-                        .pointerHoverIcon(PointerIcon.Hand)
-                        .clickable(
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() },
-                            onClick = onSkip
-                        )
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                )
-            }
-        }
-
         // Center Content Container
         Column(
             modifier = Modifier
