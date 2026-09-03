@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -62,6 +61,7 @@ import com.dahee.blockbyblock.core.theme.AppColors
 import com.dahee.blockbyblock.core.ui.AppButton
 import com.dahee.blockbyblock.core.ui.AppCard
 import com.dahee.blockbyblock.core.ui.AppChip
+import com.dahee.blockbyblock.core.ui.AppToastBanner
 import com.dahee.blockbyblock.core.ui.ButtonVariant
 import com.dahee.blockbyblock.domain.model.Ingredient
 import com.dahee.blockbyblock.domain.model.IngredientCategory
@@ -494,6 +494,15 @@ fun InventoryScreen(
                 }
             }
         }
+
+        // Auto-save notification banner at bottom
+        AppToastBanner(
+            visible = uiState.autoSaveToast != null,
+            message = uiState.autoSaveToast ?: "",
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = if (!isWeb) 80.dp else 24.dp)
+        )
     }
 }
 

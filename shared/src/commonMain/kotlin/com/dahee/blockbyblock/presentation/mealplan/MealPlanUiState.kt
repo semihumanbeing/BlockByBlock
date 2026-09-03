@@ -1,7 +1,6 @@
 package com.dahee.blockbyblock.presentation.mealplan
 
 import com.dahee.blockbyblock.domain.model.DayMealRecord
-import com.dahee.blockbyblock.domain.model.FoodBlock
 import com.dahee.blockbyblock.domain.model.MealBlockItem
 import com.dahee.blockbyblock.domain.model.MealPreset
 import com.dahee.blockbyblock.domain.model.MealType
@@ -32,6 +31,8 @@ data class DayMealPlanUiModel(
     val monthDayDisplay: String, // "8.30"
     val isToday: Boolean,
     val isSelected: Boolean,
+    val isSunday: Boolean = false,
+    val isSaturday: Boolean = false,
     val mealRecord: DayMealRecord?
 )
 
@@ -40,23 +41,23 @@ data class DayMealPlanUiModel(
  */
 data class MealPlanUiState(
     val selectedTab: MealPlanTab = MealPlanTab.TODAY,
-    val todayDateString: String = "2026-08-30",
+    val todayDateString: String = "",
 
     // Day Tab Data (Supports navigating to yesterday, tomorrow, and any date)
-    val selectedDateString: String = "2026-08-30",
-    val selectedDateFormatted: String = "2026년 8월 30일 (일)",
+    val selectedDateString: String = "",
+    val selectedDateFormatted: String = "",
     val isSelectedDateToday: Boolean = true,
     val currentDayMealRecord: DayMealRecord? = null,
 
     // Week Tab Data
-    val currentWeekLabel: String = "", // e.g. "2026년 8월 5주차 (8.24 ~ 8.30)"
+    val currentWeekLabel: String = "", // e.g. "2026년 9월 1주차 (8.31 ~ 9.6)"
     val weekDays: List<DayMealPlanUiModel> = emptyList(),
-    val weekStartDateString: String = "2026-08-24",
+    val weekStartDateString: String = "",
 
     // Meal Slot Edit Dialog State
     val isSlotDialogOpen: Boolean = false,
-    val editingDateString: String = "2026-08-30",
-    val editingDateLabel: String = "8월 30일 (일)",
+    val editingDateString: String = "",
+    val editingDateLabel: String = "",
     val editingMealType: MealType = MealType.LUNCH,
     val slotSelectedBlocks: List<MealBlockItem> = emptyList(), // Blocks currently placed in the slot (Top)
     val slotAvailableBlocks: List<AvailableBlockPiece> = emptyList(), // Blocks available to pick (Bottom)

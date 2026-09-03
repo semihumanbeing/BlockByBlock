@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -59,10 +58,8 @@ import com.dahee.blockbyblock.core.ui.AppCard
 import com.dahee.blockbyblock.core.ui.AppChip
 import com.dahee.blockbyblock.core.ui.ButtonVariant
 import com.dahee.blockbyblock.domain.model.FoodBlock
-import com.dahee.blockbyblock.domain.model.MoldGridPreset
 import com.dahee.blockbyblock.presentation.block.components.CreateBlockScreen
 import com.dahee.blockbyblock.presentation.block.components.FoodBlock3DView
-import com.dahee.blockbyblock.presentation.equipment.components.MoldView
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -422,6 +419,33 @@ private fun FoodBlockCard(
                             )
                         }
                     }
+                }
+
+                val cookingInfo = remember(block.cookingToolTypes, block.cookingToolType, block.cookingTemperature, block.cookingTimeMinutes, block.cookingTimeSeconds) {
+                    val tools = block.effectiveCookingToolTypes
+                    if (tools.isEmpty()) null
+                    else {
+                        val toolNames = tools.joinToString(", ") { strings.cookingToolName(it) }
+                        val tempStr = block.cookingTemperature?.let { "${it}°C" }
+                        val timeStr = buildString {
+                            block.cookingTimeMinutes?.takeIf { it > 0 }?.let { append("${it}${strings.timeUnitMinutes}") }
+                            block.cookingTimeSeconds?.takeIf { it > 0 }?.let {
+                                if (isNotEmpty()) append(" ")
+                                append("${it}${strings.timeUnitSeconds}")
+                            }
+                        }.ifBlank { null }
+                        listOfNotNull(toolNames, tempStr, timeStr).joinToString(" · ")
+                    }
+                }
+
+                if (cookingInfo != null) {
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(
+                        text = "🍳 $cookingInfo",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = AppColors.TextSecondary
+                    )
                 }
             }
 

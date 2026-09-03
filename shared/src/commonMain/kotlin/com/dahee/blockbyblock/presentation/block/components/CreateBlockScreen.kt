@@ -456,7 +456,11 @@ fun CreateBlockScreen(
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = "(${uiState.selectedMoldCount}개 × ${mold.cellCount}칸 = ${uiState.selectedMoldCount * mold.cellCount}개)",
+                                            text = strings.blockYieldCalculation(
+                                                uiState.selectedMoldCount,
+                                                mold.cellCount,
+                                                uiState.selectedMoldCount * mold.cellCount
+                                            ),
                                             fontSize = 11.5.sp,
                                             color = AppColors.Primary,
                                             fontWeight = FontWeight.Medium
@@ -784,7 +788,7 @@ fun CreateBlockScreen(
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     toolOptions.forEach { toolType ->
-                                        val isSelected = uiState.selectedCookingToolType == toolType
+                                        val isSelected = uiState.selectedCookingToolTypes.contains(toolType)
                                         val toolName = strings.cookingToolName(toolType)
 
                                         Column(
@@ -796,7 +800,7 @@ fun CreateBlockScreen(
                                                 .clickable(
                                                     interactionSource = remember { MutableInteractionSource() },
                                                     indication = null,
-                                                    onClick = { viewModel.onSelectCookingTool(toolType) }
+                                                    onClick = { viewModel.onToggleCookingTool(toolType) }
                                                 )
                                         ) {
                                             Box(
@@ -843,6 +847,138 @@ fun CreateBlockScreen(
                                         }
                                     }
                                 }
+
+                                // Cooking Tool Specific Setting: Temperature & Time
+                                val hasOvenOrAirFryerOrSlowCooker = uiState.selectedCookingToolTypes.any {
+                                    it == com.dahee.blockbyblock.domain.model.CookingToolType.OVEN ||
+                                    it == com.dahee.blockbyblock.domain.model.CookingToolType.AIR_FRYER ||
+                                    it == com.dahee.blockbyblock.domain.model.CookingToolType.SLOW_COOKER
+                                }
+                                val hasMicrowaveOnly = !hasOvenOrAirFryerOrSlowCooker && uiState.selectedCookingToolTypes.contains(com.dahee.blockbyblock.domain.model.CookingToolType.MICROWAVE)
+
+                                if (hasOvenOrAirFryerOrSlowCooker) {
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        // Temperature Input
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = strings.cookingTemperatureLabel,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = AppColors.TextSecondary
+                                            )
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                AppTextField(
+                                                    value = uiState.cookingTemperatureInput,
+                                                    onValueChange = { viewModel.onCookingTemperatureChange(it) },
+                                                    placeholder = if (uiState.selectedCookingToolTypes.contains(com.dahee.blockbyblock.domain.model.CookingToolType.SLOW_COOKER)) "90" else "180",
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                Text(
+                                                    text = strings.temperatureUnitCelsius,
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = AppColors.TextPrimary
+                                                )
+                                            }
+                                        }
+
+                                        // Time Input (Minutes)
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = strings.cookingTimeLabel,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = AppColors.TextSecondary
+                                            )
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                AppTextField(
+                                                    value = uiState.cookingTimeMinutesInput,
+                                                    onValueChange = { viewModel.onCookingTimeMinutesChange(it) },
+                                                    placeholder = if (uiState.selectedCookingToolTypes.contains(com.dahee.blockbyblock.domain.model.CookingToolType.SLOW_COOKER)) "120" else "15",
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                Text(
+                                                    text = strings.timeUnitMinutes,
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = AppColors.TextPrimary
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else if (hasMicrowaveOnly) {
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        Text(
+                                            text = strings.cookingTimeLabel,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = AppColors.TextSecondary
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            // Minutes
+                                            Row(
+                                                modifier = Modifier.weight(1f),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                AppTextField(
+                                                    value = uiState.cookingTimeMinutesInput,
+                                                    onValueChange = { viewModel.onCookingTimeMinutesChange(it) },
+                                                    placeholder = "3",
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                Text(
+                                                    text = strings.timeUnitMinutes,
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = AppColors.TextPrimary
+                                                )
+                                            }
+
+                                            // Seconds
+                                            Row(
+                                                modifier = Modifier.weight(1f),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                AppTextField(
+                                                    value = uiState.cookingTimeSecondsInput,
+                                                    onValueChange = { viewModel.onCookingTimeSecondsChange(it) },
+                                                    placeholder = "30",
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                Text(
+                                                    text = strings.timeUnitSeconds,
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = AppColors.TextPrimary
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             } else {
                                 Text(
                                     text = strings.noOwnedCookingTools,
@@ -853,6 +989,8 @@ fun CreateBlockScreen(
                                 )
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         // Part 2: Shelf Life (Editable input for days)
                         Row(

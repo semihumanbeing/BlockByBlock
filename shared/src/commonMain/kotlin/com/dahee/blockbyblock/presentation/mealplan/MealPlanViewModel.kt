@@ -1,5 +1,7 @@
 package com.dahee.blockbyblock.presentation.mealplan
 
+import com.dahee.blockbyblock.core.utils.getCurrentDateIso
+import com.dahee.blockbyblock.core.utils.getCurrentEpochMillis
 import com.dahee.blockbyblock.domain.model.DayMealRecord
 import com.dahee.blockbyblock.domain.model.FoodBlock
 import com.dahee.blockbyblock.domain.model.MealBlockItem
@@ -19,14 +21,14 @@ import kotlinx.coroutines.launch
 
 private data class DateNavigationState(
     val selectedTab: MealPlanTab = MealPlanTab.TODAY,
-    val selectedDateString: String = "2026-08-30",
-    val weekStartDate: String = "2026-08-24"
+    val selectedDateString: String = getCurrentDateIso(),
+    val weekStartDate: String = MealPlanViewModel.getMondayOfWeek(getCurrentDateIso())
 )
 
 private data class SlotDialogInternalState(
     val isOpen: Boolean = false,
-    val dateString: String = "2026-08-30",
-    val dateLabel: String = "8월 30일 (일)",
+    val dateString: String = "",
+    val dateLabel: String = "",
     val mealType: MealType = MealType.LUNCH,
     val selectedBlocks: List<MealBlockItem> = emptyList(),
     val availablePieces: List<AvailableBlockPiece> = emptyList(),
@@ -39,7 +41,8 @@ class MealPlanViewModel(
     private val foodBlockRepository: FoodBlockRepository,
     private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
-    private val todayString = "2026-08-30"
+    private val todayString: String
+        get() = getCurrentDateIso()
 
     private val _navState = MutableStateFlow(DateNavigationState())
     private val _dialogState = MutableStateFlow(SlotDialogInternalState())
@@ -63,6 +66,7 @@ class MealPlanViewModel(
         val weekDates = generate7Days(nav.weekStartDate)
         val dayModels = weekDates.mapIndexed { index, dateStr ->
             val record = records.find { it.dateString == dateStr }
+            val dayOfWeekNum = getDayOfWeekNumber(dateStr)
             val dayOfWeekKorean = getDayOfWeekKorean(dateStr)
             val monthDay = formatMonthDay(dateStr)
             DayMealPlanUiModel(
@@ -71,6 +75,8 @@ class MealPlanViewModel(
                 monthDayDisplay = monthDay,
                 isToday = dateStr == todayString,
                 isSelected = dateStr == nav.selectedDateString,
+                isSunday = dayOfWeekNum == 0,
+                isSaturday = dayOfWeekNum == 6,
                 mealRecord = record
             )
         }
@@ -126,8 +132,10 @@ class MealPlanViewModel(
     }
 
     fun onResetToToday() {
+        val today = getCurrentDateIso()
         _navState.value = _navState.value.copy(
-            selectedDateString = todayString,
+            selectedDateString = today,
+            weekStartDate = getMondayOfWeek(today),
             selectedTab = MealPlanTab.TODAY
         )
     }
@@ -143,7 +151,8 @@ class MealPlanViewModel(
     }
 
     fun onCurrentWeek() {
-        _navState.value = _navState.value.copy(weekStartDate = "2026-08-24")
+        val today = getCurrentDateIso()
+        _navState.value = _navState.value.copy(weekStartDate = getMondayOfWeek(today))
     }
 
     fun onOpenSlotDialog(dateString: String, dateLabel: String, mealType: MealType) {
@@ -408,20 +417,21 @@ class MealPlanViewModel(
             return dateStr
         }
 
-        fun getDayOfWeekKorean(dateStr: String): String {
+        fun getDayOfWeekNumber(dateStr: String): Int {
             val parts = dateStr.split("-")
-            if (parts.size != 3) return "일"
+            if (parts.size != 3) return 0
             val y = parts[0].toIntOrNull() ?: 2026
             val m = parts[1].toIntOrNull() ?: 8
             val d = parts[2].toIntOrNull() ?: 30
 
-            // Zeller-like calculation for Day of Week (0 = Sun, 1 = Mon, ... 6 = Sat)
             val t = intArrayOf(0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4)
             var yearAdj = y
             if (m < 3) yearAdj -= 1
-            val dayOfWeekNum = (yearAdj + yearAdj / 4 - yearAdj / 100 + yearAdj / 400 + t[m - 1] + d) % 7
+            return (yearAdj + yearAdj / 4 - yearAdj / 100 + yearAdj / 400 + t[m - 1] + d) % 7
+        }
 
-            return when (dayOfWeekNum) {
+        fun getDayOfWeekKorean(dateStr: String): String {
+            return when (getDayOfWeekNumber(dateStr)) {
                 0 -> "일"
                 1 -> "월"
                 2 -> "화"
@@ -504,8 +514,14 @@ class MealPlanViewModel(
             return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
         }
 
+        fun getMondayOfWeek(dateStr: String): String {
+            val dayNum = getDayOfWeekNumber(dateStr)
+            val daysToSubtract = if (dayNum == 0) 6 else dayNum - 1
+            return offsetDate(dateStr, -daysToSubtract)
+        }
+
         private fun currentTimeMillis(): Long {
-            return 1756540800000L
+            return getCurrentEpochMillis()
         }
     }
 }

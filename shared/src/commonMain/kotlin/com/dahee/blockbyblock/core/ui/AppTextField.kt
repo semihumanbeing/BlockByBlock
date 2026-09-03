@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.theme.AppColors
 
 @Composable
@@ -140,9 +141,10 @@ fun AppTextField(
                         trailingIcon()
                     }
                 } else if (textFieldValue.text.isNotEmpty()) {
+                    val strings = LocalStrings.current
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "지우기",
+                        contentDescription = strings.clearText,
                         tint = AppColors.TextMuted,
                         modifier = Modifier
                             .size(18.dp)

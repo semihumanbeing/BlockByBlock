@@ -62,6 +62,7 @@ import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.theme.AppColors
 import com.dahee.blockbyblock.core.ui.AppCard
 import com.dahee.blockbyblock.core.ui.AppTextField
+import com.dahee.blockbyblock.core.ui.AppToastBanner
 import com.dahee.blockbyblock.domain.model.DayMealRecord
 import com.dahee.blockbyblock.domain.model.MealSlotRecord
 import com.dahee.blockbyblock.domain.model.MealType
@@ -355,39 +356,13 @@ fun MealPlanScreen(
         }
 
         // Small Toast/Notice Badge: "식단이 저장되었습니다"
-        AnimatedVisibility(
+        AppToastBanner(
             visible = showSavedNotice,
-            enter = fadeIn() + slideInVertically(initialOffsetY = { 30 }),
-            exit = fadeOut() + slideOutVertically(targetOffsetY = { 30 }),
+            message = strings.presetSaved,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 24.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF2C241E).copy(alpha = 0.92f))
-                    .padding(horizontal = 16.dp, vertical = 9.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = AppColors.Primary,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Text(
-                        text = strings.presetSaved,
-                        fontSize = 12.5.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.White
-                    )
-                }
-            }
-        }
+        )
     }
 }
 
@@ -978,8 +953,8 @@ private fun WeekMealView(
                             fontWeight = FontWeight.Bold,
                             color = when {
                                 isToday -> AppColors.Primary
-                                dayModel.dayOfWeekName == "일" -> Color(0xFFD32F2F)
-                                dayModel.dayOfWeekName == "토" -> Color(0xFF1976D2)
+                                dayModel.isSunday -> Color(0xFFD32F2F)
+                                dayModel.isSaturday -> Color(0xFF1976D2)
                                 else -> AppColors.TextPrimary
                             }
                         )

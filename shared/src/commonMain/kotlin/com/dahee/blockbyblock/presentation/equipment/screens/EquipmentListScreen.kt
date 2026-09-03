@@ -1,14 +1,11 @@
 package com.dahee.blockbyblock.presentation.equipment.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,13 +16,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,6 +41,10 @@ import com.dahee.blockbyblock.presentation.equipment.state.EquipmentUiState
 
 import androidx.compose.ui.platform.LocalFocusManager
 
+import com.dahee.blockbyblock.core.utils.MoldCapacityFormatter
+import com.dahee.blockbyblock.domain.model.MoldCapacityUnit
+import com.dahee.blockbyblock.presentation.equipment.components.MoldUnitToggle
+
 /**
  * Screen 3: Shows all registered molds & cooking equipment at a glance,
  * with top-right [Edit All] button or individual mold click to edit via dialog.
@@ -64,6 +63,7 @@ fun EquipmentListScreen(
     if (uiState.editingMold != null) {
         SingleMoldEditDialog(
             equipment = uiState.editingMold,
+            capacityUnit = uiState.capacityUnit,
             onDismiss = { viewModel.onCloseMoldEditDialog() },
             onSave = { updated -> viewModel.onSaveSingleMold(updated) },
             onDelete = { id -> viewModel.onDeleteSingleMold(id) }
@@ -105,13 +105,23 @@ fun EquipmentListScreen(
                     )
                 }
 
-                // Top-right [Edit All] button (Warm Honey Yellow from palette)
-                AppButton(
-                    text = strings.editAllBtn,
-                    variant = ButtonVariant.WARM_YELLOW,
-                    onClick = { viewModel.onOpenEditScreen() },
-                    height = 38.dp
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    MoldUnitToggle(
+                        currentUnit = uiState.capacityUnit,
+                        onUnitChange = { viewModel.onToggleCapacityUnit(it) }
+                    )
+
+                    // Top-right [Edit All] button (Warm Honey Yellow from palette)
+                    AppButton(
+                        text = strings.editAllBtn,
+                        variant = ButtonVariant.WARM_YELLOW,
+                        onClick = { viewModel.onOpenEditScreen() },
+                        height = 38.dp
+                    )
+                }
             }
         }
 
@@ -142,6 +152,7 @@ fun EquipmentListScreen(
             items(uiState.moldEquipments, key = { it.id }) { mold ->
                 MoldItemCard(
                     equipment = mold,
+                    capacityUnit = uiState.capacityUnit,
                     onClick = { viewModel.onOpenMoldEditDialog(mold) },
                     onQuantitySet = { qty -> viewModel.onSetEquipmentQuantity(mold.id, qty) }
                 )
@@ -232,11 +243,22 @@ fun EquipmentListScreen(
 @Composable
 private fun MoldItemCard(
     equipment: Equipment,
+    capacityUnit: MoldCapacityUnit,
     onClick: () -> Unit,
     onQuantitySet: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
+    val capacityLabel = if (equipment.customCapacityMl != null) {
+        MoldCapacityFormatter.formatCapacity(equipment.customCapacityMl, capacityUnit)
+    } else if (equipment.moldPreset != null && equipment.moldPreset != MoldGridPreset.CUSTOM) {
+        MoldCapacityFormatter.formatPreset(equipment.moldPreset, capacityUnit, strings.moldPresetLabel(MoldGridPreset.CUSTOM))
+    } else {
+        MoldCapacityFormatter.formatCapacity(equipment.displayCapacity, capacityUnit)
+    }
+
+    val defaultNamePattern = "${equipment.displayCapacity}ml ${equipment.cellCount}칸"
+    val hasCustomName = equipment.name.isNotBlank() && equipment.name != defaultNamePattern && !equipment.name.startsWith(capacityLabel)
 
     AppCard(
         modifier = modifier.fillMaxWidth(),
@@ -261,32 +283,69 @@ private fun MoldItemCard(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Capacity (e.g. 250ml) & Slots (e.g. 4칸) - Clean large text without square badges
-            Row(
+            // Capacity & Slots or Custom Name
+            Column(
                 modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.Center
             ) {
-                Text(
-                    text = "${equipment.displayCapacity}ml",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AppColors.TextPrimary
-                )
+                if (hasCustomName) {
+                    Text(
+                        text = equipment.name,
+                        fontSize = 15.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.TextPrimary,
+                        maxLines = 1
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = capacityLabel,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = AppColors.TextSecondary
+                        )
+                        Text(
+                            text = "·",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.TextMuted
+                        )
+                        Text(
+                            text = strings.slotCount(equipment.cellCount),
+                            fontSize = 13.sp,
+                            color = AppColors.TextSecondary
+                        )
+                    }
+                } else {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = capacityLabel,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.TextPrimary
+                        )
 
-                Text(
-                    text = "·",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AppColors.TextMuted
-                )
+                        Text(
+                            text = "·",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.TextMuted
+                        )
 
-                Text(
-                    text = strings.slotCount(equipment.cellCount),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = AppColors.TextSecondary
-                )
+                        Text(
+                            text = strings.slotCount(equipment.cellCount),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AppColors.TextSecondary
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.width(10.dp))

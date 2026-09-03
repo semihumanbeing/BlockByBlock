@@ -81,13 +81,6 @@ class BlockViewModel(
         _uiState.update { it.copy(selectedBlockColorHex = colorHex) }
     }
 
-    fun onSelectCookingTool(toolType: CookingToolType?) {
-        _uiState.update { state ->
-            val next = if (state.selectedCookingToolType == toolType) null else toolType
-            state.copy(selectedCookingToolType = next)
-        }
-    }
-
     fun onApplyHistoryBlock(history: FoodBlock) {
         _uiState.update { state ->
             if (state.customBlockName == history.name) {
@@ -96,7 +89,8 @@ class BlockViewModel(
                 val initialQty = (mold?.cellCount ?: 1)
                 state.copy(
                     customBlockName = "",
-                    selectedBlockColorHex = FoodBlockPalette.defaultColorHex,
+                    selectedBlockColorHex = "#FF7043",
+                    selectedCookingToolTypes = emptySet(),
                     selectedCookingToolType = null,
                     selectedIngredientIds = emptySet(),
                     subIngredients = emptyList(),
@@ -116,10 +110,18 @@ class BlockViewModel(
                 val moldCellCount = (mold?.cellCount ?: history.moldCellCount).coerceAtLeast(1)
                 val moldCount = (history.quantity / moldCellCount).coerceAtLeast(1)
 
+                val drafts = history.cookingInstructions.map {
+                    CookingToolDraft(
+                        toolType = it.toolType,
+                        temperatureInput = it.temperature?.toString() ?: "",
+                        timeMinutesInput = it.timeMinutes?.toString() ?: "",
+                        timeSecondsInput = it.timeSeconds?.toString() ?: ""
+                    )
+                }
                 state.copy(
                     customBlockName = history.name,
                     selectedBlockColorHex = history.blockColorHex,
-                    selectedCookingToolType = history.cookingToolType,
+                    selectedCookingTools = drafts,
                     selectedIngredientIds = matchedIngredientIds,
                     subIngredients = history.subIngredients,
                     selectedMoldId = moldId,
@@ -135,28 +137,23 @@ class BlockViewModel(
 
     fun onOpenCreateScreen() {
         _uiState.update { state ->
-            val matchingMold = if (state.selectedCapacityMl != null) {
-                state.availableMolds.find { it.displayCapacity == state.selectedCapacityMl }
-            } else null
-            val initialMold = matchingMold ?: state.availableMolds.firstOrNull()
-            val initialMoldId = initialMold?.id ?: state.selectedMoldId
-            val mold = state.availableMolds.find { it.id == initialMoldId }
-            val initialMoldCount = 1
-            val initialQty = (mold?.cellCount ?: 1) * initialMoldCount
+            val defaultMoldId = state.availableMolds.firstOrNull()?.id
+            val defaultMold = state.availableMolds.firstOrNull()
+            val totalBlocks = defaultMold?.cellCount ?: 1
             state.copy(
                 isCreateScreenOpen = true,
                 editingBlockId = null,
-                selectedBlockColorHex = FoodBlockPalette.defaultColorHex,
+                selectedBlockColorHex = "#FF7043",
                 selectedIngredientIds = emptySet(),
                 ingredientSearchQuery = "",
                 ingredientPageIndex = 0,
                 subIngredients = emptyList(),
                 subIngredientInput = "",
-                selectedMoldId = initialMoldId,
-                selectedMoldCount = initialMoldCount,
-                selectedCookingToolType = null,
-                blockQuantity = initialQty,
-                blockQuantityInput = initialQty.toString(),
+                selectedMoldId = defaultMoldId,
+                selectedMoldCount = 1,
+                selectedCookingTools = emptyList(),
+                blockQuantity = totalBlocks,
+                blockQuantityInput = totalBlocks.toString(),
                 storageType = StorageType.FREEZER,
                 shelfLifeDaysInput = "90",
                 customBlockName = ""
@@ -175,6 +172,14 @@ class BlockViewModel(
             val mold = state.availableMolds.find { it.id == moldId }
             val moldCellCount = (mold?.cellCount ?: block.moldCellCount).coerceAtLeast(1)
             val moldCount = (block.quantity / moldCellCount).coerceAtLeast(1)
+            val drafts = block.cookingInstructions.map {
+                CookingToolDraft(
+                    toolType = it.toolType,
+                    temperatureInput = it.temperature?.toString() ?: "",
+                    timeMinutesInput = it.timeMinutes?.toString() ?: "",
+                    timeSecondsInput = it.timeSeconds?.toString() ?: ""
+                )
+            }
 
             state.copy(
                 isCreateScreenOpen = true,
@@ -187,7 +192,7 @@ class BlockViewModel(
                 subIngredientInput = "",
                 selectedMoldId = moldId,
                 selectedMoldCount = moldCount,
-                selectedCookingToolType = block.cookingToolType,
+                selectedCookingTools = drafts,
                 blockQuantity = block.quantity,
                 blockQuantityInput = block.quantity.toString(),
                 storageType = block.storageType,
@@ -321,6 +326,64 @@ class BlockViewModel(
         }
     }
 
+    fun onToggleCookingTool(toolType: CookingToolType) {
+        _uiState.update { state ->
+            val existing = state.selectedCookingTools.find { it.toolType == toolType }
+            val newTools = if (existing != null) {
+                state.selectedCookingTools.filter { it.toolType != toolType }
+            } else {
+                val (defaultTemp, defaultMin, defaultSec) = when (toolType) {
+                    CookingToolType.OVEN -> Triple("180", "20", "")
+                    CookingToolType.AIR_FRYER -> Triple("180", "15", "")
+                    CookingToolType.SLOW_COOKER -> Triple("90", "120", "")
+                    CookingToolType.MICROWAVE -> Triple("", "3", "30")
+                    CookingToolType.GAS_STOVE -> Triple("", "10", "")
+                    CookingToolType.BLENDER -> Triple("", "1", "0")
+                    CookingToolType.CUSTOM -> Triple("", "10", "")
+                }
+                state.selectedCookingTools + CookingToolDraft(
+                    toolType = toolType,
+                    temperatureInput = defaultTemp,
+                    timeMinutesInput = defaultMin,
+                    timeSecondsInput = defaultSec
+                )
+            }
+            state.copy(selectedCookingTools = newTools)
+        }
+    }
+
+    fun onSelectCookingTool(toolType: CookingToolType) = onToggleCookingTool(toolType)
+
+    fun onCookingToolTempChange(toolType: CookingToolType, temp: String) {
+        val filtered = temp.filter { it.isDigit() }
+        _uiState.update { state ->
+            val updated = state.selectedCookingTools.map {
+                if (it.toolType == toolType) it.copy(temperatureInput = filtered) else it
+            }
+            state.copy(selectedCookingTools = updated)
+        }
+    }
+
+    fun onCookingToolMinutesChange(toolType: CookingToolType, min: String) {
+        val filtered = min.filter { it.isDigit() }
+        _uiState.update { state ->
+            val updated = state.selectedCookingTools.map {
+                if (it.toolType == toolType) it.copy(timeMinutesInput = filtered) else it
+            }
+            state.copy(selectedCookingTools = updated)
+        }
+    }
+
+    fun onCookingToolSecondsChange(toolType: CookingToolType, sec: String) {
+        val filtered = sec.filter { it.isDigit() }
+        _uiState.update { state ->
+            val updated = state.selectedCookingTools.map {
+                if (it.toolType == toolType) it.copy(timeSecondsInput = filtered) else it
+            }
+            state.copy(selectedCookingTools = updated)
+        }
+    }
+
     fun onShelfLifeDaysInputChange(text: String) {
         val filtered = text.filter { it.isDigit() }
         _uiState.update { it.copy(shelfLifeDaysInput = filtered) }
@@ -348,7 +411,7 @@ class BlockViewModel(
         val blockName = if (state.customBlockName.isNotBlank()) {
             state.customBlockName.trim()
         } else {
-            selectedNames.joinToString(" & ") + " 블록"
+            selectedNames.joinToString(" & ")
         }
 
         val days = state.parsedShelfLifeDays
@@ -371,7 +434,7 @@ class BlockViewModel(
             quantity = state.blockQuantity,
             storageType = state.storageType,
             shelfLifeDays = days,
-            cookingToolType = state.selectedCookingToolType,
+            cookingInstructions = state.selectedCookingTools.map { it.toCookingInstruction() },
             createdAt = createdAt
         )
 
