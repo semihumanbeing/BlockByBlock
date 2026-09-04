@@ -262,10 +262,10 @@ private fun MoldItemCard(
 
     AppCard(
         modifier = modifier.fillMaxWidth(),
-        backgroundColor = Color.Transparent,
-        borderColor = AppColors.Border.copy(alpha = 0.5f),
+        backgroundColor = Color.White,
+        borderColor = AppColors.Border.copy(alpha = 0.6f),
         borderWidth = 0.5.dp,
-        elevation = 0.dp,
+        elevation = 1.dp,
         padding = 16.dp,
         onClick = onClick
     ) {

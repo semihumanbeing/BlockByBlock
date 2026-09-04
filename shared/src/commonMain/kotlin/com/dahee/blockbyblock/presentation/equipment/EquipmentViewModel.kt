@@ -25,7 +25,7 @@ class EquipmentViewModel(
     private val repository: EquipmentRepository
 ) : ViewModel() {
 
-    private val _screenMode = MutableStateFlow(EquipmentScreenMode.SETUP)
+    private val _screenMode = MutableStateFlow(EquipmentScreenMode.LIST)
     private val _moldDrafts = MutableStateFlow(EquipmentUiState.defaultMoldDrafts)
     private val _selectedCookingTools = MutableStateFlow<Set<CookingToolType>>(emptySet())
     private val _editingMold = MutableStateFlow<Equipment?>(null)
@@ -129,6 +129,17 @@ class EquipmentViewModel(
             val currentEquipments = repository.getEquipments().first()
             populateDraftsFromEquipments(currentEquipments)
             _screenMode.value = EquipmentScreenMode.SETUP
+        }
+    }
+
+    // Open equipment list screen
+    fun onOpenListScreen() {
+        _errorMessage.value = null
+        _screenMode.value = EquipmentScreenMode.LIST
+        viewModelScope.launch {
+            val currentEquipments = repository.getEquipments().first()
+            populateDraftsFromEquipments(currentEquipments)
+            _screenMode.value = EquipmentScreenMode.LIST
         }
     }
 

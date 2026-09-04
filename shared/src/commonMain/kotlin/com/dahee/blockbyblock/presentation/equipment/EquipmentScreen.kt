@@ -69,7 +69,13 @@ fun EquipmentScreen(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = onNavigateBack
+                            onClick = {
+                                if (uiState.screenMode == EquipmentScreenMode.SETUP && uiState.allEquipments.isNotEmpty()) {
+                                    viewModel.onCancelSetup()
+                                } else {
+                                    onNavigateBack()
+                                }
+                            }
                         )
                         .padding(horizontal = 6.dp, vertical = 4.dp)
                 ) {

@@ -219,6 +219,7 @@ fun App() {
                                 userProfile = userProfile.copy(nickname = name)
                                 hasCompletedOnboarding = true
                                 tutorialStep = TutorialStep.EQUIPMENT_SETUP
+                                equipmentViewModel.onOpenDirectSetup()
                                 isManagingEquipment = true
                                 currentTab = NavTab.INVENTORY
                             }
@@ -284,8 +285,8 @@ fun App() {
                                             if (tutorialStep == TutorialStep.EQUIPMENT_SETUP) {
                                                 tutorialStep = TutorialStep.INVENTORY_SETUP
                                                 currentTab = NavTab.INVENTORY
+                                                isManagingEquipment = false
                                             }
-                                            isManagingEquipment = false
                                         }
                                     )
                                 } else {
@@ -305,7 +306,7 @@ fun App() {
                                                 currentTab = NavTab.INVENTORY
                                             },
                                             onNavigateToEquipment = {
-                                                equipmentViewModel.onOpenDirectSetup()
+                                                equipmentViewModel.onOpenListScreen()
                                                 isManagingEquipment = true
                                             }
                                         )
@@ -325,7 +326,7 @@ fun App() {
                                             onProfileChange = { userProfile = it },
                                             onLanguageChange = { currentLanguage = it },
                                             onNavigateToEquipment = {
-                                                equipmentViewModel.onOpenDirectSetup()
+                                                equipmentViewModel.onOpenListScreen()
                                                 isManagingEquipment = true
                                             },
                                             onRestartTutorial = {
