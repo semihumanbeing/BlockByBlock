@@ -27,8 +27,8 @@ object EnStrings : AppStrings {
     override fun blockYieldCalculation(moldCount: Int, cellCount: Int, totalPieces: Int) = "($moldCount molds × $cellCount cells = $totalPieces blocks)"
     override fun itemCountBadge(count: Int) = if (count == 1) "1 item" else "$count items"
     override val customSlotBtn = "Custom"
-    override fun slotCount(count: Int) = if (count == 1) "1 slot" else "$count slots"
-    override fun pieceCount(count: Int) = if (count == 1) "1 item" else "$count items"
+    override fun slotCount(count: Int) = count.toString()
+    override fun pieceCount(count: Int) = count.toString()
     override fun totalSlotsPortion(slots: Int) = "$slots total portions"
 
     // Navigation Tabs
@@ -124,6 +124,8 @@ object EnStrings : AppStrings {
     override val createBlockSubIngredientPlaceholder = "Add ingredient (e.g. Salt, Pepper, Sesame oil)..."
     override val createBlockAddSubBtn = "Add"
     override val createBlockSectionMold = "Select Portion Mold"
+    override val createBlockMoldGuideBtn = "Guide"
+    override val createBlockMoldGuideTitle = "Portion Mold Guide"
     override val createBlockMoldCountLabel = "Number of Molds to Use"
     override fun createBlockMoldCountMax(count: Int) = "(Owned: $count)"
     override val createBlockNoMolds = "No molds registered yet"

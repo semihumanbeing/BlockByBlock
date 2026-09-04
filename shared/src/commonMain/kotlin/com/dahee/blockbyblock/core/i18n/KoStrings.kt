@@ -124,6 +124,8 @@ object KoStrings : AppStrings {
     override val createBlockSubIngredientPlaceholder = "추가 재료 입력 (예: 소금, 후추, 참기름)..."
     override val createBlockAddSubBtn = "추가"
     override val createBlockSectionMold = "몰드 선택"
+    override val createBlockMoldGuideBtn = "가이드"
+    override val createBlockMoldGuideTitle = "몰드 선택 가이드"
     override val createBlockMoldCountLabel = "사용할 몰드 개수"
     override fun createBlockMoldCountMax(count: Int) = "(보유 ${count}개)"
     override val createBlockNoMolds = "등록된 몰드가 없습니다"

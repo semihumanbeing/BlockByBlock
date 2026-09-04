@@ -112,6 +112,8 @@ interface AppStrings {
     val createBlockSubIngredientPlaceholder: String
     val createBlockAddSubBtn: String
     val createBlockSectionMold: String
+    val createBlockMoldGuideBtn: String
+    val createBlockMoldGuideTitle: String
     val createBlockMoldCountLabel: String
     fun createBlockMoldCountMax(count: Int): String
     val createBlockNoMolds: String

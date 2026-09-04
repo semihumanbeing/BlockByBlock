@@ -3,7 +3,9 @@ package com.dahee.blockbyblock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
@@ -184,8 +186,9 @@ fun App() {
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .widthIn(max = 500.dp),
+                        .fillMaxHeight()
+                        .widthIn(max = 768.dp)
+                        .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
                     // 1. Unauthenticated: Auth Screen (Login / Sign Up)

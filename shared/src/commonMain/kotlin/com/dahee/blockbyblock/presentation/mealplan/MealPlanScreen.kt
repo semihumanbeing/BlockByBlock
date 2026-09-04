@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -58,6 +60,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dahee.blockbyblock.core.i18n.LocalStrings
@@ -433,11 +436,20 @@ private fun TodayMealView(
     val strings = LocalStrings.current
     val scrollState = rememberScrollState()
 
+    // 5 Meal Slots: Breakfast, Lunch, Dinner, Snack, Extra (up to 5 meals)
+    val visibleSlots = remember(currentDayRecord) {
+        val list = mutableListOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER)
+        val snackRecord = currentDayRecord?.snack
+        val hasSnack = snackRecord != null && (snackRecord.blocks.isNotEmpty() || snackRecord.memo.isNotBlank())
+        list.add(MealType.SNACK)
+        if (hasSnack) {
+            list.add(MealType.EXTRA)
+        }
+        list
+    }
+
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.fillMaxSize()
     ) {
         // Date Navigator (Clean flat header bar without white elevated card)
         Row(
@@ -527,35 +539,55 @@ private fun TodayMealView(
             }
         }
 
-        // 5 Meal Slots: Breakfast, Lunch, Dinner, Snack, Extra (up to 5 meals)
-        val visibleSlots = remember(currentDayRecord) {
-            val list = mutableListOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER)
-            val snackRecord = currentDayRecord?.snack
-            val hasSnack = snackRecord != null && (snackRecord.blocks.isNotEmpty() || snackRecord.memo.isNotBlank())
-            list.add(MealType.SNACK)
-            if (hasSnack) {
-                list.add(MealType.EXTRA)
-            }
-            list
-        }
-
-        Column(
+        // Meal content area: fills remaining space between DateHeader and BottomNav
+        BoxWithConstraints(
             modifier = Modifier
+                .weight(1f)
                 .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            val spacingDp = 8.dp
+            val totalSpacing = spacingDp * (visibleSlots.size - 1)
+            val availableHeight = maxHeight - totalSpacing
+
+            // Count regular vs unrecorded-add slots for weighted distribution
+            // Regular slot = 4 parts, unrecorded add slot = 1 part
+            var regularCount = 0
+            var addCount = 0
             visibleSlots.forEach { mealType ->
                 val slotRecord = currentDayRecord?.getSlot(mealType) ?: MealSlotRecord(mealType)
+                val isAddSlotType = mealType == MealType.SNACK || mealType == MealType.EXTRA
+                val hasContent = slotRecord.blocks.isNotEmpty() || slotRecord.memo.isNotBlank()
+                if (isAddSlotType && !hasContent) addCount++ else regularCount++
+            }
+            val totalParts = regularCount * 4 + addCount
+            val onePart = if (totalParts > 0) availableHeight / totalParts else 0.dp
 
-                MealSlotCard(
-                    mealType = mealType,
-                    slot = slotRecord,
-                    onClick = { onOpenSlot(mealType) },
-                    onSavePresetClick = { onSavePresetSlot(mealType) },
-                    onDeleteClick = { onPromptDeleteSlot(mealType) },
-                    modifier = Modifier.fillMaxWidth()
-                )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(spacingDp)
+            ) {
+                visibleSlots.forEach { mealType ->
+                    val slotRecord = currentDayRecord?.getSlot(mealType) ?: MealSlotRecord(mealType)
+                    val isAddSlotType = mealType == MealType.SNACK || mealType == MealType.EXTRA
+                    val hasSlotContent = slotRecord.blocks.isNotEmpty() || slotRecord.memo.isNotBlank()
+                    val isUnrecordedAddSlot = isAddSlotType && !hasSlotContent
+
+                    val slotMinHeight = if (isUnrecordedAddSlot) onePart else onePart * 4
+
+                    MealSlotCard(
+                        mealType = mealType,
+                        slot = slotRecord,
+                        onClick = { onOpenSlot(mealType) },
+                        onSavePresetClick = { onSavePresetSlot(mealType) },
+                        onDeleteClick = { onPromptDeleteSlot(mealType) },
+                        minCardHeight = slotMinHeight,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = slotMinHeight)
+                    )
+                }
             }
         }
     }
@@ -568,6 +600,7 @@ private fun MealSlotCard(
     onClick: () -> Unit,
     onSavePresetClick: () -> Unit,
     onDeleteClick: () -> Unit,
+    minCardHeight: Dp = 0.dp,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
@@ -581,7 +614,6 @@ private fun MealSlotCard(
         AppCard(
             modifier = modifier
                 .fillMaxWidth()
-                .height(48.dp)
                 .pointerHoverIcon(PointerIcon.Hand)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -596,7 +628,9 @@ private fun MealSlotCard(
             padding = 8.dp
         ) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
                 Row(
@@ -709,10 +743,20 @@ private fun MealSlotCard(
             }
 
             // 2. Main Content: [Left 50%: Authentic Bento Box with Food Blocks] + [Right 50%: Block list line by line in order]
+            // Calculate bento row height dynamically: card height minus header, padding, spacing
+            val cardPaddingVertical = 10.dp * 2 // AppCard padding top + bottom
+            val headerEstimatedHeight = 24.dp
+            val spacingBetweenElements = 8.dp
+            val memoEstimatedHeight = if (hasMemo) (16.dp + spacingBetweenElements) else 0.dp
+            val bentoRowHeight = maxOf(
+                84.dp,
+                minCardHeight - cardPaddingVertical - headerEstimatedHeight - spacingBetweenElements - memoEstimatedHeight
+            )
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(84.dp),
+                    .height(bentoRowHeight),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {

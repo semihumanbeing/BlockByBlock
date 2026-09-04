@@ -34,6 +34,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -85,6 +86,7 @@ fun CreateBlockScreen(
     val strings = LocalStrings.current
     val focusManager = LocalFocusManager.current
     var showNoIngredientBubble by remember { mutableStateOf(false) }
+    var showMoldGuideDialog by remember { mutableStateOf(false) }
 
     androidx.compose.runtime.LaunchedEffect(uiState.selectedIngredientIds.size, uiState.subIngredients.size) {
         if (uiState.selectedIngredientIds.isNotEmpty() || uiState.subIngredients.isNotEmpty()) {
@@ -288,12 +290,42 @@ fun CreateBlockScreen(
                     padding = 16.dp
                 ) {
                     Column {
-                        Text(
-                            text = strings.createBlockSectionMold,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AppColors.TextPrimary
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = strings.createBlockSectionMold,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.TextPrimary
+                            )
+
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(AppColors.Primary.copy(alpha = 0.1f))
+                                    .clickable { showMoldGuideDialog = true }
+                                    .pointerHoverIcon(PointerIcon.Hand)
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = strings.createBlockMoldGuideTitle,
+                                    tint = AppColors.Primary,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Text(
+                                    text = strings.createBlockMoldGuideBtn,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.Primary
+                                )
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -1067,6 +1099,12 @@ fun CreateBlockScreen(
                 }
                 Spacer(modifier = Modifier.height(30.dp))
             }
+        }
+
+        if (showMoldGuideDialog) {
+            MoldGuideDialog(
+                onDismiss = { showMoldGuideDialog = false }
+            )
         }
     }
 }

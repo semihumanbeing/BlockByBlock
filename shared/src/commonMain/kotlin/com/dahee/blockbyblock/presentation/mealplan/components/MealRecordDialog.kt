@@ -121,8 +121,8 @@ fun MealRecordDialog(
     ) {
         Box(
             modifier = Modifier
+                .widthIn(max = 565.dp)
                 .fillMaxWidth(0.92f)
-                .widthIn(max = 520.dp)
                 .imePadding()
                 .clip(RoundedCornerShape(20.dp))
                 .background(AppColors.Background)
