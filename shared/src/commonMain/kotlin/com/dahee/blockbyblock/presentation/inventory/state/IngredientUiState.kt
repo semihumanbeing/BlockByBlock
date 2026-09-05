@@ -31,7 +31,7 @@ data class IngredientUiState(
     val isSearchCatalogDialogOpen: Boolean = false,
     val catalogSearchQuery: String = "",
     val catalogCategoryFilter: IngredientCategory? = null,
-    val catalogTargetStatus: IngredientStatus = IngredientStatus.IN_STOCK,
+    val catalogTargetStatus: IngredientStatus = IngredientStatus.STOCK,
     val catalogResults: List<CatalogIngredient> = MasterIngredientCatalog.items,
     val editingIngredient: Ingredient? = null,
     val undoDeleteState: UndoDeleteState? = null,

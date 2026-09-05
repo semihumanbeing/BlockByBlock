@@ -32,10 +32,11 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -93,11 +94,11 @@ fun InventoryScreen(
             onCategoryFilterChange = { viewModel.onCatalogCategoryFilterChange(it) },
             catalogResults = uiState.catalogResults,
             registeredIngredients = uiState.registeredIngredients,
-            onAddFromCatalog = { item, qty, unit, status ->
-                viewModel.onAddFromCatalog(item, qty, unit, status)
+            onAddFromCatalog = { item, status ->
+                viewModel.onAddFromCatalog(item, status)
             },
-            onAddCustomIngredient = { name, qty, unit, status ->
-                viewModel.onAddCustomFromCatalogQuery(name, qty, unit, status)
+            onAddCustomIngredient = { name, status ->
+                viewModel.onAddCustomFromCatalogQuery(name, status)
             },
             onDismiss = { viewModel.onCloseSearchCatalogDialog() }
         )
@@ -358,57 +359,59 @@ fun InventoryScreen(
                 }
 
                 items(freshIngredients, key = { it.id }) { ingredient ->
-                    val dismissState = rememberSwipeToDismissBoxState(
-                        confirmValueChange = { dismissValue ->
-                            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
-                                viewModel.onDeleteIngredientWithUndo(
-                                    ingredient = ingredient,
-                                    message = strings.itemDeletedToast(ingredient.name)
-                                )
-                                true
-                            } else {
-                                false
-                            }
+                    val dismissState = remember(ingredient.id) {
+                        SwipeToDismissBoxState(
+                            initialValue = SwipeToDismissBoxValue.Settled,
+                            positionalThreshold = { totalDistance -> totalDistance * 0.45f }
+                        )
+                    }
+
+                    // Reset dismiss state to Settled whenever item enters composition (e.g. after undoing deletion)
+                    LaunchedEffect(ingredient.id) {
+                        if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+                            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
                         }
-                    )
+                    }
 
                     SwipeToDismissBox(
                         state = dismissState,
                         enableDismissFromStartToEnd = false,
                         enableDismissFromEndToStart = true,
+                        onDismiss = { dismissValue ->
+                            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                                viewModel.onDeleteIngredientWithUndo(
+                                    ingredient = ingredient,
+                                    message = strings.itemDeletedToast(ingredient.name)
+                                )
+                            }
+                        },
                         backgroundContent = {
                             val isSwiping = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.CenterEnd
-                            ) {
-                                if (isSwiping) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxHeight()
-                                            .fillMaxWidth(0.5f)
-                                            .clip(RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp))
-                                            .background(Color(0xFFE53935))
-                                            .padding(end = 20.dp),
-                                        contentAlignment = Alignment.CenterEnd
+                            if (isSwiping) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(Color(0xFFE53935))
+                                        .padding(end = 20.dp),
+                                    contentAlignment = Alignment.CenterEnd
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Close,
-                                                contentDescription = strings.delete,
-                                                tint = Color.White,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Text(
-                                                text = strings.delete,
-                                                color = Color.White,
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = strings.delete,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = strings.delete,
+                                            color = Color.White,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
                                     }
                                 }
                             }
@@ -420,8 +423,6 @@ fun InventoryScreen(
                             onMarkAsConsumed = { viewModel.onMarkAsConsumed(ingredient.id) },
                             onMoveToCart = { viewModel.onMoveToCart(ingredient.id) },
                             onRestoreToStock = { viewModel.onRestoreToStock(ingredient.id) },
-                            onQuantityChange = { newQty -> viewModel.onQuickUpdateQuantity(ingredient.id, newQty) },
-                            onUnitChange = { newUnit -> viewModel.onQuickUpdateUnit(ingredient.id, newUnit) },
                             onEdit = { viewModel.onOpenEditDialog(ingredient) },
                             onDelete = {
                                 viewModel.onDeleteIngredientWithUndo(
@@ -579,9 +580,9 @@ private fun PantrySeasoningChip(
 ) {
     val strings = LocalStrings.current
     val shape = RoundedCornerShape(10.dp)
-    val isInStock = seasoning.status == IngredientStatus.IN_STOCK
-    val isCart = seasoning.status == IngredientStatus.SHOPPING_CART
-    val isConsumed = seasoning.status == IngredientStatus.CONSUMED
+    val isInStock = seasoning.status == IngredientStatus.STOCK
+    val isCart = seasoning.status == IngredientStatus.CART
+    val isConsumed = seasoning.status == IngredientStatus.OUT_OF_STOCK
 
     val cardBg = when {
         isInStock -> AppColors.Surface

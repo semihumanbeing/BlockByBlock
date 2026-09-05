@@ -47,15 +47,10 @@ import com.dahee.blockbyblock.core.theme.AppColors
 import com.dahee.blockbyblock.core.ui.AppCard
 import com.dahee.blockbyblock.core.ui.AppChip
 import com.dahee.blockbyblock.core.ui.AppTextField
-import com.dahee.blockbyblock.core.ui.EditableNumberStepper
 import com.dahee.blockbyblock.domain.model.CatalogIngredient
 import com.dahee.blockbyblock.domain.model.Ingredient
 import com.dahee.blockbyblock.domain.model.IngredientCategory
 import com.dahee.blockbyblock.domain.model.IngredientStatus
-import com.dahee.blockbyblock.domain.model.IngredientUnit
-
-// Toggle flag to hide quantity stepper UI per user preference
-private const val SHOW_QUANTITY_UI = false
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -66,15 +61,12 @@ fun IngredientSearchAddDialog(
     onCategoryFilterChange: (IngredientCategory?) -> Unit,
     catalogResults: List<CatalogIngredient>,
     registeredIngredients: List<Ingredient>,
-    onAddFromCatalog: (CatalogIngredient, Double, IngredientUnit, IngredientStatus) -> Unit,
-    onAddCustomIngredient: (String, Double, IngredientUnit, IngredientStatus) -> Unit,
+    onAddFromCatalog: (CatalogIngredient, IngredientStatus) -> Unit,
+    onAddCustomIngredient: (String, IngredientStatus) -> Unit,
     onDismiss: () -> Unit
 ) {
     val strings = LocalStrings.current
     val focusManager = LocalFocusManager.current
-
-    var customQuantity by remember { mutableStateOf(100.0) }
-    var customUnit by remember { mutableStateOf(IngredientUnit.GRAM) }
 
     Dialog(onDismissRequest = onDismiss) {
         Box(
@@ -181,7 +173,7 @@ fun IngredientSearchAddDialog(
                         val alreadyRegistered = registeredIngredients.find {
                             it.name.trim().equals(trimmedQuery, ignoreCase = true)
                         }
-                        val isActiveRegistered = alreadyRegistered != null && alreadyRegistered.status != IngredientStatus.CONSUMED
+                        val isActiveRegistered = alreadyRegistered != null && alreadyRegistered.status != IngredientStatus.OUT_OF_STOCK
 
                         item {
                             AppCard(
@@ -201,71 +193,15 @@ fun IngredientSearchAddDialog(
                                             fontWeight = FontWeight.Bold,
                                             color = if (isActiveRegistered) AppColors.TextSecondary else AppColors.PrimaryDark
                                         )
-
-                                        if (SHOW_QUANTITY_UI && !isActiveRegistered) {
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                val step = if (customUnit == IngredientUnit.GRAM || customUnit == IngredientUnit.ML) 10 else 1
-                                                EditableNumberStepper(
-                                                    value = customQuantity.toInt().coerceAtLeast(1),
-                                                    onValueChange = { customQuantity = it.toDouble() },
-                                                    suffix = "",
-                                                    step = step,
-                                                    minValue = 1,
-                                                    buttonSize = 18.dp
-                                                )
-
-                                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                    IngredientUnit.entries.forEach { u ->
-                                                        val isSelected = customUnit == u
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .clip(RoundedCornerShape(6.dp))
-                                                                .background(if (isSelected) AppColors.Primary else AppColors.SurfaceVariant)
-                                                                .border(
-                                                                    width = if (isSelected) 1.dp else 0.5.dp,
-                                                                    color = if (isSelected) AppColors.PrimaryDark else AppColors.Border,
-                                                                    shape = RoundedCornerShape(6.dp)
-                                                                )
-                                                                .pointerHoverIcon(PointerIcon.Hand)
-                                                                .clickable(
-                                                                    interactionSource = remember { MutableInteractionSource() },
-                                                                    indication = null,
-                                                                    onClick = {
-                                                                        customUnit = u
-                                                                        if ((u == IngredientUnit.GRAM || u == IngredientUnit.ML) && customQuantity < 10.0) {
-                                                                            customQuantity = 100.0
-                                                                        } else if ((u == IngredientUnit.PIECE || u == IngredientUnit.LBS) && customQuantity >= 100.0) {
-                                                                            customQuantity = 1.0
-                                                                        }
-                                                                    }
-                                                                )
-                                                                .padding(horizontal = 4.dp, vertical = 2.dp),
-                                                            contentAlignment = Alignment.Center
-                                                        ) {
-                                                            Text(
-                                                                text = u.symbol,
-                                                                fontSize = 10.sp,
-                                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                                color = if (isSelected) Color.White else AppColors.TextSecondary
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
                                     }
 
                                     Spacer(modifier = Modifier.width(8.dp))
 
                                     if (isActiveRegistered) {
                                         val (badgeBg, badgeText, badgeColor) = when (alreadyRegistered.status) {
-                                            IngredientStatus.IN_STOCK -> Triple(AppColors.PrimaryLight, strings.alreadyAddedInStock, AppColors.PrimaryDark)
-                                            IngredientStatus.CONSUMED -> Triple(AppColors.SurfaceVariant, strings.alreadyAddedConsumed, AppColors.TextMuted)
-                                            IngredientStatus.SHOPPING_CART -> Triple(AppColors.AccentLight, strings.alreadyAddedCart, Color(0xFFC2410C))
+                                            IngredientStatus.STOCK -> Triple(AppColors.PrimaryLight, strings.alreadyAddedInStock, AppColors.PrimaryDark)
+                                            IngredientStatus.OUT_OF_STOCK -> Triple(AppColors.SurfaceVariant, strings.alreadyAddedConsumed, AppColors.TextMuted)
+                                            IngredientStatus.CART -> Triple(AppColors.AccentLight, strings.alreadyAddedCart, Color(0xFFC2410C))
                                         }
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
@@ -307,9 +243,7 @@ fun IngredientSearchAddDialog(
                                                         onClick = {
                                                             onAddCustomIngredient(
                                                                 trimmedQuery,
-                                                                customQuantity,
-                                                                customUnit,
-                                                                IngredientStatus.IN_STOCK
+                                                                IngredientStatus.STOCK
                                                             )
                                                         }
                                                     ),
@@ -336,9 +270,7 @@ fun IngredientSearchAddDialog(
                                                         onClick = {
                                                             onAddCustomIngredient(
                                                                 trimmedQuery,
-                                                                customQuantity,
-                                                                customUnit,
-                                                                IngredientStatus.SHOPPING_CART
+                                                                IngredientStatus.CART
                                                             )
                                                         }
                                                     ),
@@ -381,11 +313,11 @@ fun IngredientSearchAddDialog(
                             CatalogIngredientRow(
                                 item = item,
                                 existingIngredient = alreadyRegistered,
-                                onAddStock = { qty, unit ->
-                                    onAddFromCatalog(item, qty, unit, IngredientStatus.IN_STOCK)
+                                onAddStock = {
+                                    onAddFromCatalog(item, IngredientStatus.STOCK)
                                 },
-                                onAddCart = { qty, unit ->
-                                    onAddFromCatalog(item, qty, unit, IngredientStatus.SHOPPING_CART)
+                                onAddCart = {
+                                    onAddFromCatalog(item, IngredientStatus.CART)
                                 }
                             )
                         }
@@ -400,15 +332,11 @@ fun IngredientSearchAddDialog(
 private fun CatalogIngredientRow(
     item: CatalogIngredient,
     existingIngredient: Ingredient?,
-    onAddStock: (Double, IngredientUnit) -> Unit,
-    onAddCart: (Double, IngredientUnit) -> Unit
+    onAddStock: () -> Unit,
+    onAddCart: () -> Unit
 ) {
     val strings = LocalStrings.current
-    var quantity by remember(item) { mutableStateOf(item.defaultQuantity) }
-    var unit by remember(item) { mutableStateOf(item.defaultUnit) }
-
-    val step = if (unit == IngredientUnit.GRAM || unit == IngredientUnit.ML) 10 else 1
-    val isActiveRegistered = existingIngredient != null && existingIngredient.status != IngredientStatus.CONSUMED
+    val isActiveRegistered = existingIngredient != null && existingIngredient.status != IngredientStatus.OUT_OF_STOCK
 
     AppCard(
         modifier = Modifier.fillMaxWidth(),
@@ -438,8 +366,8 @@ private fun CatalogIngredientRow(
                         color = AppColors.TextMuted
                     )
 
-                    // Small indicator if item was previously consumed
-                    if (existingIngredient?.status == IngredientStatus.CONSUMED) {
+                    // Small indicator if item was previously consumed / out of stock
+                    if (existingIngredient?.status == IngredientStatus.OUT_OF_STOCK) {
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
@@ -457,70 +385,14 @@ private fun CatalogIngredientRow(
                 }
             }
 
-            // Middle: Quantity Stepper & Radio Unit Selector (Preserved in code, hidden per user request)
-            if (SHOW_QUANTITY_UI && !isActiveRegistered) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    EditableNumberStepper(
-                        value = quantity.toInt().coerceAtLeast(1),
-                        onValueChange = { quantity = it.toDouble() },
-                        suffix = "",
-                        step = step,
-                        minValue = 1,
-                        buttonSize = 18.dp
-                    )
-
-                    // Radio-style unit chips
-                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        IngredientUnit.entries.forEach { u ->
-                            val isSelected = unit == u
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(if (isSelected) AppColors.Primary else AppColors.SurfaceVariant)
-                                    .border(
-                                        width = if (isSelected) 1.dp else 0.5.dp,
-                                        color = if (isSelected) AppColors.PrimaryDark else AppColors.Border,
-                                        shape = RoundedCornerShape(6.dp)
-                                    )
-                                    .pointerHoverIcon(PointerIcon.Hand)
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
-                                        onClick = {
-                                            unit = u
-                                            if ((u == IngredientUnit.GRAM || u == IngredientUnit.ML) && quantity < 10.0) {
-                                                quantity = 100.0
-                                            } else if ((u == IngredientUnit.PIECE || u == IngredientUnit.LBS) && quantity >= 100.0) {
-                                                quantity = 1.0
-                                            }
-                                        }
-                                    )
-                                    .padding(horizontal = 4.dp, vertical = 2.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = u.symbol,
-                                    fontSize = 10.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) Color.White else AppColors.TextSecondary
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
             Spacer(modifier = Modifier.width(8.dp))
 
             // Right: Either Active Registered Badge OR Two stacked Add Buttons (allows adding consumed items back!)
             if (isActiveRegistered) {
                 val (badgeBg, badgeText, badgeColor) = when (existingIngredient.status) {
-                    IngredientStatus.IN_STOCK -> Triple(AppColors.PrimaryLight, strings.alreadyAddedInStock, AppColors.PrimaryDark)
-                    IngredientStatus.CONSUMED -> Triple(AppColors.SurfaceVariant, strings.alreadyAddedConsumed, AppColors.TextMuted)
-                    IngredientStatus.SHOPPING_CART -> Triple(AppColors.AccentLight, strings.alreadyAddedCart, Color(0xFFC2410C))
+                    IngredientStatus.STOCK -> Triple(AppColors.PrimaryLight, strings.alreadyAddedInStock, AppColors.PrimaryDark)
+                    IngredientStatus.OUT_OF_STOCK -> Triple(AppColors.SurfaceVariant, strings.alreadyAddedConsumed, AppColors.TextMuted)
+                    IngredientStatus.CART -> Triple(AppColors.AccentLight, strings.alreadyAddedCart, Color(0xFFC2410C))
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -560,7 +432,7 @@ private fun CatalogIngredientRow(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                                onClick = { onAddStock(quantity, unit) }
+                                onClick = onAddStock
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -583,7 +455,7 @@ private fun CatalogIngredientRow(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                                onClick = { onAddCart(quantity, unit) }
+                                onClick = onAddCart
                             ),
                         contentAlignment = Alignment.Center
                     ) {

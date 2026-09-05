@@ -42,7 +42,7 @@ class BlockViewModel(
         // Observe in-stock ingredients
         coroutineScope.launch {
             ingredientRepository.getAllIngredients().collect { ingredients ->
-                val inStock = ingredients.filter { it.status == IngredientStatus.IN_STOCK }
+                val inStock = ingredients.filter { it.status == IngredientStatus.STOCK }
                 _uiState.update { state ->
                     val validSelected = state.selectedIngredientIds.filter { id ->
                         inStock.any { it.id == id }

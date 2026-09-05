@@ -40,19 +40,14 @@ import androidx.compose.ui.unit.sp
 import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.theme.AppColors
 import com.dahee.blockbyblock.core.ui.AppCard
-import com.dahee.blockbyblock.core.ui.EditableNumberStepper
 import com.dahee.blockbyblock.domain.model.Ingredient
 import com.dahee.blockbyblock.domain.model.IngredientStatus
-import com.dahee.blockbyblock.domain.model.IngredientUnit
-
-// Toggle flag to hide quantity stepper UI per user preference while preserving implementation
-private const val SHOW_QUANTITY_UI = false
 
 /**
  * Checklist item card supporting:
- * - IN_STOCK: Active inventory with 1-tap [Mark as Consumed] action
- * - CONSUMED: Dimmed item within In Stock tab with 1-tap [Move to Cart] or [Restore to Stock] action
- * - SHOPPING_CART: Purchase checklist item with 1-tap [Mark as In Stock] action
+ * - STOCK: Active inventory with 1-tap [Mark as Consumed] action
+ * - OUT_OF_STOCK: Dimmed item within In Stock tab with 1-tap [Move to Cart] or [Restore to Stock] action
+ * - CART: Purchase checklist item with 1-tap [Mark as In Stock] action
  */
 @Composable
 fun IngredientItemCard(
@@ -61,22 +56,14 @@ fun IngredientItemCard(
     onMarkAsConsumed: () -> Unit = {},
     onMoveToCart: () -> Unit = {},
     onRestoreToStock: () -> Unit = {},
-    onQuantityChange: (Double) -> Unit = {},
-    onUnitChange: (IngredientUnit) -> Unit = {},
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
-    val isInStock = ingredient.status == IngredientStatus.IN_STOCK
-    val isConsumed = ingredient.status == IngredientStatus.CONSUMED
-    val isCart = ingredient.status == IngredientStatus.SHOPPING_CART
-
-    // Step calculation: step by 1 for pieces/lbs, step by 10 for gram/ml
-    val step = when (ingredient.unit) {
-        IngredientUnit.PIECE, IngredientUnit.LBS -> 1
-        IngredientUnit.GRAM, IngredientUnit.ML -> if (ingredient.quantity >= 100.0) 10 else 10
-    }
+    val isInStock = ingredient.status == IngredientStatus.STOCK
+    val isConsumed = ingredient.status == IngredientStatus.OUT_OF_STOCK
+    val isCart = ingredient.status == IngredientStatus.CART
 
     val checkboxBg by animateColorAsState(
         targetValue = when {
@@ -333,65 +320,6 @@ fun IngredientItemCard(
                             onClick = onDelete
                         )
                 )
-            }
-
-            // 4. Quantity Stepper UI (Preserved in code, hidden per user request)
-            if (SHOW_QUANTITY_UI) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        EditableNumberStepper(
-                            value = ingredient.quantity.toInt().coerceAtLeast(1),
-                            onValueChange = { onQuantityChange(it.toDouble()) },
-                            suffix = "",
-                            step = step,
-                            minValue = 1,
-                            buttonSize = 20.dp
-                        )
-
-                        Spacer(modifier = Modifier.width(6.dp))
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IngredientUnit.entries.forEach { u ->
-                                val isSelected = ingredient.unit == u
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(if (isSelected) AppColors.Primary else AppColors.SurfaceVariant)
-                                        .border(
-                                            width = if (isSelected) 1.dp else 0.5.dp,
-                                            color = if (isSelected) AppColors.PrimaryDark else AppColors.Border,
-                                            shape = RoundedCornerShape(6.dp)
-                                        )
-                                        .pointerHoverIcon(PointerIcon.Hand)
-                                        .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null,
-                                            onClick = { onUnitChange(u) }
-                                        )
-                                        .padding(horizontal = 5.dp, vertical = 3.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = u.symbol,
-                                        fontSize = 11.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) Color.White else AppColors.TextSecondary
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
     }

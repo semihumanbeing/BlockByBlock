@@ -47,14 +47,9 @@ import com.dahee.blockbyblock.core.ui.AppButton
 import com.dahee.blockbyblock.core.ui.AppChip
 import com.dahee.blockbyblock.core.ui.AppTextField
 import com.dahee.blockbyblock.core.ui.ButtonVariant
-import com.dahee.blockbyblock.core.ui.EditableNumberStepper
 import com.dahee.blockbyblock.domain.model.Ingredient
 import com.dahee.blockbyblock.domain.model.IngredientCategory
 import com.dahee.blockbyblock.domain.model.IngredientStatus
-import com.dahee.blockbyblock.domain.model.IngredientUnit
-
-// Toggle flag to hide quantity stepper UI per user preference
-private const val SHOW_QUANTITY_UI = false
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -69,9 +64,7 @@ fun IngredientAddEditDialog(
     val isEditing = ingredient != null && ingredient.name.isNotBlank()
 
     var name by remember { mutableStateOf(ingredient?.name ?: "") }
-    var quantity by remember { mutableStateOf(ingredient?.quantity ?: 1.0) }
-    var unit by remember { mutableStateOf(ingredient?.unit ?: IngredientUnit.GRAM) }
-    var status by remember { mutableStateOf(ingredient?.status ?: IngredientStatus.IN_STOCK) }
+    var status by remember { mutableStateOf(ingredient?.status ?: IngredientStatus.STOCK) }
     var category by remember { mutableStateOf(ingredient?.category ?: IngredientCategory.OTHER) }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -124,7 +117,7 @@ fun IngredientAddEditDialog(
                     )
                 }
 
-                // 1. Status Tabs (In Stock vs Shopping Cart)
+                // 1. Status Tabs (Stock vs Cart vs Out of Stock)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -147,98 +140,7 @@ fun IngredientAddEditDialog(
                     label = strings.inventoryNameLabel
                 )
 
-                // 3. Quantity & Unit Selection (Preserved in code, hidden per user preference)
-                if (SHOW_QUANTITY_UI) {
-                    Column {
-                        Text(
-                            text = strings.inventoryQuantityLabel,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = AppColors.TextSecondary
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            EditableNumberStepper(
-                                value = quantity.toInt().coerceAtLeast(1),
-                                onValueChange = { quantity = it.toDouble() },
-                                suffix = "",
-                                step = if (unit == IngredientUnit.GRAM || unit == IngredientUnit.ML) 10 else 1,
-                                minValue = 1,
-                                buttonSize = 26.dp,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Text(
-                            text = strings.inventoryUnitLabel,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = AppColors.TextSecondary
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        // Radio-button style unit options
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            IngredientUnit.entries.forEach { u ->
-                                val isSelected = unit == u
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(if (isSelected) AppColors.PrimaryLight.copy(alpha = 0.5f) else AppColors.Surface)
-                                        .border(
-                                            width = if (isSelected) 1.5.dp else 0.5.dp,
-                                            color = if (isSelected) AppColors.Primary else AppColors.Border,
-                                            shape = RoundedCornerShape(10.dp)
-                                        )
-                                        .pointerHoverIcon(PointerIcon.Hand)
-                                        .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null,
-                                            onClick = { unit = u }
-                                        )
-                                        .padding(vertical = 10.dp, horizontal = 8.dp),
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    // Radio indicator circle
-                                    Box(
-                                        modifier = Modifier
-                                            .size(16.dp)
-                                            .clip(CircleShape)
-                                            .border(
-                                                width = if (isSelected) 5.dp else 1.dp,
-                                                color = if (isSelected) AppColors.Primary else AppColors.Border,
-                                                shape = CircleShape
-                                            )
-                                            .background(if (isSelected) AppColors.Primary else Color.Transparent)
-                                    )
-
-                                    Spacer(modifier = Modifier.width(6.dp))
-
-                                    Text(
-                                        text = u.symbol,
-                                        fontSize = 13.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) AppColors.PrimaryDark else AppColors.TextPrimary
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 4. Category Selection
+                // 3. Category Selection
                 Column {
                     Text(
                         text = strings.inventoryCategoryLabel,
@@ -291,8 +193,6 @@ fun IngredientAddEditDialog(
                                 val saved = Ingredient(
                                     id = ingredient?.id ?: "ing_${kotlin.random.Random.nextInt(100000, 999999)}",
                                     name = name.trim(),
-                                    quantity = quantity,
-                                    unit = unit,
                                     status = status,
                                     category = category
                                 )

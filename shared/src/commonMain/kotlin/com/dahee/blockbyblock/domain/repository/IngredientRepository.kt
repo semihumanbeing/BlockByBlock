@@ -16,7 +16,6 @@ interface IngredientRepository {
     suspend fun upsertIngredient(ingredient: Ingredient)
     suspend fun toggleStatus(id: String)
     suspend fun updateStatus(id: String, status: IngredientStatus)
-    suspend fun updateQuantityAndUnit(id: String, quantity: Double, unitSymbol: String? = null)
     suspend fun deleteIngredient(id: String)
     suspend fun getIngredientById(id: String): Ingredient?
 }

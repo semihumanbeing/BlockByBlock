@@ -3,7 +3,6 @@ package com.dahee.blockbyblock.data.repository
 import com.dahee.blockbyblock.domain.model.Ingredient
 import com.dahee.blockbyblock.domain.model.IngredientCategory
 import com.dahee.blockbyblock.domain.model.IngredientStatus
-import com.dahee.blockbyblock.domain.model.IngredientUnit
 import com.dahee.blockbyblock.domain.repository.IngredientRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,8 +28,7 @@ class InMemoryIngredientRepository : IngredientRepository {
                 val matchesQuery = query.isBlank() ||
                         ingredient.name.contains(query, ignoreCase = true) ||
                         ingredient.category.displayNameKo.contains(query, ignoreCase = true) ||
-                        ingredient.category.displayNameEn.contains(query, ignoreCase = true) ||
-                        "${ingredient.quantity.toInt()}${ingredient.unit.symbol}".contains(query, ignoreCase = true)
+                        ingredient.category.displayNameEn.contains(query, ignoreCase = true)
 
                 val matchesStatus = statusFilter == null || ingredient.status == statusFilter
                 val matchesCategory = categoryFilter == null || ingredient.category == categoryFilter
@@ -74,26 +72,11 @@ class InMemoryIngredientRepository : IngredientRepository {
         if (index >= 0) {
             val item = currentList[index]
             val newStatus = when (item.status) {
-                IngredientStatus.IN_STOCK -> IngredientStatus.CONSUMED
-                IngredientStatus.CONSUMED -> IngredientStatus.SHOPPING_CART
-                IngredientStatus.SHOPPING_CART -> IngredientStatus.IN_STOCK
+                IngredientStatus.STOCK -> IngredientStatus.OUT_OF_STOCK
+                IngredientStatus.OUT_OF_STOCK -> IngredientStatus.CART
+                IngredientStatus.CART -> IngredientStatus.STOCK
             }
             currentList[index] = item.copy(status = newStatus)
-            _ingredients.value = currentList
-        }
-    }
-
-    override suspend fun updateQuantityAndUnit(id: String, quantity: Double, unitSymbol: String?) {
-        val currentList = _ingredients.value.toMutableList()
-        val index = currentList.indexOfFirst { it.id == id }
-        if (index >= 0) {
-            val item = currentList[index]
-            val newUnit = if (unitSymbol != null) {
-                IngredientUnit.entries.find { it.symbol.equals(unitSymbol, ignoreCase = true) } ?: item.unit
-            } else {
-                item.unit
-            }
-            currentList[index] = item.copy(quantity = quantity, unit = newUnit)
             _ingredients.value = currentList
         }
     }

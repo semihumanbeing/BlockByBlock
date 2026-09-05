@@ -5,7 +5,6 @@ import com.dahee.blockbyblock.domain.model.CatalogIngredient
 import com.dahee.blockbyblock.domain.model.Ingredient
 import com.dahee.blockbyblock.domain.model.IngredientCategory
 import com.dahee.blockbyblock.domain.model.IngredientStatus
-import com.dahee.blockbyblock.domain.model.IngredientUnit
 import com.dahee.blockbyblock.domain.repository.IngredientRepository
 import com.dahee.blockbyblock.presentation.inventory.state.IngredientTab
 import com.dahee.blockbyblock.presentation.inventory.state.IngredientUiState
@@ -38,9 +37,9 @@ class IngredientViewModel(
     private fun observeIngredients() {
         scope.launch {
             repository.getAllIngredients().collectLatest { allList ->
-                val inStock = allList.count { it.status == IngredientStatus.IN_STOCK }
-                val consumed = allList.count { it.status == IngredientStatus.CONSUMED }
-                val cart = allList.count { it.status == IngredientStatus.SHOPPING_CART }
+                val inStock = allList.count { it.status == IngredientStatus.STOCK }
+                val consumed = allList.count { it.status == IngredientStatus.OUT_OF_STOCK }
+                val cart = allList.count { it.status == IngredientStatus.CART }
 
                 val tab = _uiState.value.selectedTab
                 val cat = _uiState.value.selectedCategory
@@ -48,8 +47,8 @@ class IngredientViewModel(
                 val filtered = allList.filter { item ->
                     val matchesTab = when (tab) {
                         IngredientTab.ALL -> true
-                        IngredientTab.IN_STOCK -> item.status == IngredientStatus.IN_STOCK
-                        IngredientTab.SHOPPING_CART -> item.status == IngredientStatus.SHOPPING_CART
+                        IngredientTab.IN_STOCK -> item.status == IngredientStatus.STOCK
+                        IngredientTab.SHOPPING_CART -> item.status == IngredientStatus.CART
                     }
                     val matchesCat = cat == null || item.category == cat
                     matchesTab && matchesCat
@@ -86,21 +85,21 @@ class IngredientViewModel(
     // Mark as consumed (Move to consumed state within inventory)
     fun onMarkAsConsumed(id: String) {
         scope.launch {
-            repository.updateStatus(id, IngredientStatus.CONSUMED)
+            repository.updateStatus(id, IngredientStatus.OUT_OF_STOCK)
         }
     }
 
     // Move to Shopping Cart
     fun onMoveToCart(id: String) {
         scope.launch {
-            repository.updateStatus(id, IngredientStatus.SHOPPING_CART)
+            repository.updateStatus(id, IngredientStatus.CART)
         }
     }
 
     // Restore to In Stock
     fun onRestoreToStock(id: String) {
         scope.launch {
-            repository.updateStatus(id, IngredientStatus.IN_STOCK)
+            repository.updateStatus(id, IngredientStatus.STOCK)
         }
     }
 
@@ -110,44 +109,26 @@ class IngredientViewModel(
             val item = _uiState.value.registeredIngredients.find { it.id == id }
             if (item != null) {
                 when (item.status) {
-                    IngredientStatus.IN_STOCK -> {
-                        repository.updateStatus(id, IngredientStatus.CONSUMED)
+                    IngredientStatus.STOCK -> {
+                        repository.updateStatus(id, IngredientStatus.OUT_OF_STOCK)
                     }
-                    IngredientStatus.CONSUMED -> {
-                        repository.updateStatus(id, IngredientStatus.SHOPPING_CART)
+                    IngredientStatus.OUT_OF_STOCK -> {
+                        repository.updateStatus(id, IngredientStatus.CART)
                     }
-                    IngredientStatus.SHOPPING_CART -> {
-                        repository.updateStatus(id, IngredientStatus.IN_STOCK)
+                    IngredientStatus.CART -> {
+                        repository.updateStatus(id, IngredientStatus.STOCK)
                     }
                 }
             }
         }
     }
 
-    // Quick quantity update with immediate auto-save (Kept for domain logic)
-    fun onQuickUpdateQuantity(id: String, newQuantity: Double) {
-        scope.launch {
-            repository.updateQuantityAndUnit(id, newQuantity.coerceAtLeast(0.0))
-        }
-    }
-
-    // Quick unit update with immediate auto-save (Kept for domain logic)
-    fun onQuickUpdateUnit(id: String, newUnit: IngredientUnit) {
-        scope.launch {
-            repository.updateQuantityAndUnit(
-                id,
-                _uiState.value.displayedIngredients.find { it.id == id }?.quantity ?: 1.0,
-                newUnit.symbol
-            )
-        }
-    }
-
     // Catalog Search Dialog Handlers
     fun onOpenSearchCatalogDialog() {
         val initialStatus = if (_uiState.value.selectedTab == IngredientTab.SHOPPING_CART) {
-            IngredientStatus.SHOPPING_CART
+            IngredientStatus.CART
         } else {
-            IngredientStatus.IN_STOCK
+            IngredientStatus.STOCK
         }
         _uiState.update {
             it.copy(
@@ -186,8 +167,6 @@ class IngredientViewModel(
     // Add ingredient selected from catalog (re-activates if consumed, prevents duplicates if active)
     fun onAddFromCatalog(
         catalogItem: CatalogIngredient,
-        quantity: Double,
-        unit: IngredientUnit,
         status: IngredientStatus
     ) {
         val trimmedName = catalogItem.name.trim()
@@ -195,16 +174,16 @@ class IngredientViewModel(
             it.name.trim().equals(trimmedName, ignoreCase = true)
         }
         if (existing != null) {
-            if (existing.status == IngredientStatus.CONSUMED) {
+            if (existing.status == IngredientStatus.OUT_OF_STOCK) {
                 // Re-activate consumed ingredient by updating its status to target status
                 scope.launch {
                     repository.updateStatus(existing.id, status)
-                    val targetText = if (status == IngredientStatus.IN_STOCK) "보유중" else "장바구니"
+                    val targetText = if (status == IngredientStatus.STOCK) "보유중" else "장바구니"
                     showAutoSaveToast("'${trimmedName}'이(가) ${targetText}에 추가되었습니다.")
                 }
                 return
             } else {
-                val statusText = if (existing.status == IngredientStatus.IN_STOCK) "보유중" else "장바구니"
+                val statusText = if (existing.status == IngredientStatus.STOCK) "보유중" else "장바구니"
                 showAutoSaveToast("'${trimmedName}'은(는) 이미 ${statusText}에 등록되어 있습니다.")
                 return
             }
@@ -214,21 +193,17 @@ class IngredientViewModel(
             val newIngredient = Ingredient(
                 id = "ing_${Random.nextInt(100000, 999999)}",
                 name = trimmedName,
-                quantity = quantity,
-                unit = unit,
                 status = status,
                 category = catalogItem.category
             )
             repository.upsertIngredient(newIngredient)
-            showAutoSaveToast("'${trimmedName}'이(가) ${if (status == IngredientStatus.IN_STOCK) "보유중" else "장바구니"}에 추가되었습니다.")
+            showAutoSaveToast("'${trimmedName}'이(가) ${if (status == IngredientStatus.STOCK) "보유중" else "장바구니"}에 추가되었습니다.")
         }
     }
 
     // Add custom ingredient from search text (re-activates if consumed, prevents duplicates if active)
     fun onAddCustomFromCatalogQuery(
         name: String,
-        quantity: Double,
-        unit: IngredientUnit,
         status: IngredientStatus
     ) {
         val trimmed = name.trim()
@@ -238,16 +213,16 @@ class IngredientViewModel(
             it.name.trim().equals(trimmed, ignoreCase = true)
         }
         if (existing != null) {
-            if (existing.status == IngredientStatus.CONSUMED) {
+            if (existing.status == IngredientStatus.OUT_OF_STOCK) {
                 // Re-activate consumed custom ingredient by updating its status to target status
                 scope.launch {
                     repository.updateStatus(existing.id, status)
-                    val targetText = if (status == IngredientStatus.IN_STOCK) "보유중" else "장바구니"
+                    val targetText = if (status == IngredientStatus.STOCK) "보유중" else "장바구니"
                     showAutoSaveToast("'${trimmed}'이(가) ${targetText}에 추가되었습니다.")
                 }
                 return
             } else {
-                val statusText = if (existing.status == IngredientStatus.IN_STOCK) "보유중" else "장바구니"
+                val statusText = if (existing.status == IngredientStatus.STOCK) "보유중" else "장바구니"
                 showAutoSaveToast("'${trimmed}'은(는) 이미 ${statusText}에 등록되어 있습니다.")
                 return
             }
@@ -257,13 +232,11 @@ class IngredientViewModel(
             val newIngredient = Ingredient(
                 id = "ing_${Random.nextInt(100000, 999999)}",
                 name = trimmed,
-                quantity = quantity,
-                unit = unit,
                 status = status,
                 category = guessCategoryByName(trimmed)
             )
             repository.upsertIngredient(newIngredient)
-            showAutoSaveToast("'${trimmed}'이(가) ${if (status == IngredientStatus.IN_STOCK) "보유중" else "장바구니"}에 추가되었습니다.")
+            showAutoSaveToast("'${trimmed}'이(가) ${if (status == IngredientStatus.STOCK) "보유중" else "장바구니"}에 추가되었습니다.")
         }
     }
 
@@ -274,9 +247,9 @@ class IngredientViewModel(
         }
         if (existingOther != null) {
             val statusText = when (existingOther.status) {
-                IngredientStatus.IN_STOCK -> "보유중"
-                IngredientStatus.CONSUMED -> "보유중(소진 상태)"
-                IngredientStatus.SHOPPING_CART -> "장바구니"
+                IngredientStatus.STOCK -> "보유중"
+                IngredientStatus.OUT_OF_STOCK -> "보유중(소진 상태)"
+                IngredientStatus.CART -> "장바구니"
             }
             showAutoSaveToast("'${trimmed}'은(는) 이미 ${statusText}에 등록되어 있습니다.")
             return
@@ -362,8 +335,8 @@ class IngredientViewModel(
                 val filtered = allList.filter { item ->
                     val matchesTab = when (tab) {
                         IngredientTab.ALL -> true
-                        IngredientTab.IN_STOCK -> item.status == IngredientStatus.IN_STOCK
-                        IngredientTab.SHOPPING_CART -> item.status == IngredientStatus.SHOPPING_CART
+                        IngredientTab.IN_STOCK -> item.status == IngredientStatus.STOCK
+                        IngredientTab.SHOPPING_CART -> item.status == IngredientStatus.CART
                     }
                     val matchesCat = cat == null || item.category == cat
                     matchesTab && matchesCat

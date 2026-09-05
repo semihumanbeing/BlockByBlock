@@ -4,7 +4,6 @@ import com.dahee.blockbyblock.domain.model.BlockSizeCategory
 import com.dahee.blockbyblock.domain.model.CookingToolType
 import com.dahee.blockbyblock.domain.model.IngredientCategory
 import com.dahee.blockbyblock.domain.model.IngredientStatus
-import com.dahee.blockbyblock.domain.model.IngredientUnit
 import com.dahee.blockbyblock.domain.model.MealType
 import com.dahee.blockbyblock.domain.model.MoldGridPreset
 
