@@ -79,4 +79,13 @@ class InMemoryEquipmentRepository(
             }
         }
     }
+
+    override suspend fun fetchEquipments(): Result<List<Equipment>> {
+        return Result.success(_equipments.value)
+    }
+
+    override suspend fun syncAll(equipments: List<Equipment>): Result<List<Equipment>> {
+        _equipments.value = equipments
+        return Result.success(equipments)
+    }
 }

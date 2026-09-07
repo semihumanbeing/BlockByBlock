@@ -2,6 +2,7 @@ package com.dahee.blockbyblock
 
 import com.dahee.blockbyblock.core.i18n.AppLanguage
 import platform.Foundation.NSLocale
+import platform.Foundation.NSUserDefaults
 import platform.Foundation.currentLocale
 import platform.Foundation.languageCode
 import platform.Foundation.preferredLanguages
@@ -20,6 +21,19 @@ class IOSPlatform: Platform {
                 AppLanguage.EN
             }
         }
+    override val defaultBaseUrl: String = "http://localhost:8000"
+
+    override fun getPersistentString(key: String): String? {
+        return NSUserDefaults.standardUserDefaults.stringForKey(key)
+    }
+
+    override fun setPersistentString(key: String, value: String?) {
+        if (value != null) {
+            NSUserDefaults.standardUserDefaults.setObject(value, key)
+        } else {
+            NSUserDefaults.standardUserDefaults.removeObjectForKey(key)
+        }
+    }
 }
 
 actual fun getPlatform(): Platform = IOSPlatform()

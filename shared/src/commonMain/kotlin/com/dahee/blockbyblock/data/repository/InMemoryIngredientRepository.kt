@@ -90,4 +90,17 @@ class InMemoryIngredientRepository : IngredientRepository {
     override suspend fun getIngredientById(id: String): Ingredient? {
         return _ingredients.value.find { it.id == id }
     }
+
+    override suspend fun fetchIngredients(): Result<List<Ingredient>> {
+        return Result.success(_ingredients.value)
+    }
+
+    override suspend fun fetchCatalogIngredients(
+        query: String?,
+        category: IngredientCategory?,
+        lang: String
+    ): Result<List<com.dahee.blockbyblock.domain.model.CatalogIngredient>> {
+        val results = com.dahee.blockbyblock.data.datasource.MasterIngredientCatalog.search(query ?: "", category, lang)
+        return Result.success(results)
+    }
 }

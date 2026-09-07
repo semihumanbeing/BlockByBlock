@@ -8,4 +8,6 @@ interface FoodBlockRepository {
     suspend fun getFoodBlocks(): List<FoodBlock>
     suspend fun saveFoodBlock(block: FoodBlock)
     suspend fun deleteFoodBlock(id: String)
+    suspend fun fetchFoodBlocks(): Result<List<FoodBlock>>
+    suspend fun updateQuantity(id: String, delta: Int)
 }

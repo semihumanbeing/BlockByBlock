@@ -28,4 +28,23 @@ class InMemoryFoodBlockRepository : FoodBlockRepository {
         val current = _blocksFlow.value.filter { it.id != id }
         _blocksFlow.value = current
     }
+
+    override suspend fun fetchFoodBlocks(): Result<List<FoodBlock>> {
+        return Result.success(_blocksFlow.value)
+    }
+
+    override suspend fun updateQuantity(id: String, delta: Int) {
+        val current = _blocksFlow.value.toMutableList()
+        val index = current.indexOfFirst { it.id == id }
+        if (index >= 0) {
+            val item = current[index]
+            val newQty = (item.quantity + delta).coerceAtLeast(0)
+            if (newQty <= 0) {
+                current.removeAt(index)
+            } else {
+                current[index] = item.copy(quantity = newQty)
+            }
+            _blocksFlow.value = current
+        }
+    }
 }

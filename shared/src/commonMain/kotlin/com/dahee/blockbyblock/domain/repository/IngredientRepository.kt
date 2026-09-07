@@ -18,4 +18,10 @@ interface IngredientRepository {
     suspend fun updateStatus(id: String, status: IngredientStatus)
     suspend fun deleteIngredient(id: String)
     suspend fun getIngredientById(id: String): Ingredient?
+    suspend fun fetchIngredients(): Result<List<Ingredient>>
+    suspend fun fetchCatalogIngredients(
+        query: String? = null,
+        category: IngredientCategory? = null,
+        lang: String = "KO"
+    ): Result<List<com.dahee.blockbyblock.domain.model.CatalogIngredient>> = Result.success(emptyList())
 }

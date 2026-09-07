@@ -11,4 +11,6 @@ interface EquipmentRepository {
     suspend fun deleteEquipment(id: String)
     suspend fun updateQuantity(id: String, delta: Int)
     suspend fun setQuantity(id: String, quantity: Int)
+    suspend fun fetchEquipments(): Result<List<Equipment>>
+    suspend fun syncAll(equipments: List<Equipment>): Result<List<Equipment>>
 }

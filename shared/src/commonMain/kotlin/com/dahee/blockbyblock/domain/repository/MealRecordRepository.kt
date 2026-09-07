@@ -10,9 +10,12 @@ interface MealRecordRepository {
     suspend fun getMealRecordByDate(dateString: String): DayMealRecord?
     suspend fun saveMealRecord(record: DayMealRecord)
     suspend fun deleteMealRecord(id: String)
+    suspend fun fetchWeeklyMeals(startDate: String): Result<List<DayMealRecord>>
+    suspend fun fetchDailyMeal(dateString: String): Result<DayMealRecord?>
 
     fun observeMealPresets(): Flow<List<MealPreset>>
     suspend fun getMealPresets(): List<MealPreset>
     suspend fun saveMealPreset(preset: MealPreset)
     suspend fun deleteMealPreset(id: String)
+    suspend fun fetchMealPresets(): Result<List<MealPreset>>
 }

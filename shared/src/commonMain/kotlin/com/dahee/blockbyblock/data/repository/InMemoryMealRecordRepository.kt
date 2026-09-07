@@ -34,6 +34,14 @@ class InMemoryMealRecordRepository : MealRecordRepository {
         _records.value = _records.value.filter { it.id != id }
     }
 
+    override suspend fun fetchWeeklyMeals(startDate: String): Result<List<DayMealRecord>> {
+        return Result.success(_records.value)
+    }
+
+    override suspend fun fetchDailyMeal(dateString: String): Result<DayMealRecord?> {
+        return Result.success(getMealRecordByDate(dateString))
+    }
+
     override fun observeMealPresets(): Flow<List<MealPreset>> = _presets.asStateFlow()
 
     override suspend fun getMealPresets(): List<MealPreset> = _presets.value
@@ -51,5 +59,9 @@ class InMemoryMealRecordRepository : MealRecordRepository {
 
     override suspend fun deleteMealPreset(id: String) {
         _presets.value = _presets.value.filter { it.id != id }
+    }
+
+    override suspend fun fetchMealPresets(): Result<List<MealPreset>> {
+        return Result.success(_presets.value)
     }
 }
