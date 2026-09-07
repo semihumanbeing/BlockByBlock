@@ -63,6 +63,7 @@ fun IngredientSearchAddDialog(
     registeredIngredients: List<Ingredient>,
     onAddFromCatalog: (CatalogIngredient, IngredientStatus) -> Unit,
     onAddCustomIngredient: (String, IngredientStatus) -> Unit,
+    onRemoveIngredient: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val strings = LocalStrings.current
@@ -176,11 +177,22 @@ fun IngredientSearchAddDialog(
                         val isActiveRegistered = alreadyRegistered != null && alreadyRegistered.status != IngredientStatus.OUT_OF_STOCK
 
                         item {
+                            val customCardBg = when (alreadyRegistered?.status) {
+                                IngredientStatus.STOCK -> Color(0xBFDAFFD3)
+                                IngredientStatus.CART -> Color(0xCDFCDCD1)
+                                else -> AppColors.PrimaryLight.copy(alpha = 0.3f)
+                            }
+                            val customBorderColor = when (alreadyRegistered?.status) {
+                                IngredientStatus.STOCK -> Color(0xBFDAFFD3)
+                                IngredientStatus.CART -> Color(0xCDFCDCD1)
+                                else -> AppColors.Primary.copy(alpha = 0.4f)
+                            }
+
                             AppCard(
                                 modifier = Modifier.fillMaxWidth(),
                                 padding = 10.dp,
-                                backgroundColor = if (isActiveRegistered) AppColors.SurfaceVariant else AppColors.PrimaryLight.copy(alpha = 0.3f),
-                                borderColor = if (isActiveRegistered) AppColors.Border else AppColors.Primary.copy(alpha = 0.4f)
+                                backgroundColor = customCardBg,
+                                borderColor = customBorderColor
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -191,7 +203,7 @@ fun IngredientSearchAddDialog(
                                             text = strings.catalogAddCustomBtn(trimmedQuery),
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (isActiveRegistered) AppColors.TextSecondary else AppColors.PrimaryDark
+                                            color = if (isActiveRegistered) AppColors.TextPrimary else AppColors.PrimaryDark
                                         )
                                     }
 
@@ -199,30 +211,76 @@ fun IngredientSearchAddDialog(
 
                                     if (isActiveRegistered) {
                                         val (badgeBg, badgeText, badgeColor) = when (alreadyRegistered.status) {
-                                            IngredientStatus.STOCK -> Triple(AppColors.PrimaryLight, strings.alreadyAddedInStock, AppColors.PrimaryDark)
+                                            IngredientStatus.STOCK -> Triple(Color.White.copy(alpha = 0.9f), strings.alreadyAddedInStock, AppColors.PrimaryDark)
                                             IngredientStatus.OUT_OF_STOCK -> Triple(AppColors.SurfaceVariant, strings.alreadyAddedConsumed, AppColors.TextMuted)
-                                            IngredientStatus.CART -> Triple(AppColors.AccentLight, strings.alreadyAddedCart, Color(0xFFC2410C))
+                                            IngredientStatus.CART -> Triple(Color.White.copy(alpha = 0.9f), strings.alreadyAddedCart, Color(0xFFC2410C))
                                         }
                                         Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(6.dp))
-                                                .background(badgeBg)
-                                                .padding(horizontal = 8.dp, vertical = 5.dp)
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = null,
-                                                tint = badgeColor,
-                                                modifier = Modifier.size(13.dp)
-                                            )
-                                            Text(
-                                                text = badgeText,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = badgeColor
-                                            )
+                                            // Left: In Stock / Cart indicator (same size as add buttons: 68.dp x 30.dp)
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(68.dp)
+                                                    .height(30.dp)
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(badgeBg),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Check,
+                                                        contentDescription = null,
+                                                        tint = badgeColor,
+                                                        modifier = Modifier.size(12.dp)
+                                                    )
+                                                    Text(
+                                                        text = badgeText,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = badgeColor
+                                                    )
+                                                }
+                                            }
+
+                                            // Right: Cancel button (same size as add buttons: 68.dp x 30.dp)
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(68.dp)
+                                                    .height(30.dp)
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(Color.White.copy(alpha = 0.9f))
+                                                    .border(1.dp, AppColors.Border, RoundedCornerShape(8.dp))
+                                                    .pointerHoverIcon(PointerIcon.Hand)
+                                                    .clickable(
+                                                        interactionSource = remember { MutableInteractionSource() },
+                                                        indication = null,
+                                                        onClick = { onRemoveIngredient(alreadyRegistered.id) }
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Close,
+                                                        contentDescription = strings.cancel,
+                                                        tint = AppColors.TextSecondary,
+                                                        modifier = Modifier.size(12.dp)
+                                                    )
+                                                    Text(
+                                                        text = strings.cancel,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = AppColors.TextSecondary
+                                                    )
+                                                }
+                                            }
                                         }
                                     } else {
                                         // Side-by-side equal-sized add buttons: Left = In Stock, Right = Shopping Cart
@@ -318,7 +376,10 @@ fun IngredientSearchAddDialog(
                                 },
                                 onAddCart = {
                                     onAddFromCatalog(item, IngredientStatus.CART)
-                                }
+                                },
+                                onRemove = if (alreadyRegistered != null) {
+                                    { onRemoveIngredient(alreadyRegistered.id) }
+                                } else null
                             )
                         }
                     }
@@ -333,15 +394,28 @@ private fun CatalogIngredientRow(
     item: CatalogIngredient,
     existingIngredient: Ingredient?,
     onAddStock: () -> Unit,
-    onAddCart: () -> Unit
+    onAddCart: () -> Unit,
+    onRemove: (() -> Unit)? = null
 ) {
     val strings = LocalStrings.current
     val isActiveRegistered = existingIngredient != null && existingIngredient.status != IngredientStatus.OUT_OF_STOCK
 
+    val cardBg = when (existingIngredient?.status) {
+        IngredientStatus.STOCK -> Color(0xBFDAFFD3)
+        IngredientStatus.CART -> Color(0xCDFCDCD1)
+        else -> AppColors.Surface
+    }
+    val cardBorder = when (existingIngredient?.status) {
+        IngredientStatus.STOCK -> Color(0xBFDAFFD3)
+        IngredientStatus.CART -> Color(0xCDFCDCD1)
+        else -> AppColors.Border.copy(alpha = 0.6f)
+    }
+
     AppCard(
         modifier = Modifier.fillMaxWidth(),
         padding = 10.dp,
-        backgroundColor = if (isActiveRegistered) AppColors.SurfaceVariant.copy(alpha = 0.5f) else AppColors.Surface
+        backgroundColor = cardBg,
+        borderColor = cardBorder
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -353,7 +427,7 @@ private fun CatalogIngredientRow(
                     text = item.name,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isActiveRegistered) AppColors.TextSecondary else AppColors.TextPrimary
+                    color = AppColors.TextPrimary
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Row(
@@ -363,7 +437,7 @@ private fun CatalogIngredientRow(
                     Text(
                         text = strings.ingredientCategoryName(item.category),
                         fontSize = 11.sp,
-                        color = AppColors.TextMuted
+                        color = if (isActiveRegistered) AppColors.TextSecondary else AppColors.TextMuted
                     )
 
                     // Small indicator if item was previously consumed / out of stock
@@ -387,33 +461,80 @@ private fun CatalogIngredientRow(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Right: Either Active Registered Badge OR Two stacked Add Buttons (allows adding consumed items back!)
+            // Right: Either Active Registered Badge (with cancel button) OR Two stacked Add Buttons (allows adding consumed items back!)
             if (isActiveRegistered) {
                 val (badgeBg, badgeText, badgeColor) = when (existingIngredient.status) {
-                    IngredientStatus.STOCK -> Triple(AppColors.PrimaryLight, strings.alreadyAddedInStock, AppColors.PrimaryDark)
+                    IngredientStatus.STOCK -> Triple(Color.White.copy(alpha = 0.9f), strings.alreadyAddedInStock, AppColors.PrimaryDark)
                     IngredientStatus.OUT_OF_STOCK -> Triple(AppColors.SurfaceVariant, strings.alreadyAddedConsumed, AppColors.TextMuted)
-                    IngredientStatus.CART -> Triple(AppColors.AccentLight, strings.alreadyAddedCart, Color(0xFFC2410C))
+                    IngredientStatus.CART -> Triple(Color.White.copy(alpha = 0.9f), strings.alreadyAddedCart, Color(0xFFC2410C))
                 }
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(badgeBg)
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = badgeColor,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Text(
-                        text = badgeText,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = badgeColor
-                    )
+                    // Left: In Stock / Cart indicator (same size as add buttons: 68.dp x 30.dp)
+                    Box(
+                        modifier = Modifier
+                            .width(68.dp)
+                            .height(30.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(badgeBg),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = badgeColor,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Text(
+                                text = badgeText,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = badgeColor
+                            )
+                        }
+                    }
+
+                    // Right: Cancel button (same size as add buttons: 68.dp x 30.dp)
+                    Box(
+                        modifier = Modifier
+                            .width(68.dp)
+                            .height(30.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.White.copy(alpha = 0.9f))
+                            .border(1.dp, AppColors.Border, RoundedCornerShape(8.dp))
+                            .pointerHoverIcon(PointerIcon.Hand)
+                            .clickable(
+                                enabled = onRemove != null,
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { onRemove?.invoke() }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = strings.cancel,
+                                tint = AppColors.TextSecondary,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Text(
+                                text = strings.cancel,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColors.TextSecondary
+                            )
+                        }
+                    }
                 }
             } else {
                 // Side-by-side equal-sized add buttons: Left = In Stock, Right = Shopping Cart

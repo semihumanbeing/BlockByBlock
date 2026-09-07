@@ -100,6 +100,9 @@ fun InventoryScreen(
             onAddCustomIngredient = { name, status ->
                 viewModel.onAddCustomFromCatalogQuery(name, status)
             },
+            onRemoveIngredient = { id ->
+                viewModel.onDeleteIngredient(id)
+            },
             onDismiss = { viewModel.onCloseSearchCatalogDialog() }
         )
     }
