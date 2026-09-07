@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -50,10 +51,23 @@ import com.dahee.blockbyblock.presentation.tutorial.TutorialGuideBanner
 import com.dahee.blockbyblock.presentation.tutorial.TutorialStep
 import com.dahee.blockbyblock.presentation.tutorial.WelcomeProfileScreen
 
+import androidx.compose.runtime.rememberCoroutineScope
+import com.dahee.blockbyblock.data.remote.TokenStorage
+import com.dahee.blockbyblock.data.remote.dto.UpdateOnboardingRequest
+import com.dahee.blockbyblock.data.remote.dto.UpdateProfileRequest
+import com.dahee.blockbyblock.data.remote.service.AuthApiService
+import com.dahee.blockbyblock.data.remote.service.UserApiService
+import kotlinx.coroutines.launch
+
 @Composable
 fun App() {
+    val coroutineScope = rememberCoroutineScope()
+    val authApiService = remember { AuthApiService() }
+    val userApiService = remember { UserApiService() }
+
     // Auth & Onboarding State
     var isLoggedIn by remember { mutableStateOf(false) }
+    var isCheckingAuth by remember { mutableStateOf(TokenStorage.isAuthenticated) }
     var hasCompletedOnboarding by remember { mutableStateOf(false) }
     var userProfile by remember {
         mutableStateOf(
@@ -65,13 +79,27 @@ fun App() {
     var isManagingEquipment by remember { mutableStateOf(false) }
     var tutorialStep by remember { mutableStateOf(TutorialStep.WELCOME_PROFILE) }
 
-    val equipmentRepository = remember { InMemoryEquipmentRepository() }
+    val initialLang = remember {
+        val savedLang = TokenStorage.getUserLang()
+        if (savedLang != null) {
+            try {
+                com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(savedLang)
+            } catch (_: Throwable) {
+                getPlatform().defaultLanguage
+            }
+        } else {
+            getPlatform().defaultLanguage
+        }
+    }
+    var currentLanguage by remember { mutableStateOf(initialLang) }
+
+    val equipmentRepository = remember { com.dahee.blockbyblock.data.repository.NetworkEquipmentRepository() }
     val equipmentViewModel = remember { EquipmentViewModel(equipmentRepository) }
 
-    val ingredientRepository = remember { InMemoryIngredientRepository() }
-    val ingredientViewModel = remember { IngredientViewModel(ingredientRepository) }
+    val ingredientRepository = remember { com.dahee.blockbyblock.data.repository.NetworkIngredientRepository() }
+    val ingredientViewModel = remember { IngredientViewModel(ingredientRepository, initialLanguage = initialLang) }
 
-    val foodBlockRepository = remember { InMemoryFoodBlockRepository() }
+    val foodBlockRepository = remember { com.dahee.blockbyblock.data.repository.NetworkFoodBlockRepository() }
     val blockViewModel = remember {
         BlockViewModel(
             foodBlockRepository = foodBlockRepository,
@@ -80,11 +108,12 @@ fun App() {
         )
     }
 
-    val mealRecordRepository = remember { InMemoryMealRecordRepository() }
+    val mealRecordRepository = remember { com.dahee.blockbyblock.data.repository.NetworkMealRecordRepository() }
     val mealPlanViewModel = remember {
         MealPlanViewModel(
             mealRecordRepository = mealRecordRepository,
-            foodBlockRepository = foodBlockRepository
+            foodBlockRepository = foodBlockRepository,
+            initialLanguage = initialLang
         )
     }
 
@@ -94,7 +123,94 @@ fun App() {
     val hasAddedIngredient = ingredientUiState.registeredIngredients.isNotEmpty()
     val hasCreatedBlock = blockUiState.blocks.isNotEmpty()
 
-    var currentLanguage by remember { mutableStateOf(getPlatform().defaultLanguage) }
+    // Auto-restore login session on startup / page refresh
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (TokenStorage.isAuthenticated) {
+            val meResult = userApiService.getMe()
+            meResult.onSuccess { userRes ->
+                try {
+                    val langEnum = com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(userRes.lang)
+                    currentLanguage = langEnum
+                } catch (_: Throwable) {}
+                val avatar = try {
+                    com.dahee.blockbyblock.domain.model.ProfileAvatarType.valueOf(userRes.avatarType)
+                } catch (_: Throwable) {
+                    com.dahee.blockbyblock.domain.model.ProfileAvatarType.PERSON
+                }
+                val profile = UserProfile(
+                    id = userRes.id,
+                    nickname = userRes.nickname,
+                    avatarType = avatar,
+                    email = userRes.email,
+                    onboardingCompleted = userRes.onboardingCompleted
+                )
+                userProfile = profile
+                hasCompletedOnboarding = profile.onboardingCompleted
+                isLoggedIn = true
+                if (!profile.onboardingCompleted) {
+                    tutorialStep = TutorialStep.WELCOME_PROFILE
+                } else {
+                    tutorialStep = TutorialStep.COMPLETED
+                    currentTab = NavTab.MEAL_PLAN
+                }
+                coroutineScope.launch { equipmentRepository.fetchEquipments() }
+                coroutineScope.launch { ingredientRepository.fetchIngredients() }
+                coroutineScope.launch { foodBlockRepository.fetchFoodBlocks() }
+                coroutineScope.launch { mealRecordRepository.fetchWeeklyMeals(com.dahee.blockbyblock.core.utils.getCurrentDateIso()) }
+                coroutineScope.launch { mealRecordRepository.fetchMealPresets() }
+            }.onFailure {
+                val refresh = TokenStorage.getRefreshToken()
+                if (!refresh.isNullOrBlank()) {
+                    val refreshRes = authApiService.refreshToken(refresh)
+                    refreshRes.onSuccess {
+                        val retryMe = userApiService.getMe()
+                        retryMe.onSuccess { userRes ->
+                            try {
+                                val langEnum = com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(userRes.lang)
+                                currentLanguage = langEnum
+                            } catch (_: Throwable) {}
+                            val avatar = try {
+                                com.dahee.blockbyblock.domain.model.ProfileAvatarType.valueOf(userRes.avatarType)
+                            } catch (_: Throwable) {
+                                com.dahee.blockbyblock.domain.model.ProfileAvatarType.PERSON
+                            }
+                            val profile = UserProfile(
+                                id = userRes.id,
+                                nickname = userRes.nickname,
+                                avatarType = avatar,
+                                email = userRes.email,
+                                onboardingCompleted = userRes.onboardingCompleted
+                            )
+                            userProfile = profile
+                            hasCompletedOnboarding = profile.onboardingCompleted
+                            isLoggedIn = true
+                            if (!profile.onboardingCompleted) {
+                                tutorialStep = TutorialStep.WELCOME_PROFILE
+                            } else {
+                                tutorialStep = TutorialStep.COMPLETED
+                                currentTab = NavTab.MEAL_PLAN
+                            }
+                            coroutineScope.launch { equipmentRepository.fetchEquipments() }
+                            coroutineScope.launch { ingredientRepository.fetchIngredients() }
+                            coroutineScope.launch { foodBlockRepository.fetchFoodBlocks() }
+                            coroutineScope.launch { mealRecordRepository.fetchWeeklyMeals(com.dahee.blockbyblock.core.utils.getCurrentDateIso()) }
+                            coroutineScope.launch { mealRecordRepository.fetchMealPresets() }
+                        }.onFailure {
+                            TokenStorage.clearTokens()
+                            isLoggedIn = false
+                        }
+                    }.onFailure {
+                        TokenStorage.clearTokens()
+                        isLoggedIn = false
+                    }
+                } else {
+                    TokenStorage.clearTokens()
+                    isLoggedIn = false
+                }
+            }
+            isCheckingAuth = false
+        }
+    }
 
     // Listen for meal slot save during tutorial
     androidx.compose.runtime.LaunchedEffect(mealPlanViewModel, tutorialStep) {
@@ -111,6 +227,12 @@ fun App() {
             kotlinx.coroutines.delay(2800)
             tutorialStep = TutorialStep.COMPLETED
         }
+    }
+
+    // Sync language with ingredientViewModel and mealPlanViewModel
+    androidx.compose.runtime.LaunchedEffect(currentLanguage) {
+        ingredientViewModel.setLanguage(currentLanguage)
+        mealPlanViewModel.setLanguage(currentLanguage)
     }
 
     var showSaveEquipmentConfirmDialog by remember { mutableStateOf(false) }
@@ -191,23 +313,49 @@ fun App() {
                         .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
+                    // 0. Checking saved auth session
+                    if (isCheckingAuth) {
+                        Box(
+                            modifier = Modifier.fillMaxSize().background(AppColors.Background),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                color = AppColors.Primary,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+                    }
                     // 1. Unauthenticated: Auth Screen (Login / Sign Up)
-                    if (!isLoggedIn) {
+                    else if (!isLoggedIn) {
                         AuthScreen(
-                            onLoginSuccess = { email ->
+                            authApiService = authApiService,
+                            onLoginSuccess = { profile ->
                                 isLoggedIn = true
-                                userProfile = userProfile.copy(email = email)
-                                if (!hasCompletedOnboarding) {
+                                userProfile = profile
+                                hasCompletedOnboarding = profile.onboardingCompleted
+                                TokenStorage.getUserLang()?.let { langStr ->
+                                    try {
+                                        currentLanguage = com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(langStr)
+                                    } catch (_: Throwable) {}
+                                }
+                                coroutineScope.launch {
+                                    equipmentRepository.fetchEquipments()
+                                    ingredientRepository.fetchIngredients()
+                                    foodBlockRepository.fetchFoodBlocks()
+                                    mealRecordRepository.fetchWeeklyMeals(com.dahee.blockbyblock.core.utils.getCurrentDateIso())
+                                    mealRecordRepository.fetchMealPresets()
+                                }
+                                if (!profile.onboardingCompleted) {
                                     tutorialStep = TutorialStep.WELCOME_PROFILE
                                 } else {
                                     tutorialStep = TutorialStep.COMPLETED
                                     currentTab = NavTab.MEAL_PLAN
                                 }
                             },
-                            onSignUpSuccess = { email ->
+                            onSignUpSuccess = { profile ->
                                 isLoggedIn = true
                                 hasCompletedOnboarding = false
-                                userProfile = userProfile.copy(email = email)
+                                userProfile = profile
                                 tutorialStep = TutorialStep.WELCOME_PROFILE
                             }
                         )
@@ -216,12 +364,23 @@ fun App() {
                     else if (tutorialStep == TutorialStep.WELCOME_PROFILE) {
                         WelcomeProfileScreen(
                             onStart = { name ->
-                                userProfile = userProfile.copy(nickname = name)
+                                userProfile = userProfile.copy(nickname = name, onboardingCompleted = true)
                                 hasCompletedOnboarding = true
                                 tutorialStep = TutorialStep.EQUIPMENT_SETUP
                                 equipmentViewModel.onOpenDirectSetup()
                                 isManagingEquipment = true
                                 currentTab = NavTab.INVENTORY
+                                coroutineScope.launch {
+                                    userApiService.updateProfile(
+                                        UpdateProfileRequest(
+                                            nickname = name,
+                                            avatarType = userProfile.avatarType.name
+                                        )
+                                    )
+                                    userApiService.updateOnboarding(
+                                        UpdateOnboardingRequest(onboardingCompleted = true)
+                                    )
+                                }
                             }
                         )
                     }
@@ -323,8 +482,30 @@ fun App() {
                                         )
                                         NavTab.ME -> MeScreen(
                                             userProfile = userProfile,
-                                            onProfileChange = { userProfile = it },
-                                            onLanguageChange = { currentLanguage = it },
+                                            onProfileChange = { updated ->
+                                                userProfile = updated
+                                                coroutineScope.launch {
+                                                    userApiService.updateProfile(
+                                                        UpdateProfileRequest(
+                                                            nickname = updated.nickname,
+                                                            avatarType = updated.avatarType.name
+                                                        )
+                                                    )
+                                                }
+                                            },
+                                            onLanguageChange = { newLang ->
+                                                currentLanguage = newLang
+                                                TokenStorage.setUserInfo(TokenStorage.getUserId(), newLang.name)
+                                                coroutineScope.launch {
+                                                    userApiService.updateProfile(
+                                                        UpdateProfileRequest(
+                                                            nickname = userProfile.nickname,
+                                                            avatarType = userProfile.avatarType.name,
+                                                            lang = newLang.name
+                                                        )
+                                                    )
+                                                }
+                                            },
                                             onNavigateToEquipment = {
                                                 equipmentViewModel.onOpenListScreen()
                                                 isManagingEquipment = true
@@ -334,6 +515,9 @@ fun App() {
                                                 tutorialStep = TutorialStep.WELCOME_PROFILE
                                             },
                                             onLogout = {
+                                                coroutineScope.launch {
+                                                    authApiService.logout()
+                                                }
                                                 isLoggedIn = false
                                             }
                                         )

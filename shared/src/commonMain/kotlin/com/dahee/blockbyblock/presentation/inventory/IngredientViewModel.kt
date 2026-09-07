@@ -23,7 +23,8 @@ import kotlin.random.Random
 
 class IngredientViewModel(
     private val repository: IngredientRepository,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main),
+    initialLanguage: com.dahee.blockbyblock.core.i18n.AppLanguage = com.dahee.blockbyblock.core.i18n.AppLanguage.KO
 ) {
     private val _uiState = MutableStateFlow(IngredientUiState())
     val uiState: StateFlow<IngredientUiState> = _uiState.asStateFlow()
@@ -31,6 +32,9 @@ class IngredientViewModel(
     private var toastJob: Job? = null
 
     init {
+        scope.launch {
+            repository.fetchIngredients()
+        }
         observeIngredients()
     }
 
@@ -124,11 +128,29 @@ class IngredientViewModel(
     }
 
     // Catalog Search Dialog Handlers
+    private var catalogSearchJob: Job? = null
+
+    private var currentLanguage: com.dahee.blockbyblock.core.i18n.AppLanguage = initialLanguage
+
+    fun setLanguage(language: com.dahee.blockbyblock.core.i18n.AppLanguage) {
+        if (currentLanguage != language) {
+            currentLanguage = language
+            if (_uiState.value.isSearchCatalogDialogOpen) {
+                searchCatalog(_uiState.value.catalogSearchQuery, _uiState.value.catalogCategoryFilter)
+            }
+        }
+    }
+
     fun onOpenSearchCatalogDialog() {
         val initialStatus = if (_uiState.value.selectedTab == IngredientTab.SHOPPING_CART) {
             IngredientStatus.CART
         } else {
             IngredientStatus.STOCK
+        }
+        val initialItems = if (currentLanguage == com.dahee.blockbyblock.core.i18n.AppLanguage.EN) {
+            MasterIngredientCatalog.englishItems
+        } else {
+            MasterIngredientCatalog.items
         }
         _uiState.update {
             it.copy(
@@ -136,27 +158,52 @@ class IngredientViewModel(
                 catalogSearchQuery = "",
                 catalogCategoryFilter = null,
                 catalogTargetStatus = initialStatus,
-                catalogResults = MasterIngredientCatalog.items
+                catalogResults = initialItems
             )
         }
+        searchCatalog("", null)
     }
 
     fun onCloseSearchCatalogDialog() {
+        catalogSearchJob?.cancel()
         _uiState.update { it.copy(isSearchCatalogDialogOpen = false) }
     }
 
     fun onCatalogSearchQueryChange(query: String) {
-        _uiState.update { current ->
-            val results = MasterIngredientCatalog.search(query, current.catalogCategoryFilter)
-            current.copy(catalogSearchQuery = query, catalogResults = results)
-        }
+        _uiState.update { it.copy(catalogSearchQuery = query) }
+        searchCatalog(query, _uiState.value.catalogCategoryFilter)
     }
 
     fun onCatalogCategoryFilterChange(category: IngredientCategory?) {
-        _uiState.update { current ->
-            val newCat = if (current.catalogCategoryFilter == category) null else category
-            val results = MasterIngredientCatalog.search(current.catalogSearchQuery, newCat)
-            current.copy(catalogCategoryFilter = newCat, catalogResults = results)
+        val newCat = if (_uiState.value.catalogCategoryFilter == category) null else category
+        _uiState.update { it.copy(catalogCategoryFilter = newCat) }
+        searchCatalog(_uiState.value.catalogSearchQuery, newCat)
+    }
+
+    private fun searchCatalog(query: String, category: IngredientCategory?) {
+        catalogSearchJob?.cancel()
+        catalogSearchJob = scope.launch {
+            if (query.isNotBlank()) {
+                delay(150)
+            }
+            val langCode = currentLanguage.name
+            val result = repository.fetchCatalogIngredients(
+                query = query.ifBlank { null },
+                category = category,
+                lang = langCode
+            )
+            result.onSuccess { items ->
+                _uiState.update { current ->
+                    if (current.catalogSearchQuery == query && current.catalogCategoryFilter == category) {
+                        current.copy(catalogResults = items)
+                    } else {
+                        current
+                    }
+                }
+            }.onFailure {
+                val fallback = MasterIngredientCatalog.search(query, category, langCode)
+                _uiState.update { it.copy(catalogResults = fallback) }
+            }
         }
     }
 

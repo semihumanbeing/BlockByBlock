@@ -28,6 +28,9 @@ class BlockViewModel(
     val uiState = _uiState.asStateFlow()
 
     init {
+        coroutineScope.launch {
+            foodBlockRepository.fetchFoodBlocks()
+        }
         observeData()
     }
 

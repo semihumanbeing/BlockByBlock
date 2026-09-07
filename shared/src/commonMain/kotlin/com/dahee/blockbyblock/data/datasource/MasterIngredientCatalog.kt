@@ -83,9 +83,93 @@ object MasterIngredientCatalog {
         CatalogIngredient("cat_62", "프로틴 파우더", IngredientCategory.OTHER)
     )
 
-    fun search(query: String, category: IngredientCategory? = null): List<CatalogIngredient> {
+    val englishItems: List<CatalogIngredient> = listOf(
+        // Meat & Seafood
+        CatalogIngredient("encat_1", "Chicken Breast", IngredientCategory.MEAT_SEAFOOD),
+        CatalogIngredient("encat_2", "Chicken Thigh", IngredientCategory.MEAT_SEAFOOD),
+        CatalogIngredient("encat_3", "Ground Turkey", IngredientCategory.MEAT_SEAFOOD),
+        CatalogIngredient("encat_4", "Turkey Breast", IngredientCategory.MEAT_SEAFOOD),
+        CatalogIngredient("encat_5", "Lean Ground Beef", IngredientCategory.MEAT_SEAFOOD),
+        CatalogIngredient("encat_6", "Flank Steak", IngredientCategory.MEAT_SEAFOOD),
+        CatalogIngredient("encat_7", "Salmon Fillet", IngredientCategory.MEAT_SEAFOOD),
+        CatalogIngredient("encat_8", "Canned Tuna", IngredientCategory.MEAT_SEAFOOD),
+        CatalogIngredient("encat_9", "Jumbo Shrimp", IngredientCategory.MEAT_SEAFOOD),
+        CatalogIngredient("encat_10", "Cod / White Fish", IngredientCategory.MEAT_SEAFOOD),
+        CatalogIngredient("encat_11", "Turkey Bacon", IngredientCategory.MEAT_SEAFOOD),
+        CatalogIngredient("encat_12", "Pork Tenderloin", IngredientCategory.MEAT_SEAFOOD),
+
+        // Vegetables & Greens
+        CatalogIngredient("encat_13", "Baby Spinach", IngredientCategory.VEGETABLE),
+        CatalogIngredient("encat_14", "Baby Kale", IngredientCategory.VEGETABLE),
+        CatalogIngredient("encat_15", "Broccoli Florets", IngredientCategory.VEGETABLE),
+        CatalogIngredient("encat_16", "Asparagus", IngredientCategory.VEGETABLE),
+        CatalogIngredient("encat_17", "Brussels Sprouts", IngredientCategory.VEGETABLE),
+        CatalogIngredient("encat_18", "Bell Peppers", IngredientCategory.VEGETABLE),
+        CatalogIngredient("encat_19", "Zucchini", IngredientCategory.VEGETABLE),
+        CatalogIngredient("encat_20", "Cauliflower Rice", IngredientCategory.VEGETABLE),
+        CatalogIngredient("encat_21", "Portobello Mushrooms", IngredientCategory.VEGETABLE),
+        CatalogIngredient("encat_22", "Avocado", IngredientCategory.VEGETABLE),
+        CatalogIngredient("encat_23", "Cherry Tomatoes", IngredientCategory.VEGETABLE),
+        CatalogIngredient("encat_24", "Sweet Potato", IngredientCategory.VEGETABLE),
+        CatalogIngredient("encat_25", "Baby Carrots", IngredientCategory.VEGETABLE),
+        CatalogIngredient("encat_26", "Red Onion", IngredientCategory.VEGETABLE),
+        CatalogIngredient("encat_27", "Cucumber", IngredientCategory.VEGETABLE),
+        CatalogIngredient("encat_28", "Blueberries", IngredientCategory.VEGETABLE),
+
+        // Grains & Carbs
+        CatalogIngredient("encat_29", "Rolled Oats", IngredientCategory.GRAIN_CARB),
+        CatalogIngredient("encat_30", "Quinoa", IngredientCategory.GRAIN_CARB),
+        CatalogIngredient("encat_31", "Brown Rice", IngredientCategory.GRAIN_CARB),
+        CatalogIngredient("encat_32", "Jasmine Rice", IngredientCategory.GRAIN_CARB),
+        CatalogIngredient("encat_33", "Whole Wheat Pasta", IngredientCategory.GRAIN_CARB),
+        CatalogIngredient("encat_34", "Sourdough Bread", IngredientCategory.GRAIN_CARB),
+        CatalogIngredient("encat_35", "Whole Grain Bagel", IngredientCategory.GRAIN_CARB),
+        CatalogIngredient("encat_36", "Chickpeas (Garbanzo)", IngredientCategory.GRAIN_CARB),
+        CatalogIngredient("encat_37", "Black Beans", IngredientCategory.GRAIN_CARB),
+        CatalogIngredient("encat_38", "Lentils", IngredientCategory.GRAIN_CARB),
+
+        // Dairy & Eggs
+        CatalogIngredient("encat_39", "Whole Eggs", IngredientCategory.DAIRY_EGG),
+        CatalogIngredient("encat_40", "Liquid Egg Whites", IngredientCategory.DAIRY_EGG),
+        CatalogIngredient("encat_41", "Plain Greek Yogurt", IngredientCategory.DAIRY_EGG),
+        CatalogIngredient("encat_42", "Cottage Cheese", IngredientCategory.DAIRY_EGG),
+        CatalogIngredient("encat_43", "Almond Milk", IngredientCategory.DAIRY_EGG),
+        CatalogIngredient("encat_44", "Oat Milk", IngredientCategory.DAIRY_EGG),
+        CatalogIngredient("encat_45", "Cheddar Cheese", IngredientCategory.DAIRY_EGG),
+        CatalogIngredient("encat_46", "Feta Cheese", IngredientCategory.DAIRY_EGG),
+        CatalogIngredient("encat_47", "Parmesan Cheese", IngredientCategory.DAIRY_EGG),
+        CatalogIngredient("encat_48", "Unsalted Butter", IngredientCategory.DAIRY_EGG),
+
+        // Sauces & Seasonings
+        CatalogIngredient("encat_49", "Extra Virgin Olive Oil", IngredientCategory.SAUCE_SEASONING),
+        CatalogIngredient("encat_50", "Balsamic Vinegar", IngredientCategory.SAUCE_SEASONING),
+        CatalogIngredient("encat_51", "Dijon Mustard", IngredientCategory.SAUCE_SEASONING),
+        CatalogIngredient("encat_52", "Sriracha Hot Sauce", IngredientCategory.SAUCE_SEASONING),
+        CatalogIngredient("encat_53", "Low-Sodium Soy Sauce", IngredientCategory.SAUCE_SEASONING),
+        CatalogIngredient("encat_54", "Tomato Paste", IngredientCategory.SAUCE_SEASONING),
+        CatalogIngredient("encat_55", "Guacamole", IngredientCategory.SAUCE_SEASONING),
+        CatalogIngredient("encat_56", "Classic Hummus", IngredientCategory.SAUCE_SEASONING),
+        CatalogIngredient("encat_57", "Basil Pesto", IngredientCategory.SAUCE_SEASONING),
+        CatalogIngredient("encat_58", "Salt & Pepper", IngredientCategory.SAUCE_SEASONING),
+        CatalogIngredient("encat_59", "Garlic Powder", IngredientCategory.SAUCE_SEASONING),
+        CatalogIngredient("encat_60", "Maple Syrup", IngredientCategory.SAUCE_SEASONING),
+
+        // Other
+        CatalogIngredient("encat_61", "Firm Tofu", IngredientCategory.OTHER),
+        CatalogIngredient("encat_62", "Tempeh", IngredientCategory.OTHER),
+        CatalogIngredient("encat_63", "Peanut Butter", IngredientCategory.OTHER),
+        CatalogIngredient("encat_64", "Almond Butter", IngredientCategory.OTHER),
+        CatalogIngredient("encat_65", "Whey Protein Powder", IngredientCategory.OTHER),
+        CatalogIngredient("encat_66", "Plant Protein Powder", IngredientCategory.OTHER),
+        CatalogIngredient("encat_67", "Mixed Nuts", IngredientCategory.OTHER),
+        CatalogIngredient("encat_68", "Chia Seeds", IngredientCategory.OTHER),
+        CatalogIngredient("encat_69", "Flaxseed", IngredientCategory.OTHER)
+    )
+
+    fun search(query: String, category: IngredientCategory? = null, lang: String = "KO"): List<CatalogIngredient> {
         val trimmed = query.trim()
-        return items.filter { item ->
+        val targetList = if (lang.equals("EN", ignoreCase = true)) englishItems else items
+        return targetList.filter { item ->
             val matchQuery = trimmed.isBlank() ||
                     item.name.contains(trimmed, ignoreCase = true) ||
                     item.category.displayNameKo.contains(trimmed, ignoreCase = true) ||

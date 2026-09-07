@@ -33,8 +33,9 @@ class EquipmentViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
 
     init {
-        // Pre-populate drafts from repository so setup is ready immediately
+        // Fetch from remote / repository so setup is ready immediately
         viewModelScope.launch {
+            repository.fetchEquipments()
             val currentEquipments = repository.getEquipments().first()
             populateDraftsFromEquipments(currentEquipments)
         }
@@ -378,12 +379,7 @@ class EquipmentViewModel(
 
         val selectedMolds = _moldDrafts.value.filter { it.isSelected }
         viewModelScope.launch {
-            // Replace entire list with new selection
-            val currentList = uiState.value.allEquipments
-            currentList.forEach { repository.deleteEquipment(it.id) }
-
-            // Register selected molds
-            selectedMolds.forEach { moldDraft ->
+            val moldEquipments = selectedMolds.map { moldDraft ->
                 val capacityLabel = if (moldDraft.capacityMl > 0) {
                     MoldCapacityFormatter.formatCapacity(moldDraft.capacityMl, _capacityUnit.value)
                 } else {
@@ -392,8 +388,8 @@ class EquipmentViewModel(
                 val fallbackName = "$capacityLabel ${moldDraft.cellCount}칸"
                 val moldName = moldDraft.name.ifBlank { fallbackName }
 
-                val moldEquipment = Equipment(
-                    id = "mold_${moldDraft.preset.name}_${kotlin.random.Random.nextInt(1000, 9999)}",
+                Equipment(
+                    id = moldDraft.id,
                     name = moldName,
                     category = EquipmentCategory.MOLD,
                     moldPreset = moldDraft.preset,
@@ -403,21 +399,20 @@ class EquipmentViewModel(
                     moldColorHex = moldDraft.moldColorHex,
                     isOwned = true
                 )
-                repository.addEquipment(moldEquipment)
             }
 
-            // Register selected cooking tools
-            _selectedCookingTools.value.forEach { toolType ->
-                val toolEquipment = Equipment(
-                    id = "tool_${toolType.name}_${kotlin.random.Random.nextInt(1000, 9999)}",
+            val toolEquipments = _selectedCookingTools.value.map { toolType ->
+                Equipment(
+                    id = "tool_${toolType.name}",
                     name = toolType.displayName,
                     category = EquipmentCategory.COOKING_TOOL,
                     toolType = toolType,
                     quantity = 1,
                     isOwned = true
                 )
-                repository.addEquipment(toolEquipment)
             }
+
+            repository.syncAll(moldEquipments + toolEquipments)
 
             _errorMessage.value = null
             _screenMode.value = EquipmentScreenMode.LIST

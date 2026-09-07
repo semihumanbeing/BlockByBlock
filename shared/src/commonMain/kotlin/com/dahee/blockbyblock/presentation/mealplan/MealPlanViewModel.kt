@@ -39,13 +39,19 @@ private data class SlotDialogInternalState(
 class MealPlanViewModel(
     private val mealRecordRepository: MealRecordRepository,
     private val foodBlockRepository: FoodBlockRepository,
-    private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
+    private val viewModelScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
+    initialLanguage: com.dahee.blockbyblock.core.i18n.AppLanguage = com.dahee.blockbyblock.core.i18n.AppLanguage.KO
 ) {
     private val todayString: String
         get() = getCurrentDateIso()
 
     private val _navState = MutableStateFlow(DateNavigationState())
     private val _dialogState = MutableStateFlow(SlotDialogInternalState())
+    private val _languageState = MutableStateFlow(initialLanguage)
+
+    fun setLanguage(language: com.dahee.blockbyblock.core.i18n.AppLanguage) {
+        _languageState.value = language
+    }
 
     @Suppress("UNCHECKED_CAST")
     val uiState: StateFlow<MealPlanUiState> = combine(
@@ -53,13 +59,15 @@ class MealPlanViewModel(
         foodBlockRepository.observeFoodBlocks(),
         mealRecordRepository.observeMealPresets(),
         _navState,
-        _dialogState
+        _dialogState,
+        _languageState
     ) { params ->
         val records = params[0] as List<DayMealRecord>
         val foodBlocks = params[1] as List<FoodBlock>
         val presets = params[2] as List<MealPreset>
         val nav = params[3] as DateNavigationState
         val dialog = params[4] as SlotDialogInternalState
+        val lang = params[5] as com.dahee.blockbyblock.core.i18n.AppLanguage
 
         val currentDayRecord = records.find { it.dateString == nav.selectedDateString }
 
@@ -67,11 +75,11 @@ class MealPlanViewModel(
         val dayModels = weekDates.mapIndexed { index, dateStr ->
             val record = records.find { it.dateString == dateStr }
             val dayOfWeekNum = getDayOfWeekNumber(dateStr)
-            val dayOfWeekKorean = getDayOfWeekKorean(dateStr)
+            val dayOfWeekName = getDayOfWeekName(dateStr, lang)
             val monthDay = formatMonthDay(dateStr)
             DayMealPlanUiModel(
                 dateString = dateStr,
-                dayOfWeekName = dayOfWeekKorean,
+                dayOfWeekName = dayOfWeekName,
                 monthDayDisplay = monthDay,
                 isToday = dateStr == todayString,
                 isSelected = dateStr == nav.selectedDateString,
@@ -81,8 +89,9 @@ class MealPlanViewModel(
             )
         }
 
-        val weekLabel = computeWeekLabel(nav.weekStartDate, weekDates.last())
-        val selectedDateFormatted = formatFullDateKorean(nav.selectedDateString)
+        val weekLabel = computeWeekLabel(nav.weekStartDate, weekDates.last(), lang)
+        val selectedDateFormatted = formatFullDate(nav.selectedDateString, lang)
+        val dialogDateLabel = if (dialog.dateString.isNotBlank()) formatFullDate(dialog.dateString, lang) else dialog.dateLabel
 
         MealPlanUiState(
             selectedTab = nav.selectedTab,
@@ -96,7 +105,7 @@ class MealPlanViewModel(
             weekStartDateString = nav.weekStartDate,
             isSlotDialogOpen = dialog.isOpen,
             editingDateString = dialog.dateString,
-            editingDateLabel = dialog.dateLabel,
+            editingDateLabel = dialogDateLabel,
             editingMealType = dialog.mealType,
             slotSelectedBlocks = dialog.selectedBlocks,
             slotAvailableBlocks = dialog.availablePieces,
@@ -109,6 +118,13 @@ class MealPlanViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = MealPlanUiState()
     )
+
+    init {
+        viewModelScope.launch {
+            mealRecordRepository.fetchWeeklyMeals(_navState.value.weekStartDate)
+            mealRecordRepository.fetchMealPresets()
+        }
+    }
 
     fun onSelectTab(tab: MealPlanTab) {
         _navState.value = _navState.value.copy(selectedTab = tab)
@@ -443,17 +459,74 @@ class MealPlanViewModel(
             }
         }
 
-        fun formatFullDateKorean(dateStr: String): String {
+        fun getDayOfWeekEnglish(dateStr: String): String {
+            return when (getDayOfWeekNumber(dateStr)) {
+                0 -> "Sun"
+                1 -> "Mon"
+                2 -> "Tue"
+                3 -> "Wed"
+                4 -> "Thu"
+                5 -> "Fri"
+                6 -> "Sat"
+                else -> "Sun"
+            }
+        }
+
+        fun getDayOfWeekName(
+            dateStr: String,
+            lang: com.dahee.blockbyblock.core.i18n.AppLanguage = com.dahee.blockbyblock.core.i18n.AppLanguage.KO
+        ): String {
+            return if (lang == com.dahee.blockbyblock.core.i18n.AppLanguage.EN) {
+                getDayOfWeekEnglish(dateStr)
+            } else {
+                getDayOfWeekKorean(dateStr)
+            }
+        }
+
+        private fun getEnglishMonthShort(month: Int): String {
+            return when (month) {
+                1 -> "Jan"
+                2 -> "Feb"
+                3 -> "Mar"
+                4 -> "Apr"
+                5 -> "May"
+                6 -> "Jun"
+                7 -> "Jul"
+                8 -> "Aug"
+                9 -> "Sep"
+                10 -> "Oct"
+                11 -> "Nov"
+                12 -> "Dec"
+                else -> "Jan"
+            }
+        }
+
+        fun formatFullDate(
+            dateStr: String,
+            lang: com.dahee.blockbyblock.core.i18n.AppLanguage = com.dahee.blockbyblock.core.i18n.AppLanguage.KO
+        ): String {
             val parts = dateStr.split("-")
             if (parts.size != 3) return dateStr
             val y = parts[0]
             val m = parts[1].toIntOrNull() ?: 1
             val d = parts[2].toIntOrNull() ?: 1
-            val dayName = getDayOfWeekKorean(dateStr)
-            return "${y}년 ${m}월 ${d}일 ($dayName)"
+            val dayName = getDayOfWeekName(dateStr, lang)
+
+            return if (lang == com.dahee.blockbyblock.core.i18n.AppLanguage.EN) {
+                val monthStr = getEnglishMonthShort(m)
+                "$dayName, $monthStr $d, $y"
+            } else {
+                "${y}년 ${m}월 ${d}일 ($dayName)"
+            }
         }
 
-        private fun computeWeekLabel(startMonday: String, endSunday: String): String {
+        fun formatFullDateKorean(dateStr: String): String = formatFullDate(dateStr, com.dahee.blockbyblock.core.i18n.AppLanguage.KO)
+
+        private fun computeWeekLabel(
+            startMonday: String,
+            endSunday: String,
+            lang: com.dahee.blockbyblock.core.i18n.AppLanguage = com.dahee.blockbyblock.core.i18n.AppLanguage.KO
+        ): String {
             val startParts = startMonday.split("-")
             val endParts = endSunday.split("-")
             if (startParts.size == 3 && endParts.size == 3) {
@@ -464,7 +537,12 @@ class MealPlanViewModel(
                 val ed = endParts[2].toIntOrNull() ?: 1
 
                 val weekOfMonth = ((sd - 1) / 7) + 1
-                return "${y}년 ${sm}월 ${weekOfMonth}주차 (${sm}.${sd} ~ ${em}.${ed})"
+                return if (lang == com.dahee.blockbyblock.core.i18n.AppLanguage.EN) {
+                    val monthStr = getEnglishMonthShort(sm)
+                    "Week $weekOfMonth, $monthStr $y (${sm}.${sd} ~ ${em}.${ed})"
+                } else {
+                    "${y}년 ${sm}월 ${weekOfMonth}주차 (${sm}.${sd} ~ ${em}.${ed})"
+                }
             }
             return "$startMonday ~ $endSunday"
         }

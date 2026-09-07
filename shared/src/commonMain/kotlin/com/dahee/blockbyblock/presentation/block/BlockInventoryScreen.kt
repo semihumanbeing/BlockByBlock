@@ -28,10 +28,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -237,54 +238,55 @@ fun BlockInventoryScreen(
                 }
             } else {
                 items(uiState.filteredBlocks, key = { it.id }) { block ->
-                    val dismissState = rememberSwipeToDismissBoxState(
-                        confirmValueChange = { dismissValue ->
-                            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
-                                viewModel.onDeleteBlock(block.id)
-                                true
-                            } else {
-                                false
-                            }
+                    val dismissState = remember(block.id) {
+                        SwipeToDismissBoxState(
+                            initialValue = SwipeToDismissBoxValue.Settled,
+                            positionalThreshold = { totalDistance -> totalDistance * 0.45f }
+                        )
+                    }
+
+                    LaunchedEffect(block.id) {
+                        if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+                            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
                         }
-                    )
+                    }
 
                     SwipeToDismissBox(
                         state = dismissState,
                         enableDismissFromStartToEnd = false,
                         enableDismissFromEndToStart = true,
+                        onDismiss = { dismissValue ->
+                            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                                viewModel.onDeleteBlock(block.id)
+                            }
+                        },
                         backgroundContent = {
                             val isSwiping = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.CenterEnd
-                            ) {
-                                if (isSwiping) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxHeight()
-                                            .fillMaxWidth(0.5f)
-                                            .clip(RoundedCornerShape(topEnd = 14.dp, bottomEnd = 14.dp))
-                                            .background(Color(0xFFE53935))
-                                            .padding(end = 20.dp),
-                                        contentAlignment = Alignment.CenterEnd
+                            if (isSwiping) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(Color(0xFFE53935))
+                                        .padding(end = 20.dp),
+                                    contentAlignment = Alignment.CenterEnd
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Close,
-                                                contentDescription = strings.delete,
-                                                tint = Color.White,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Text(
-                                                text = strings.delete,
-                                                color = Color.White,
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = strings.delete,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = strings.delete,
+                                            color = Color.White,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
                                     }
                                 }
                             }
