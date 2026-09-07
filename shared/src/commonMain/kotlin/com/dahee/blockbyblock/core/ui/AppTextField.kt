@@ -37,6 +37,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
 import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.theme.AppColors
 
@@ -52,9 +62,12 @@ fun AppTextField(
     singleLine: Boolean = true,
     visualTransformation: androidx.compose.ui.text.input.VisualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    keyboardActions: KeyboardActions = KeyboardActions.Default
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    focusRequester: FocusRequester? = null,
+    inputModifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(12.dp)
+    val focusManager = LocalFocusManager.current
 
     // iOS CJK IME(한글 자모 조합) 보존을 위한 내부 TextFieldValue 상태 유지
     var textFieldValue by remember {
@@ -132,7 +145,22 @@ fun AppTextField(
                         cursorBrush = SolidColor(AppColors.Primary),
                         keyboardOptions = keyboardOptions,
                         keyboardActions = keyboardActions,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+                            .then(inputModifier)
+                            .onPreviewKeyEvent { keyEvent ->
+                                if (keyEvent.key == Key.Tab && keyEvent.type == KeyEventType.KeyDown) {
+                                    if (keyEvent.isShiftPressed) {
+                                        focusManager.moveFocus(FocusDirection.Previous)
+                                    } else {
+                                        focusManager.moveFocus(FocusDirection.Next)
+                                    }
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
                     )
                 }
 

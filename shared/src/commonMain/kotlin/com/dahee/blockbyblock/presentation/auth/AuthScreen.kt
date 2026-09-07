@@ -47,6 +47,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -68,6 +75,15 @@ import com.dahee.blockbyblock.core.ui.AppTextField
 import com.dahee.blockbyblock.core.ui.ButtonVariant
 import org.jetbrains.compose.resources.painterResource
 
+import androidx.compose.runtime.rememberCoroutineScope
+import com.dahee.blockbyblock.data.remote.dto.LoginRequest
+import com.dahee.blockbyblock.data.remote.dto.SignUpRequest
+import com.dahee.blockbyblock.data.remote.dto.SocialLoginRequest
+import com.dahee.blockbyblock.data.remote.service.AuthApiService
+import com.dahee.blockbyblock.domain.model.ProfileAvatarType
+import com.dahee.blockbyblock.domain.model.UserProfile
+import kotlinx.coroutines.launch
+
 enum class AuthMode {
     LOGIN,
     SIGN_UP
@@ -75,13 +91,19 @@ enum class AuthMode {
 
 @Composable
 fun AuthScreen(
-    onLoginSuccess: (email: String) -> Unit,
-    onSignUpSuccess: (email: String) -> Unit,
+    onLoginSuccess: (user: UserProfile) -> Unit,
+    onSignUpSuccess: (user: UserProfile) -> Unit,
+    authApiService: AuthApiService = remember { AuthApiService() },
+    googleAuthProvider: GoogleAuthProvider = rememberGoogleAuthProvider(),
     modifier: Modifier = Modifier
 ) {
     var mode by remember { mutableStateOf(AuthMode.LOGIN) }
     val strings = LocalStrings.current
     val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
+
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     // Form inputs
     var emailInput by remember { mutableStateOf("") }
@@ -89,6 +111,10 @@ fun AuthScreen(
     var passwordConfirmInput by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var passwordConfirmVisible by remember { mutableStateOf(false) }
+
+    val emailFocusRequester = remember { FocusRequester() }
+    val passwordFocusRequester = remember { FocusRequester() }
+    val passwordConfirmFocusRequester = remember { FocusRequester() }
 
     // Terms agreement states
     var agreeTermsService by remember { mutableStateOf(false) }
@@ -108,6 +134,60 @@ fun AuthScreen(
 
     val isPasswordConfirmMatched = passwordConfirmInput.isNotBlank() && passwordConfirmInput == passwordInput
     val showPasswordConfirmMismatchError = mode == AuthMode.SIGN_UP && passwordConfirmInput.isNotBlank() && !isPasswordConfirmMatched
+
+    val isFormValid = if (mode == AuthMode.LOGIN) {
+        emailInput.isNotBlank() && passwordInput.isNotBlank()
+    } else {
+        isEmailValid && isPasswordPolicyMet && isPasswordConfirmMatched && agreeAll
+    }
+
+    val submitForm = {
+        if (isFormValid && !isLoading) {
+            scope.launch {
+                isLoading = true
+                errorMessage = null
+                if (mode == AuthMode.LOGIN) {
+                    val res = authApiService.login(LoginRequest(emailInput.trim(), passwordInput))
+                    isLoading = false
+                    res.onSuccess { loginRes ->
+                        val avatar = try {
+                            ProfileAvatarType.valueOf(loginRes.user.avatarType)
+                        } catch (_: Exception) {
+                            ProfileAvatarType.PERSON
+                        }
+                        onLoginSuccess(
+                            UserProfile(
+                                id = loginRes.user.id,
+                                nickname = loginRes.user.nickname,
+                                avatarType = avatar,
+                                email = loginRes.user.email,
+                                onboardingCompleted = loginRes.user.onboardingCompleted
+                            )
+                        )
+                    }.onFailure { err ->
+                        errorMessage = err.message ?: "Login failed"
+                    }
+                } else {
+                    val nickname = emailInput.substringBefore("@")
+                    val res = authApiService.signUp(SignUpRequest(emailInput.trim(), passwordInput, nickname))
+                    isLoading = false
+                    res.onSuccess { signUpRes ->
+                        onSignUpSuccess(
+                            UserProfile(
+                                id = signUpRes.userId,
+                                nickname = nickname,
+                                avatarType = ProfileAvatarType.PERSON,
+                                email = emailInput.trim(),
+                                onboardingCompleted = false
+                            )
+                        )
+                    }.onFailure { err ->
+                        errorMessage = err.message ?: "Sign up failed"
+                    }
+                }
+            }
+        }
+    }
 
     Box(
         modifier = modifier
@@ -248,11 +328,46 @@ fun AuthScreen(
             GoogleSocialButton(
                 text = if (mode == AuthMode.LOGIN) strings.authGoogleLoginBtn else strings.authGoogleSignUpBtn,
                 onClick = {
-                    val googleEmail = "user.google@blockbyblock.com"
-                    if (mode == AuthMode.LOGIN) {
-                        onLoginSuccess(googleEmail)
-                    } else {
-                        onSignUpSuccess(googleEmail)
+                    if (!isLoading) {
+                        scope.launch {
+                            isLoading = true
+                            errorMessage = null
+                            when (val authResult = googleAuthProvider.signIn()) {
+                                is GoogleAuthResult.Cancelled -> {
+                                    isLoading = false
+                                }
+                                is GoogleAuthResult.Failure -> {
+                                    isLoading = false
+                                    errorMessage = authResult.message
+                                }
+                                is GoogleAuthResult.Success -> {
+                                    val res = authApiService.socialLogin(
+                                        SocialLoginRequest(
+                                            provider = "GOOGLE",
+                                            idToken = authResult.idToken
+                                        )
+                                    )
+                                    isLoading = false
+                                    res.onSuccess { loginRes ->
+                                        val avatar = try {
+                                            ProfileAvatarType.valueOf(loginRes.user.avatarType)
+                                        } catch (_: Exception) {
+                                            ProfileAvatarType.PERSON
+                                        }
+                                        val profile = UserProfile(
+                                            id = loginRes.user.id,
+                                            nickname = loginRes.user.nickname,
+                                            avatarType = avatar,
+                                            email = loginRes.user.email,
+                                            onboardingCompleted = loginRes.user.onboardingCompleted
+                                        )
+                                        if (mode == AuthMode.LOGIN) onLoginSuccess(profile) else onSignUpSuccess(profile)
+                                    }.onFailure { err ->
+                                        errorMessage = err.message ?: "Social login failed"
+                                    }
+                                }
+                            }
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -289,6 +404,23 @@ fun AuthScreen(
                 padding = 18.dp
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    if (errorMessage != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFFFFEBEE))
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = errorMessage ?: "",
+                                color = Color(0xFFC62828),
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
                     // Email Field
                     Column {
                         Text(
@@ -302,9 +434,25 @@ fun AuthScreen(
                             value = emailInput,
                             onValueChange = { emailInput = it },
                             placeholder = strings.authEmailPlaceholder,
+                            focusRequester = emailFocusRequester,
+                            inputModifier = Modifier.onPreviewKeyEvent { keyEvent ->
+                                if (keyEvent.key == Key.Tab && keyEvent.type == KeyEventType.KeyDown) {
+                                    if (!keyEvent.isShiftPressed) {
+                                        passwordFocusRequester.requestFocus()
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                } else {
+                                    false
+                                }
+                            },
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Email,
                                 imeAction = ImeAction.Next
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { passwordFocusRequester.requestFocus() }
                             ),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -334,16 +482,37 @@ fun AuthScreen(
                                 value = passwordInput,
                                 onValueChange = { passwordInput = it },
                                 placeholder = strings.authPasswordPlaceholder,
+                                focusRequester = passwordFocusRequester,
+                                inputModifier = Modifier.onPreviewKeyEvent { keyEvent ->
+                                    if (keyEvent.key == Key.Tab && keyEvent.type == KeyEventType.KeyDown) {
+                                        if (keyEvent.isShiftPressed) {
+                                            emailFocusRequester.requestFocus()
+                                            true
+                                        } else if (mode == AuthMode.SIGN_UP) {
+                                            passwordConfirmFocusRequester.requestFocus()
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    } else {
+                                        false
+                                    }
+                                },
                                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                                 keyboardOptions = KeyboardOptions(
                                     keyboardType = KeyboardType.Password,
                                     imeAction = if (mode == AuthMode.LOGIN) ImeAction.Done else ImeAction.Next
                                 ),
                                 keyboardActions = KeyboardActions(
+                                    onNext = {
+                                        if (mode == AuthMode.SIGN_UP) {
+                                            passwordConfirmFocusRequester.requestFocus()
+                                        }
+                                    },
                                     onDone = {
                                         focusManager.clearFocus()
-                                        if (emailInput.isNotBlank() && passwordInput.isNotBlank() && mode == AuthMode.LOGIN) {
-                                            onLoginSuccess(emailInput.trim())
+                                        if (isFormValid && mode == AuthMode.LOGIN) {
+                                            submitForm()
                                         }
                                     }
                                 ),
@@ -418,13 +587,31 @@ fun AuthScreen(
                                     value = passwordConfirmInput,
                                     onValueChange = { passwordConfirmInput = it },
                                     placeholder = strings.authPasswordConfirmPlaceholder,
+                                    focusRequester = passwordConfirmFocusRequester,
+                                    inputModifier = Modifier.onPreviewKeyEvent { keyEvent ->
+                                        if (keyEvent.key == Key.Tab && keyEvent.type == KeyEventType.KeyDown) {
+                                            if (keyEvent.isShiftPressed) {
+                                                passwordFocusRequester.requestFocus()
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        } else {
+                                            false
+                                        }
+                                    },
                                     visualTransformation = if (passwordConfirmVisible) VisualTransformation.None else PasswordVisualTransformation(),
                                     keyboardOptions = KeyboardOptions(
                                         keyboardType = KeyboardType.Password,
                                         imeAction = ImeAction.Done
                                     ),
                                     keyboardActions = KeyboardActions(
-                                        onDone = { focusManager.clearFocus() }
+                                        onDone = {
+                                            focusManager.clearFocus()
+                                            if (isFormValid && mode == AuthMode.SIGN_UP) {
+                                                submitForm()
+                                            }
+                                        }
                                     ),
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -564,25 +751,11 @@ fun AuthScreen(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     // Primary Action Button
-                    val isFormValid = if (mode == AuthMode.LOGIN) {
-                        emailInput.isNotBlank() && passwordInput.isNotBlank()
-                    } else {
-                        isEmailValid && isPasswordPolicyMet && isPasswordConfirmMatched && agreeAll
-                    }
-
                     AppButton(
-                        text = if (mode == AuthMode.LOGIN) strings.authLoginBtn else strings.authSignUpBtn,
+                        text = if (isLoading) "..." else if (mode == AuthMode.LOGIN) strings.authLoginBtn else strings.authSignUpBtn,
                         variant = ButtonVariant.PRIMARY,
-                        enabled = isFormValid,
-                        onClick = {
-                            if (isFormValid) {
-                                if (mode == AuthMode.LOGIN) {
-                                    onLoginSuccess(emailInput.trim())
-                                } else {
-                                    onSignUpSuccess(emailInput.trim())
-                                }
-                            }
-                        },
+                        enabled = isFormValid && !isLoading,
+                        onClick = { submitForm() },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
