@@ -26,9 +26,51 @@ class NetworkIngredientRepository(
 
     override suspend fun fetchIngredients(): Result<List<Ingredient>> {
         return apiService.getIngredients().map { response ->
-            val mapped = response.ingredients.map { mapResponseToIngredient(it) }
+            val mapped = response.allIngredients.map { mapResponseToIngredient(it) }
             _ingredients.value = mapped
             mapped
+        }
+    }
+
+    override suspend fun fetchIngredientsPaged(
+        page: Int,
+        size: Int,
+        status: IngredientStatus?,
+        category: IngredientCategory?,
+        query: String?
+    ): Result<com.dahee.blockbyblock.domain.model.IngredientPagedResult> {
+        return apiService.getIngredients(
+            page = page,
+            size = size,
+            status = status?.name,
+            category = category?.name,
+            query = query
+        ).map { response ->
+            val pageResp = response.resolvedPage
+            val mappedItems = pageResp.items.map { mapResponseToIngredient(it) }
+
+            // Merge into local _ingredients so other views retain observed items
+            _ingredients.update { current ->
+                val newIds = mappedItems.map { it.id }.toSet()
+                mappedItems + current.filterNot { newIds.contains(it.id) }
+            }
+
+            com.dahee.blockbyblock.domain.model.IngredientPagedResult(
+                page = com.dahee.blockbyblock.domain.model.PageResult(
+                    items = mappedItems,
+                    page = pageResp.page,
+                    size = pageResp.size,
+                    totalElements = pageResp.totalElements,
+                    totalPages = pageResp.totalPages,
+                    hasNext = pageResp.hasNext,
+                    hasPrevious = pageResp.hasPrevious
+                ),
+                counts = com.dahee.blockbyblock.domain.model.IngredientCounts(
+                    stock = response.counts.stock,
+                    outOfStock = response.counts.outOfStock,
+                    cart = response.counts.cart
+                )
+            )
         }
     }
 

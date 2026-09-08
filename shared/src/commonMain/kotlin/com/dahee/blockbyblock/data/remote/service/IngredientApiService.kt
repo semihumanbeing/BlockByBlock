@@ -45,8 +45,26 @@ class IngredientApiService {
         }
     }
 
-    suspend fun getIngredients(): Result<IngredientListResponse> = runCatching {
-        val response: HttpResponse = ApiClient.client.get(ApiClient.endpoint("api/v1/ingredients"))
+    suspend fun getIngredients(
+        page: Int = 1,
+        size: Int = 12,
+        status: String? = null,
+        category: String? = null,
+        query: String? = null
+    ): Result<IngredientListResponse> = runCatching {
+        val response: HttpResponse = ApiClient.client.get(ApiClient.endpoint("api/v1/ingredients")) {
+            parameter("page", page)
+            parameter("size", size)
+            if (!status.isNullOrBlank()) {
+                parameter("status", status)
+            }
+            if (!category.isNullOrBlank()) {
+                parameter("category", category)
+            }
+            if (!query.isNullOrBlank()) {
+                parameter("query", query)
+            }
+        }
         if (response.status.isSuccess()) {
             response.body<ApiResponse<IngredientListResponse>>().data
         } else {

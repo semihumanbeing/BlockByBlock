@@ -19,6 +19,13 @@ interface IngredientRepository {
     suspend fun deleteIngredient(id: String)
     suspend fun getIngredientById(id: String): Ingredient?
     suspend fun fetchIngredients(): Result<List<Ingredient>>
+    suspend fun fetchIngredientsPaged(
+        page: Int = 1,
+        size: Int = 12,
+        status: IngredientStatus? = null,
+        category: IngredientCategory? = null,
+        query: String? = null
+    ): Result<com.dahee.blockbyblock.domain.model.IngredientPagedResult>
     suspend fun fetchCatalogIngredients(
         query: String? = null,
         category: IngredientCategory? = null,

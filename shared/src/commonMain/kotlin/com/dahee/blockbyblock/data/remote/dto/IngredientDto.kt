@@ -26,10 +26,36 @@ data class IngredientResponse(
 )
 
 @Serializable
-data class IngredientListResponse(
-    val ingredients: List<IngredientResponse>,
-    val counts: IngredientCountsResponse
+data class IngredientPageResponse(
+    val items: List<IngredientResponse> = emptyList(),
+    val page: Int = 1,
+    val size: Int = 12,
+    val totalElements: Long = 0,
+    val totalPages: Int = 0,
+    val hasNext: Boolean = false,
+    val hasPrevious: Boolean = false
 )
+
+@Serializable
+data class IngredientListResponse(
+    val ingredients: List<IngredientResponse> = emptyList(),
+    val page: IngredientPageResponse? = null,
+    val counts: IngredientCountsResponse = IngredientCountsResponse()
+) {
+    val allIngredients: List<IngredientResponse>
+        get() = page?.items ?: ingredients
+
+    val resolvedPage: IngredientPageResponse
+        get() = page ?: IngredientPageResponse(
+            items = ingredients,
+            page = 1,
+            size = ingredients.size.coerceAtLeast(12),
+            totalElements = ingredients.size.toLong(),
+            totalPages = 1,
+            hasNext = false,
+            hasPrevious = false
+        )
+}
 
 @Serializable
 data class CreateIngredientRequest(

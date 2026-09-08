@@ -95,6 +95,51 @@ class InMemoryIngredientRepository : IngredientRepository {
         return Result.success(_ingredients.value)
     }
 
+    override suspend fun fetchIngredientsPaged(
+        page: Int,
+        size: Int,
+        status: IngredientStatus?,
+        category: IngredientCategory?,
+        query: String?
+    ): Result<com.dahee.blockbyblock.domain.model.IngredientPagedResult> {
+        val filtered = _ingredients.value.filter { item ->
+            val matchesQuery = query.isNullOrBlank() ||
+                    item.name.contains(query, ignoreCase = true) ||
+                    item.category.displayNameKo.contains(query, ignoreCase = true) ||
+                    item.category.displayNameEn.contains(query, ignoreCase = true)
+            val matchesStatus = status == null || item.status == status
+            val matchesCategory = category == null || item.category == category
+            matchesQuery && matchesStatus && matchesCategory
+        }
+
+        val totalElements = filtered.size
+        val totalPages = if (totalElements == 0) 0 else ((totalElements - 1) / size) + 1
+        val startIndex = ((page - 1) * size).coerceIn(0, totalElements)
+        val endIndex = (startIndex + size).coerceAtMost(totalElements)
+        val pagedItems = if (startIndex < totalElements) filtered.subList(startIndex, endIndex) else emptyList()
+
+        val counts = com.dahee.blockbyblock.domain.model.IngredientCounts(
+            stock = _ingredients.value.count { it.status == IngredientStatus.STOCK },
+            outOfStock = _ingredients.value.count { it.status == IngredientStatus.OUT_OF_STOCK },
+            cart = _ingredients.value.count { it.status == IngredientStatus.CART }
+        )
+
+        return Result.success(
+            com.dahee.blockbyblock.domain.model.IngredientPagedResult(
+                page = com.dahee.blockbyblock.domain.model.PageResult(
+                    items = pagedItems,
+                    page = page,
+                    size = size,
+                    totalElements = totalElements.toLong(),
+                    totalPages = totalPages,
+                    hasNext = page < totalPages,
+                    hasPrevious = page > 1
+                ),
+                counts = counts
+            )
+        )
+    }
+
     override suspend fun fetchCatalogIngredients(
         query: String?,
         category: IngredientCategory?,

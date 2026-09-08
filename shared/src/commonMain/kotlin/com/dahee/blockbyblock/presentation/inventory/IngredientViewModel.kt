@@ -31,65 +31,169 @@ class IngredientViewModel(
 
     private var toastJob: Job? = null
 
+    private data class PageCacheKey(
+        val tab: IngredientTab,
+        val category: IngredientCategory?,
+        val page: Int
+    )
+
+    private val pageCache = mutableMapOf<PageCacheKey, com.dahee.blockbyblock.domain.model.IngredientPagedResult>()
+    private val activePrefetchJobs = mutableMapOf<PageCacheKey, Job>()
+    private var loadJob: Job? = null
+
     init {
-        scope.launch {
-            repository.fetchIngredients()
-        }
-        observeIngredients()
+        loadPage(page = 1)
+        observeAllIngredients()
     }
 
-    private fun observeIngredients() {
+    private fun observeAllIngredients() {
         scope.launch {
             repository.getAllIngredients().collectLatest { allList ->
-                val inStock = allList.count { it.status == IngredientStatus.STOCK }
-                val consumed = allList.count { it.status == IngredientStatus.OUT_OF_STOCK }
-                val cart = allList.count { it.status == IngredientStatus.CART }
-
-                val tab = _uiState.value.selectedTab
-                val cat = _uiState.value.selectedCategory
-
-                val filtered = allList.filter { item ->
-                    val matchesTab = when (tab) {
-                        IngredientTab.ALL -> true
-                        IngredientTab.IN_STOCK -> item.status == IngredientStatus.STOCK
-                        IngredientTab.SHOPPING_CART -> item.status == IngredientStatus.CART
-                    }
-                    val matchesCat = cat == null || item.category == cat
-                    matchesTab && matchesCat
-                }
-
                 _uiState.update { current ->
-                    current.copy(
-                        registeredIngredients = allList,
-                        allMatchingIngredients = filtered,
-                        displayedIngredients = filtered,
-                        inStockCount = inStock,
-                        consumedCount = consumed,
-                        shoppingCartCount = cart,
-                        totalCount = allList.size
-                    )
+                    current.copy(registeredIngredients = allList)
                 }
             }
         }
     }
 
+    fun loadPage(page: Int, forceRefresh: Boolean = false) {
+        val tab = _uiState.value.selectedTab
+        val category = _uiState.value.selectedCategory
+        val key = PageCacheKey(tab, category, page)
+
+        if (!forceRefresh && pageCache.containsKey(key)) {
+            val cached = pageCache[key]!!
+            applyPagedResult(cached)
+            // Background prefetch adjacent pages: next page and previous page
+            if (cached.page.hasNext) {
+                prefetchPage(tab, category, page + 1)
+            }
+            if (page > 1) {
+                prefetchPage(tab, category, page - 1)
+            }
+            return
+        }
+
+        loadJob?.cancel()
+        loadJob = scope.launch {
+            _uiState.update { it.copy(isPageLoading = true) }
+            val status = tabToStatus(tab)
+            val result = repository.fetchIngredientsPaged(
+                page = page,
+                size = PAGE_SIZE,
+                status = status,
+                category = category,
+                query = null
+            )
+            result.onSuccess { pagedResult ->
+                pageCache[key] = pagedResult
+                applyPagedResult(pagedResult)
+
+                // Background prefetch adjacent pages: next page and previous page
+                if (pagedResult.page.hasNext) {
+                    prefetchPage(tab, category, page + 1)
+                }
+                if (page > 1) {
+                    prefetchPage(tab, category, page - 1)
+                }
+            }.onFailure {
+                _uiState.update { it.copy(isPageLoading = false) }
+            }
+        }
+    }
+
+    private fun prefetchPage(tab: IngredientTab, category: IngredientCategory?, page: Int) {
+        if (page < 1) return
+        val key = PageCacheKey(tab, category, page)
+        if (pageCache.containsKey(key)) return
+        if (activePrefetchJobs[key]?.isActive == true) return
+
+        val job = scope.launch {
+            try {
+                val status = tabToStatus(tab)
+                val result = repository.fetchIngredientsPaged(
+                    page = page,
+                    size = PAGE_SIZE,
+                    status = status,
+                    category = category,
+                    query = null
+                )
+                result.onSuccess { pagedResult ->
+                    pageCache[key] = pagedResult
+                }
+            } catch (_: Exception) {
+                // Silently ignore background prefetch errors
+            } finally {
+                activePrefetchJobs.remove(key)
+            }
+        }
+        activePrefetchJobs[key] = job
+    }
+
+    private fun applyPagedResult(pagedResult: com.dahee.blockbyblock.domain.model.IngredientPagedResult) {
+        if (pagedResult.page.items.isEmpty() && pagedResult.page.page > 1) {
+            val fallbackPage = pagedResult.page.totalPages.coerceAtLeast(1)
+            if (fallbackPage != pagedResult.page.page) {
+                loadPage(page = fallbackPage, forceRefresh = true)
+                return
+            }
+        }
+
+        _uiState.update { current ->
+            current.copy(
+                displayedIngredients = pagedResult.page.items,
+                currentPage = pagedResult.page.page,
+                pageSize = pagedResult.page.size,
+                totalPages = pagedResult.page.totalPages.coerceAtLeast(1),
+                totalElements = pagedResult.page.totalElements,
+                hasNextPage = pagedResult.page.hasNext,
+                hasPreviousPage = pagedResult.page.hasPrevious,
+                inStockCount = pagedResult.counts.stock,
+                consumedCount = pagedResult.counts.outOfStock,
+                shoppingCartCount = pagedResult.counts.cart,
+                totalCount = pagedResult.counts.total,
+                isPageLoading = false
+            )
+        }
+    }
+
+    private fun tabToStatus(tab: IngredientTab): IngredientStatus? = when (tab) {
+        IngredientTab.ALL -> null
+        IngredientTab.IN_STOCK -> IngredientStatus.STOCK
+        IngredientTab.SHOPPING_CART -> IngredientStatus.CART
+    }
+
+    fun onPageChange(targetPage: Int) {
+        val maxPage = _uiState.value.totalPages.coerceAtLeast(1)
+        val clamped = targetPage.coerceIn(1, maxPage)
+        if (clamped == _uiState.value.currentPage) return
+        loadPage(page = clamped)
+    }
+
     fun onTabChange(newTab: IngredientTab) {
-        _uiState.update { it.copy(selectedTab = newTab) }
-        refreshFilteredList()
+        if (_uiState.value.selectedTab == newTab) return
+        _uiState.update { it.copy(selectedTab = newTab, currentPage = 1) }
+        loadPage(page = 1)
     }
 
     fun onCategoryFilterChange(category: IngredientCategory?) {
-        _uiState.update { current ->
-            val updated = if (current.selectedCategory == category) null else category
-            current.copy(selectedCategory = updated)
-        }
-        refreshFilteredList()
+        val updated = if (_uiState.value.selectedCategory == category) null else category
+        _uiState.update { it.copy(selectedCategory = updated, currentPage = 1) }
+        loadPage(page = 1)
+    }
+
+    private fun invalidateCacheAndReload() {
+        activePrefetchJobs.values.forEach { it.cancel() }
+        activePrefetchJobs.clear()
+        pageCache.clear()
+        loadPage(page = _uiState.value.currentPage, forceRefresh = true)
     }
 
     // Mark as consumed (Move to consumed state within inventory)
     fun onMarkAsConsumed(id: String) {
         scope.launch {
             repository.updateStatus(id, IngredientStatus.OUT_OF_STOCK)
+            invalidateCacheAndReload()
         }
     }
 
@@ -97,6 +201,7 @@ class IngredientViewModel(
     fun onMoveToCart(id: String) {
         scope.launch {
             repository.updateStatus(id, IngredientStatus.CART)
+            invalidateCacheAndReload()
         }
     }
 
@@ -104,25 +209,23 @@ class IngredientViewModel(
     fun onRestoreToStock(id: String) {
         scope.launch {
             repository.updateStatus(id, IngredientStatus.STOCK)
+            invalidateCacheAndReload()
         }
     }
 
     // Checklist 1-tap 3-state circular toggle: In Stock -> Consumed -> Shopping Cart -> In Stock
     fun onToggleChecklistStatus(id: String) {
         scope.launch {
-            val item = _uiState.value.registeredIngredients.find { it.id == id }
+            val item = _uiState.value.displayedIngredients.find { it.id == id }
+                ?: _uiState.value.registeredIngredients.find { it.id == id }
             if (item != null) {
-                when (item.status) {
-                    IngredientStatus.STOCK -> {
-                        repository.updateStatus(id, IngredientStatus.OUT_OF_STOCK)
-                    }
-                    IngredientStatus.OUT_OF_STOCK -> {
-                        repository.updateStatus(id, IngredientStatus.CART)
-                    }
-                    IngredientStatus.CART -> {
-                        repository.updateStatus(id, IngredientStatus.STOCK)
-                    }
+                val nextStatus = when (item.status) {
+                    IngredientStatus.STOCK -> IngredientStatus.OUT_OF_STOCK
+                    IngredientStatus.OUT_OF_STOCK -> IngredientStatus.CART
+                    IngredientStatus.CART -> IngredientStatus.STOCK
                 }
+                repository.updateStatus(id, nextStatus)
+                invalidateCacheAndReload()
             }
         }
     }
@@ -227,6 +330,7 @@ class IngredientViewModel(
                     repository.updateStatus(existing.id, status)
                     val targetText = if (status == IngredientStatus.STOCK) "보유중" else "장바구니"
                     showAutoSaveToast("'${trimmedName}'이(가) ${targetText}에 추가되었습니다.")
+                    invalidateCacheAndReload()
                 }
                 return
             } else {
@@ -244,6 +348,7 @@ class IngredientViewModel(
                 category = catalogItem.category
             )
             repository.upsertIngredient(newIngredient)
+            invalidateCacheAndReload()
             showAutoSaveToast("'${trimmedName}'이(가) ${if (status == IngredientStatus.STOCK) "보유중" else "장바구니"}에 추가되었습니다.")
         }
     }
@@ -266,6 +371,7 @@ class IngredientViewModel(
                     repository.updateStatus(existing.id, status)
                     val targetText = if (status == IngredientStatus.STOCK) "보유중" else "장바구니"
                     showAutoSaveToast("'${trimmed}'이(가) ${targetText}에 추가되었습니다.")
+                    invalidateCacheAndReload()
                 }
                 return
             } else {
@@ -283,6 +389,7 @@ class IngredientViewModel(
                 category = guessCategoryByName(trimmed)
             )
             repository.upsertIngredient(newIngredient)
+            invalidateCacheAndReload()
             showAutoSaveToast("'${trimmed}'이(가) ${if (status == IngredientStatus.STOCK) "보유중" else "장바구니"}에 추가되었습니다.")
         }
     }
@@ -305,6 +412,7 @@ class IngredientViewModel(
         scope.launch {
             repository.upsertIngredient(ingredient.copy(name = trimmed))
             _uiState.update { it.copy(isAddDialogOpen = false, editingIngredient = null) }
+            invalidateCacheAndReload()
         }
     }
 
@@ -322,6 +430,7 @@ class IngredientViewModel(
                     undoDeleteState = UndoDeleteState(ingredient, message)
                 )
             }
+            invalidateCacheAndReload()
             undoJob = scope.launch {
                 delay(4000)
                 _uiState.update { it.copy(undoDeleteState = null) }
@@ -336,6 +445,7 @@ class IngredientViewModel(
         scope.launch {
             repository.upsertIngredient(lastState.ingredient)
             _uiState.update { it.copy(undoDeleteState = null) }
+            invalidateCacheAndReload()
         }
     }
 
@@ -345,13 +455,15 @@ class IngredientViewModel(
     }
 
     fun onDeleteIngredient(id: String) {
-        val target = _uiState.value.registeredIngredients.find { it.id == id }
+        val target = _uiState.value.displayedIngredients.find { it.id == id }
+            ?: _uiState.value.registeredIngredients.find { it.id == id }
         if (target != null) {
             onDeleteIngredientWithUndo(target, "'${target.name}'이(가) 삭제되었습니다.")
         } else {
             scope.launch {
                 repository.deleteIngredient(id)
                 _uiState.update { it.copy(isAddDialogOpen = false, editingIngredient = null) }
+                invalidateCacheAndReload()
             }
         }
     }
@@ -373,31 +485,8 @@ class IngredientViewModel(
         }
     }
 
-    private fun refreshFilteredList() {
-        scope.launch {
-            repository.getAllIngredients().collectLatest { allList ->
-                val tab = _uiState.value.selectedTab
-                val cat = _uiState.value.selectedCategory
-
-                val filtered = allList.filter { item ->
-                    val matchesTab = when (tab) {
-                        IngredientTab.ALL -> true
-                        IngredientTab.IN_STOCK -> item.status == IngredientStatus.STOCK
-                        IngredientTab.SHOPPING_CART -> item.status == IngredientStatus.CART
-                    }
-                    val matchesCat = cat == null || item.category == cat
-                    matchesTab && matchesCat
-                }
-
-                _uiState.update { current ->
-                    current.copy(
-                        registeredIngredients = allList,
-                        allMatchingIngredients = filtered,
-                        displayedIngredients = filtered
-                    )
-                }
-            }
-        }
+    companion object {
+        private const val PAGE_SIZE = 12
     }
 
     private fun guessCategoryByName(name: String): IngredientCategory {
