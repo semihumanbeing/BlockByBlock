@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -129,25 +130,27 @@ fun BentoLunchBoxView(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 blocks.forEach { item ->
-                                    val blockModifier = if (onBlockClick != null) {
-                                        Modifier
-                                            .pointerHoverIcon(PointerIcon.Hand)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .clickable(
-                                                interactionSource = remember { MutableInteractionSource() },
-                                                indication = null,
-                                                onClick = { onBlockClick(item) }
-                                            )
-                                    } else {
-                                        Modifier.clip(RoundedCornerShape(8.dp))
-                                    }
+                                    key(item.instanceId) {
+                                        val blockModifier = if (onBlockClick != null) {
+                                            Modifier
+                                                .pointerHoverIcon(PointerIcon.Hand)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .clickable(
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    indication = null,
+                                                    onClick = { onBlockClick(item) }
+                                                )
+                                        } else {
+                                            Modifier.clip(RoundedCornerShape(8.dp))
+                                        }
 
-                                    Box(modifier = blockModifier) {
-                                        FoodBlockTopView(
-                                            colorHex = item.blockColorHex,
-                                            moldCapacityMl = item.moldCapacityMl,
-                                            height = blockHeight
-                                        )
+                                        Box(modifier = blockModifier) {
+                                            FoodBlockTopView(
+                                                colorHex = item.blockColorHex,
+                                                moldCapacityMl = item.moldCapacityMl,
+                                                height = blockHeight
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -166,25 +169,27 @@ fun BentoLunchBoxView(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     blocks.forEach { item ->
-                                        val blockModifier = if (onBlockClick != null) {
-                                            Modifier
-                                                .pointerHoverIcon(PointerIcon.Hand)
-                                                .clip(RoundedCornerShape(6.dp))
-                                                .clickable(
-                                                    interactionSource = remember { MutableInteractionSource() },
-                                                    indication = null,
-                                                    onClick = { onBlockClick(item) }
-                                                )
-                                        } else {
-                                            Modifier.clip(RoundedCornerShape(6.dp))
-                                        }
+                                        key(item.instanceId) {
+                                            val blockModifier = if (onBlockClick != null) {
+                                                Modifier
+                                                    .pointerHoverIcon(PointerIcon.Hand)
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .clickable(
+                                                        interactionSource = remember { MutableInteractionSource() },
+                                                        indication = null,
+                                                        onClick = { onBlockClick(item) }
+                                                    )
+                                            } else {
+                                                Modifier.clip(RoundedCornerShape(6.dp))
+                                            }
 
-                                        Box(modifier = blockModifier) {
-                                            FoodBlockTopView(
-                                                colorHex = item.blockColorHex,
-                                                moldCapacityMl = item.moldCapacityMl,
-                                                height = computedHeight
-                                            )
+                                            Box(modifier = blockModifier) {
+                                                FoodBlockTopView(
+                                                    colorHex = item.blockColorHex,
+                                                    moldCapacityMl = item.moldCapacityMl,
+                                                    height = computedHeight
+                                                )
+                                            }
                                         }
                                     }
                                 }

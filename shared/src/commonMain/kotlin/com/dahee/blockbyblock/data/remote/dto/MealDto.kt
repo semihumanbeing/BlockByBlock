@@ -11,11 +11,12 @@ data class MealBlockItemRequest(
 
 @Serializable
 data class MealBlockResponse(
+    val id: Long? = null,
     val blockId: Long,
-    val name: String,
-    val moldCapacityMl: Int,
-    val moldCellCount: Int,
-    val blockColorHex: String,
+    val name: String = "",
+    val moldCapacityMl: Int = 0,
+    val moldCellCount: Int = 0,
+    val blockColorHex: String = "#FF7043",
     val quantity: Int = 1,
     val sortOrder: Int = 0
 )

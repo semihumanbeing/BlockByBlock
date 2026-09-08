@@ -17,7 +17,8 @@ data class MealBlockItem(
     val blockName: String,
     val blockColorHex: String = "#FF7043",
     val moldCapacityMl: Int = 250,
-    val moldCellCount: Int = 4
+    val moldCellCount: Int = 4,
+    val sortOrder: Int = 0
 )
 
 /**

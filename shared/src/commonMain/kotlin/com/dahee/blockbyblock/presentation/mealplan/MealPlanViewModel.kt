@@ -235,7 +235,8 @@ class MealPlanViewModel(
             blockName = piece.blockName,
             blockColorHex = piece.blockColorHex,
             moldCapacityMl = piece.moldCapacityMl,
-            moldCellCount = piece.moldCellCount
+            moldCellCount = piece.moldCellCount,
+            sortOrder = currentSelected.size
         )
 
         currentSelected.add(itemToAdd)
@@ -263,10 +264,23 @@ class MealPlanViewModel(
             )
         )
 
+        val reindexedSelected = currentSelected.mapIndexed { index, b -> b.copy(sortOrder = index) }
+
         _dialogState.value = _dialogState.value.copy(
-            selectedBlocks = currentSelected,
+            selectedBlocks = reindexedSelected,
             availablePieces = currentAvailable
         )
+    }
+
+    fun onReorderSelectedBlocks(fromIndex: Int, toIndex: Int) {
+        val currentList = _dialogState.value.selectedBlocks.toMutableList()
+        if (fromIndex in currentList.indices && toIndex in currentList.indices) {
+            val moved = currentList.removeAt(fromIndex)
+            currentList.add(toIndex, moved)
+            _dialogState.value = _dialogState.value.copy(
+                selectedBlocks = currentList.mapIndexed { index, b -> b.copy(sortOrder = index) }
+            )
+        }
     }
 
     fun onTitleInputChange(newTitle: String) {
@@ -302,7 +316,7 @@ class MealPlanViewModel(
 
             val updatedSlot = MealSlotRecord(
                 mealType = dialog.mealType,
-                blocks = dialog.selectedBlocks,
+                blocks = dialog.selectedBlocks.mapIndexed { index, b -> b.copy(sortOrder = index) },
                 memo = dialog.memo.trim(),
                 customTitle = customTitleToSave
             )
@@ -344,7 +358,7 @@ class MealPlanViewModel(
             val newPreset = MealPreset(
                 id = "preset-${currentTimeMillis()}",
                 name = finalName,
-                blocks = dialog.selectedBlocks,
+                blocks = dialog.selectedBlocks.mapIndexed { index, b -> b.copy(sortOrder = index) },
                 memo = dialog.memo.trim(),
                 createdAt = currentTimeMillis()
             )
@@ -364,7 +378,7 @@ class MealPlanViewModel(
             val newPreset = MealPreset(
                 id = "preset-${currentTimeMillis()}",
                 name = finalName,
-                blocks = slot.blocks,
+                blocks = slot.blocks.mapIndexed { index, b -> b.copy(sortOrder = index) },
                 memo = slot.memo,
                 createdAt = currentTimeMillis()
             )
@@ -392,7 +406,10 @@ class MealPlanViewModel(
             }
 
             val newSelected = preset.blocks.mapIndexed { index, blockItem ->
-                blockItem.copy(instanceId = "${blockItem.blockId}-preset-${currentTimeMillis()}-$index")
+                blockItem.copy(
+                    instanceId = "${blockItem.blockId}-preset-${currentTimeMillis()}-$index",
+                    sortOrder = index
+                )
             }
 
             val availableList = allPieces.toMutableList()

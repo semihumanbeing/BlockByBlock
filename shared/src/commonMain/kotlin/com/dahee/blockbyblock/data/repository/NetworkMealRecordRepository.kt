@@ -72,17 +72,13 @@ class NetworkMealRecordRepository(
         )
 
         for (slot in slots) {
-            val blocksReq = slot.blocks
-                .groupBy { it.blockId }
-                .values
-                .mapIndexed { index, group ->
-                    val first = group.first()
-                    MealBlockItemRequest(
-                        blockId = first.blockId.toLongOrNull() ?: 0L,
-                        quantity = group.size,
-                        sortOrder = index
-                    )
-                }
+            val blocksReq = slot.blocks.mapIndexed { index, block ->
+                MealBlockItemRequest(
+                    blockId = block.blockId.toLongOrNull() ?: 0L,
+                    quantity = 1,
+                    sortOrder = index
+                )
+            }
             if (blocksReq.isNotEmpty() || slot.memo.isNotBlank() || slot.customTitle.isNotBlank()) {
                 val req = SaveMealSlotRequest(
                     customTitle = slot.customTitle.ifBlank { null },
@@ -128,17 +124,13 @@ class NetworkMealRecordRepository(
     }
 
     override suspend fun saveMealPreset(preset: MealPreset) {
-        val blocksReq = preset.blocks
-            .groupBy { it.blockId }
-            .values
-            .mapIndexed { index, group ->
-                val first = group.first()
-                MealBlockItemRequest(
-                    blockId = first.blockId.toLongOrNull() ?: 0L,
-                    quantity = group.size,
-                    sortOrder = index
-                )
-            }
+        val blocksReq = preset.blocks.mapIndexed { index, block ->
+            MealBlockItemRequest(
+                blockId = block.blockId.toLongOrNull() ?: 0L,
+                quantity = 1,
+                sortOrder = index
+            )
+        }
         val req = CreateMealPresetRequest(
             name = preset.name,
             memo = preset.memo.ifBlank { null },
@@ -176,15 +168,18 @@ class NetworkMealRecordRepository(
 
     private fun mapSlotResponseToRecord(type: MealType, res: MealSlotResponse?): MealSlotRecord {
         if (res == null) return MealSlotRecord(type)
-        val blocks = res.blocks.flatMap { b ->
+        val sortedBlocks = res.blocks.sortedBy { it.sortOrder }
+        val blocks = sortedBlocks.flatMap { b ->
+            val placementId = b.id?.toString() ?: "slot_${res.id}_block_${b.blockId}_${b.sortOrder}"
             (1..b.quantity.coerceAtLeast(1)).map { q ->
                 MealBlockItem(
-                    instanceId = "slot_${res.id}_block_${b.blockId}_${b.sortOrder}_$q",
+                    instanceId = if (q == 1) placementId else "${placementId}_$q",
                     blockId = b.blockId.toString(),
                     blockName = b.name,
                     blockColorHex = b.blockColorHex,
                     moldCapacityMl = b.moldCapacityMl,
-                    moldCellCount = b.moldCellCount
+                    moldCellCount = b.moldCellCount,
+                    sortOrder = b.sortOrder
                 )
             }
         }
@@ -197,15 +192,18 @@ class NetworkMealRecordRepository(
     }
 
     private fun mapPresetResponseToModel(res: MealPresetResponse): MealPreset {
-        val blocks = res.blocks.flatMap { b ->
+        val sortedBlocks = res.blocks.sortedBy { it.sortOrder }
+        val blocks = sortedBlocks.flatMap { b ->
+            val placementId = b.id?.toString() ?: "preset_${res.id}_block_${b.blockId}_${b.sortOrder}"
             (1..b.quantity.coerceAtLeast(1)).map { q ->
                 MealBlockItem(
-                    instanceId = "preset_${res.id}_block_${b.blockId}_${b.sortOrder}_$q",
+                    instanceId = if (q == 1) placementId else "${placementId}_$q",
                     blockId = b.blockId.toString(),
                     blockName = b.name,
                     blockColorHex = b.blockColorHex,
                     moldCapacityMl = b.moldCapacityMl,
-                    moldCellCount = b.moldCellCount
+                    moldCellCount = b.moldCellCount,
+                    sortOrder = b.sortOrder
                 )
             }
         }
