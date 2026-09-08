@@ -240,7 +240,7 @@ class IngredientViewModel(
     }
 
     // Catalog Search Dialog Handlers
-    private var catalogSearchJob: Job? = null
+    internal var catalogSearchJob: Job? = null
 
     private var currentLanguage: com.dahee.blockbyblock.core.i18n.AppLanguage = initialLanguage
 
@@ -273,6 +273,8 @@ class IngredientViewModel(
                 catalogResults = initialItems
             )
         }
+        val cacheKey = CatalogCacheKey(query = "", category = null, lang = currentLanguage.name)
+        catalogCache[cacheKey] = initialItems
         searchCatalog("", null)
     }
 
@@ -326,7 +328,7 @@ class IngredientViewModel(
         catalogSearchJob?.cancel()
         catalogSearchJob = scope.launch {
             if (trimmedQuery.isNotBlank()) {
-                delay(150)
+                delay(300) // 300ms debounce to prevent burst requests while typing
             }
             val result = repository.fetchCatalogIngredients(
                 query = trimmedQuery.ifBlank { null },
