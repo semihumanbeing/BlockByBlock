@@ -118,9 +118,9 @@ class AuthApiLiveTest {
         val blockRepo = com.dahee.blockbyblock.data.repository.NetworkFoodBlockRepository()
         val allEquips = equipRepo.getEquipments().first()
         val mold = allEquips.first { it.category == com.dahee.blockbyblock.domain.model.EquipmentCategory.MOLD }
-        val testBlock = com.dahee.blockbyblock.domain.model.FoodBlock(
+        val testBlock1 = com.dahee.blockbyblock.domain.model.FoodBlock(
             id = "",
-            name = "소고기 볶음 블록",
+            name = "블록 1",
             moldId = mold.id,
             moldName = mold.name,
             moldCapacityMl = mold.displayCapacity,
@@ -129,7 +129,7 @@ class AuthApiLiveTest {
             blockColorHex = "#FF7043",
             mainIngredients = listOf("소고기 안심"),
             subIngredients = listOf("양파", "당근"),
-            quantity = 2,
+            quantity = 5,
             shelfLifeDays = 30,
             cookingInstructions = listOf(
                 com.dahee.blockbyblock.domain.model.CookingInstruction(
@@ -138,63 +138,112 @@ class AuthApiLiveTest {
                     timeSeconds = 30
                 )
             ),
-            memo = "맛있는 테스트 블록"
+            memo = "테스트 블록 1"
         )
-        blockRepo.saveFoodBlock(testBlock)
+        val testBlock2 = com.dahee.blockbyblock.domain.model.FoodBlock(
+            id = "",
+            name = "블록 2",
+            moldId = mold.id,
+            moldName = mold.name,
+            moldCapacityMl = mold.displayCapacity,
+            moldCellCount = mold.cellCount,
+            moldColorHex = mold.moldColorHex,
+            blockColorHex = "#4CAF50",
+            mainIngredients = listOf("소고기 안심"),
+            subIngredients = listOf("양파"),
+            quantity = 5,
+            shelfLifeDays = 30,
+            cookingInstructions = listOf(
+                com.dahee.blockbyblock.domain.model.CookingInstruction(
+                    toolType = com.dahee.blockbyblock.domain.model.CookingToolType.MICROWAVE,
+                    timeMinutes = 3,
+                    timeSeconds = 0
+                )
+            ),
+            memo = "테스트 블록 2"
+        )
+        blockRepo.saveFoodBlock(testBlock1)
+        blockRepo.saveFoodBlock(testBlock2)
         val blocksResult = blockRepo.fetchFoodBlocks()
         assertTrue("Blocks fetch failed", blocksResult.isSuccess)
-        val createdBlock = blocksResult.getOrThrow().find { it.name == "소고기 볶음 블록" }
-        assertNotNull("Created block should exist", createdBlock)
+        val allCreatedBlocks = blocksResult.getOrThrow()
+        val createdBlock1 = allCreatedBlocks.find { it.name == "블록 1" }
+        val createdBlock2 = allCreatedBlocks.find { it.name == "블록 2" }
+        assertNotNull("Created block 1 should exist", createdBlock1)
+        assertNotNull("Created block 2 should exist", createdBlock2)
 
-        // 7. Test Meal Record and Preset
+        // 7. Test Meal Record and Preset with sequence 1, 2, 2, 1, 2
         val mealRepo = com.dahee.blockbyblock.data.repository.NetworkMealRecordRepository()
         val randomDay = (10..28).random()
         val today = "2026-09-$randomDay"
-        val mealBlock = com.dahee.blockbyblock.domain.model.MealBlockItem(
-            instanceId = "inst_1",
-            blockId = createdBlock!!.id,
-            blockName = createdBlock.name,
-            blockColorHex = createdBlock.blockColorHex,
-            moldCapacityMl = createdBlock.moldCapacityMl,
-            moldCellCount = createdBlock.moldCellCount
+        val mealBlock1 = com.dahee.blockbyblock.domain.model.MealBlockItem(
+            instanceId = "inst_b1",
+            blockId = createdBlock1!!.id,
+            blockName = createdBlock1.name,
+            blockColorHex = createdBlock1.blockColorHex,
+            moldCapacityMl = createdBlock1.moldCapacityMl,
+            moldCellCount = createdBlock1.moldCellCount
         )
+        val mealBlock2 = com.dahee.blockbyblock.domain.model.MealBlockItem(
+            instanceId = "inst_b2",
+            blockId = createdBlock2!!.id,
+            blockName = createdBlock2.name,
+            blockColorHex = createdBlock2.blockColorHex,
+            moldCapacityMl = createdBlock2.moldCapacityMl,
+            moldCellCount = createdBlock2.moldCellCount
+        )
+
+        // Input sequence: 1, 2, 2, 1, 2
+        val inputSequence = listOf(mealBlock1, mealBlock2, mealBlock2, mealBlock1, mealBlock2)
+        val expectedBlockIds = listOf(createdBlock1.id, createdBlock2.id, createdBlock2.id, createdBlock1.id, createdBlock2.id)
+        val expectedBlockNames = listOf("블록 1", "블록 2", "블록 2", "블록 1", "블록 2")
+        val expectedSortOrders = listOf(0, 1, 2, 3, 4)
+
         val dayRecord = com.dahee.blockbyblock.domain.model.DayMealRecord(
             id = "day_$today",
             dateString = today,
             lunch = com.dahee.blockbyblock.domain.model.MealSlotRecord(
                 mealType = com.dahee.blockbyblock.domain.model.MealType.LUNCH,
-                blocks = listOf(mealBlock, mealBlock), // Multiple instances of identical block (same blockId)
-                memo = "점심 맛있게 먹기",
-                customTitle = "단백질 든든 식단"
+                blocks = inputSequence,
+                memo = "1, 2, 2, 1, 2 순서 배치 테스트",
+                customTitle = "순서 보존 식단"
             )
         )
         mealRepo.saveMealRecord(dayRecord)
+
         val dailyFetch = mealRepo.fetchDailyMeal(today)
         assertTrue("Fetch daily meal failed", dailyFetch.isSuccess)
         val fetchedLunch = dailyFetch.getOrThrow()?.lunch
         assertNotNull(fetchedLunch)
-        assertEquals("Both block instances should be restored", 2, fetchedLunch!!.blocks.size)
+        assertEquals("Should restore 5 block instances", 5, fetchedLunch!!.blocks.size)
+        assertEquals("Block IDs should preserve 1, 2, 2, 1, 2 sequence", expectedBlockIds, fetchedLunch.blocks.map { it.blockId })
+        assertEquals("Block names should preserve sequence", expectedBlockNames, fetchedLunch.blocks.map { it.blockName })
+        assertEquals("Sort orders should be 0, 1, 2, 3, 4", expectedSortOrders, fetchedLunch.blocks.map { it.sortOrder })
 
-        // Test Preset with duplicate blocks
+        // Test Preset with duplicate blocks sequence 1, 2, 2, 1, 2
         val testPreset = com.dahee.blockbyblock.domain.model.MealPreset(
             id = "",
-            name = "다이어트 세트",
-            blocks = listOf(mealBlock, mealBlock),
-            memo = "주말용"
+            name = "1_2_2_1_2 프리셋",
+            blocks = inputSequence,
+            memo = "순서 테스트용 프리셋"
         )
         mealRepo.saveMealPreset(testPreset)
         val presetsResult = mealRepo.fetchMealPresets()
         assertTrue("Fetch presets failed", presetsResult.isSuccess)
-        val createdPreset = presetsResult.getOrThrow().find { it.name == "다이어트 세트" }
+        val createdPreset = presetsResult.getOrThrow().find { it.name == "1_2_2_1_2 프리셋" }
         assertNotNull("Created preset should exist", createdPreset)
-        assertEquals(2, createdPreset!!.blocks.size)
+        assertEquals("Preset should contain 5 block instances", 5, createdPreset!!.blocks.size)
+        assertEquals("Preset block IDs should preserve 1, 2, 2, 1, 2 sequence", expectedBlockIds, createdPreset.blocks.map { it.blockId })
+        assertEquals("Preset block names should preserve sequence", expectedBlockNames, createdPreset.blocks.map { it.blockName })
+        assertEquals("Preset sort orders should be 0, 1, 2, 3, 4", expectedSortOrders, createdPreset.blocks.map { it.sortOrder })
 
         // Clean up preset & meal
-        mealRepo.deleteMealPreset(createdPreset!!.id)
+        mealRepo.deleteMealPreset(createdPreset.id)
         mealRepo.deleteMealRecord(today)
 
-        // Delete block
-        blockRepo.deleteFoodBlock(createdBlock.id)
+        // Delete blocks
+        blockRepo.deleteFoodBlock(createdBlock1.id)
+        blockRepo.deleteFoodBlock(createdBlock2.id)
 
         // 8. Logout
         val logoutResult = authService.logout()
