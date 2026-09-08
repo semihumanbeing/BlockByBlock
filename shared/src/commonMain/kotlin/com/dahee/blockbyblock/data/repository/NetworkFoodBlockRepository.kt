@@ -157,7 +157,10 @@ class NetworkFoodBlockRepository(
             quantity = res.quantity,
             shelfLifeDays = res.shelfLifeDays,
             cookingInstructions = instructions,
-            memo = res.memo ?: ""
+            memo = res.memo ?: "",
+            expirationDate = res.expirationDate,
+            daysRemaining = res.daysRemaining,
+            isExpiringSoon = res.isExpiringSoon
         )
     }
 }

@@ -23,7 +23,10 @@ data class FoodBlock(
     val shelfLifeDays: Int = 90,
     val cookingInstructions: List<CookingInstruction> = emptyList(),
     val createdAt: Long = 0L,
-    val memo: String = ""
+    val memo: String = "",
+    val expirationDate: String? = null,
+    val daysRemaining: Long? = null,
+    val isExpiringSoon: Boolean = false
 ) {
     val cookingToolType: CookingToolType?
         get() = cookingInstructions.firstOrNull()?.toolType

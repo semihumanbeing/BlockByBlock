@@ -23,3 +23,6 @@ actual fun getCurrentDateIso(): String {
 }
 
 actual fun getCurrentEpochMillis(): Long = (NSDate().timeIntervalSince1970 * 1000).toLong()
+
+actual fun getCurrentTimeZone(): String = NSCalendar.currentCalendar.timeZone.name
+

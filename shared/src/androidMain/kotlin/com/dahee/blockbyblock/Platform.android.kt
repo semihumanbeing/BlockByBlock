@@ -11,7 +11,9 @@ object AndroidAppContextHolder {
 }
 
 class AndroidPlatform : Platform {
-    private val inMemoryPrefs = ConcurrentHashMap<String, String>()
+    companion object {
+        private val inMemoryPrefs = ConcurrentHashMap<String, String>()
+    }
 
     override val name: String = "Android ${Build.VERSION.SDK_INT}"
     override val isWeb: Boolean = false
@@ -22,6 +24,7 @@ class AndroidPlatform : Platform {
             AppLanguage.EN
         }
     override val defaultBaseUrl: String = "http://10.0.2.2:8000"
+    override val deviceType: String? = "ANDROID"
 
     override fun getPersistentString(key: String): String? {
         val ctx = AndroidAppContextHolder.context

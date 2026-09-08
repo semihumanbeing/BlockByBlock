@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.dahee.blockbyblock.core.i18n.LocalAppLanguage
 import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.i18n.getStrings
+import com.dahee.blockbyblock.core.notification.PushNotificationManager
 import com.dahee.blockbyblock.core.theme.AppColors
 import com.dahee.blockbyblock.core.theme.BlockByBlockTheme
 import com.dahee.blockbyblock.data.repository.InMemoryEquipmentRepository
@@ -64,6 +65,7 @@ fun App() {
     val coroutineScope = rememberCoroutineScope()
     val authApiService = remember { AuthApiService() }
     val userApiService = remember { UserApiService() }
+    val deviceApiService = remember { com.dahee.blockbyblock.data.remote.service.DeviceApiService() }
 
     // Auth & Onboarding State
     var isLoggedIn by remember { mutableStateOf(false) }
@@ -78,6 +80,16 @@ fun App() {
     var currentTab by remember { mutableStateOf(NavTab.MEAL_PLAN) }
     var isManagingEquipment by remember { mutableStateOf(false) }
     var tutorialStep by remember { mutableStateOf(TutorialStep.WELCOME_PROFILE) }
+
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        com.dahee.blockbyblock.data.remote.ApiClient.setAuthFailureHandler { _ ->
+            isLoggedIn = false
+            userProfile = UserProfile()
+        }
+        onDispose {
+            com.dahee.blockbyblock.data.remote.ApiClient.setAuthFailureHandler(null)
+        }
+    }
 
     val initialLang = remember {
         val savedLang = TokenStorage.getUserLang()
@@ -158,6 +170,7 @@ fun App() {
                 coroutineScope.launch { foodBlockRepository.fetchFoodBlocks() }
                 coroutineScope.launch { mealRecordRepository.fetchWeeklyMeals(com.dahee.blockbyblock.core.utils.getCurrentDateIso()) }
                 coroutineScope.launch { mealRecordRepository.fetchMealPresets() }
+                coroutineScope.launch { com.dahee.blockbyblock.core.notification.PushNotificationManager.syncDeviceOrTimezone(deviceApiService, userApiService) }
             }.onFailure {
                 val refresh = TokenStorage.getRefreshToken()
                 if (!refresh.isNullOrBlank()) {
@@ -195,6 +208,7 @@ fun App() {
                             coroutineScope.launch { foodBlockRepository.fetchFoodBlocks() }
                             coroutineScope.launch { mealRecordRepository.fetchWeeklyMeals(com.dahee.blockbyblock.core.utils.getCurrentDateIso()) }
                             coroutineScope.launch { mealRecordRepository.fetchMealPresets() }
+                            coroutineScope.launch { com.dahee.blockbyblock.core.notification.PushNotificationManager.syncDeviceOrTimezone(deviceApiService, userApiService) }
                         }.onFailure {
                             TokenStorage.clearTokens()
                             isLoggedIn = false
@@ -339,6 +353,7 @@ fun App() {
                                     } catch (_: Throwable) {}
                                 }
                                 coroutineScope.launch {
+                                    PushNotificationManager.syncDeviceOrTimezone(deviceApiService, userApiService)
                                     equipmentRepository.fetchEquipments()
                                     ingredientRepository.fetchIngredients()
                                     foodBlockRepository.fetchFoodBlocks()
@@ -357,6 +372,9 @@ fun App() {
                                 hasCompletedOnboarding = false
                                 userProfile = profile
                                 tutorialStep = TutorialStep.WELCOME_PROFILE
+                                coroutineScope.launch {
+                                    PushNotificationManager.syncDeviceOrTimezone(deviceApiService, userApiService)
+                                }
                             }
                         )
                     }
@@ -516,6 +534,7 @@ fun App() {
                                             },
                                             onLogout = {
                                                 coroutineScope.launch {
+                                                    com.dahee.blockbyblock.core.notification.PushNotificationManager.onLogout(deviceApiService)
                                                     authApiService.logout()
                                                 }
                                                 isLoggedIn = false

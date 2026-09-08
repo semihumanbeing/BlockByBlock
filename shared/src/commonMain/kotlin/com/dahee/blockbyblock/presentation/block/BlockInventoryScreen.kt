@@ -317,7 +317,7 @@ private fun FoodBlockCard(
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
-    val isExpiringSoon = block.shelfLifeDays <= 7
+    val isExpiringSoon = block.isExpiringSoon || (block.daysRemaining != null && block.daysRemaining <= 7) || (block.daysRemaining == null && block.shelfLifeDays <= 7)
 
     AppCard(
         modifier = modifier
@@ -373,16 +373,26 @@ private fun FoodBlockCard(
                                 .border(0.8.dp, Color(0xFFEF5350), RoundedCornerShape(6.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
+                            val badgeText = when {
+                                block.daysRemaining != null -> strings.shelfLifeRemainingDDay(block.daysRemaining)
+                                block.shelfLifeDays <= 0 -> strings.shelfLifeExpired
+                                else -> strings.shelfLifeExpiringSoon(block.shelfLifeDays)
+                            }
                             Text(
-                                text = if (block.shelfLifeDays <= 0) strings.shelfLifeExpired else strings.shelfLifeExpiringSoon(block.shelfLifeDays),
+                                text = badgeText,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFD32F2F)
                             )
                         }
                     } else {
+                        val regularText = when {
+                            !block.expirationDate.isNullOrBlank() -> strings.shelfLifeUntil(block.expirationDate)
+                            block.daysRemaining != null -> strings.shelfLifeRemainingDDay(block.daysRemaining)
+                            else -> strings.shelfLifeDays(block.shelfLifeDays)
+                        }
                         Text(
-                            text = strings.shelfLifeDays(block.shelfLifeDays),
+                            text = regularText,
                             fontSize = 11.sp,
                             color = AppColors.TextSecondary
                         )

@@ -18,6 +18,7 @@ class AuthApiLiveTest {
 
     private val authService = AuthApiService()
     private val userService = UserApiService()
+    private val deviceService = com.dahee.blockbyblock.data.remote.service.DeviceApiService()
 
     @Before
     fun setup() {
@@ -26,20 +27,21 @@ class AuthApiLiveTest {
 
     @Test
     fun testLoginAndProfileFlow() = runBlocking {
-        // 1. Signup/Login with a fresh test user
-        val testEmail = "test_${System.currentTimeMillis()}@test.com"
-        val signupResult = authService.signUp(com.dahee.blockbyblock.data.remote.dto.SignUpRequest(
-            email = testEmail,
-            password = "password123",
-            nickname = "Tester"
-        ))
-        assertTrue("Signup failed: ${signupResult.exceptionOrNull()?.message}", signupResult.isSuccess)
-        val loginData = signupResult.getOrThrow()
-        assertNotNull(loginData.accessToken)
-        assertTrue(TokenStorage.isAuthenticated)
-        assertNotNull(TokenStorage.getUserId())
+        val randomNum = (1000..9999).random()
+        val testEmail = "test_user_$randomNum@example.com"
+        val testPassword = "Password123!"
 
-        // 2. Fetch profile via /users/me
+        // 1. Sign up
+        val signUpResult = authService.signUp(
+            com.dahee.blockbyblock.data.remote.dto.SignUpRequest(
+                email = testEmail,
+                password = testPassword,
+                nickname = "테스터"
+            )
+        )
+        assertTrue("SignUp failed: ${signUpResult.exceptionOrNull()?.message}", signUpResult.isSuccess)
+
+        // 2. Get me
         val meResult = userService.getMe()
         assertTrue("getMe failed: ${meResult.exceptionOrNull()?.message}", meResult.isSuccess)
         val me = meResult.getOrThrow()
@@ -52,6 +54,23 @@ class AuthApiLiveTest {
         assertEquals("테스터_수정", updateResult.getOrThrow().nickname)
         assertEquals("EN", updateResult.getOrThrow().lang)
         assertEquals("EN", TokenStorage.getUserLang())
+
+        // 3-1. Test User Timezone Update (PATCH /api/v1/users/me/timezone)
+        val tzResult = userService.updateTimezone("America/New_York")
+        assertTrue("updateTimezone failed: ${tzResult.exceptionOrNull()?.message}", tzResult.isSuccess)
+        assertEquals("America/New_York", tzResult.getOrThrow().timezone)
+
+        // 3-2. Test Mobile Device FCM Registration (POST /api/v1/devices)
+        val testFcmToken = "test_fcm_token_${System.currentTimeMillis()}"
+        val deviceReg = deviceService.registerDevice(
+            fcmToken = testFcmToken,
+            deviceType = "IOS",
+            timezone = "America/New_York"
+        )
+        assertTrue("registerDevice failed: ${deviceReg.exceptionOrNull()?.message}", deviceReg.isSuccess)
+        val registeredDevice = deviceReg.getOrThrow()
+        assertEquals("IOS", registeredDevice.deviceType)
+        assertTrue(registeredDevice.isActive)
 
         // 4. Test Equipment Sync and Fetch
         val equipRepo = com.dahee.blockbyblock.data.repository.NetworkEquipmentRepository()
@@ -171,6 +190,11 @@ class AuthApiLiveTest {
         val createdBlock2 = allCreatedBlocks.find { it.name == "블록 2" }
         assertNotNull("Created block 1 should exist", createdBlock1)
         assertNotNull("Created block 2 should exist", createdBlock2)
+        assertNotNull("Block 1 expirationDate should be set", createdBlock1!!.expirationDate)
+        assertNotNull("Block 1 daysRemaining should be calculated", createdBlock1.daysRemaining)
+        assertTrue("Block 1 daysRemaining should be positive", createdBlock1.daysRemaining!! > 0)
+        assertNotNull("Block 2 expirationDate should be set", createdBlock2!!.expirationDate)
+        assertNotNull("Block 2 daysRemaining should be calculated", createdBlock2.daysRemaining)
 
         // 7. Test Meal Record and Preset with sequence 1, 2, 2, 1, 2
         val mealRepo = com.dahee.blockbyblock.data.repository.NetworkMealRecordRepository()
@@ -178,7 +202,7 @@ class AuthApiLiveTest {
         val today = "2026-09-$randomDay"
         val mealBlock1 = com.dahee.blockbyblock.domain.model.MealBlockItem(
             instanceId = "inst_b1",
-            blockId = createdBlock1!!.id,
+            blockId = createdBlock1.id,
             blockName = createdBlock1.name,
             blockColorHex = createdBlock1.blockColorHex,
             moldCapacityMl = createdBlock1.moldCapacityMl,
@@ -186,7 +210,7 @@ class AuthApiLiveTest {
         )
         val mealBlock2 = com.dahee.blockbyblock.domain.model.MealBlockItem(
             instanceId = "inst_b2",
-            blockId = createdBlock2!!.id,
+            blockId = createdBlock2.id,
             blockName = createdBlock2.name,
             blockColorHex = createdBlock2.blockColorHex,
             moldCapacityMl = createdBlock2.moldCapacityMl,
@@ -245,7 +269,11 @@ class AuthApiLiveTest {
         blockRepo.deleteFoodBlock(createdBlock1.id)
         blockRepo.deleteFoodBlock(createdBlock2.id)
 
-        // 8. Logout
+        // 8. Test Mobile Device Unregister (DELETE /api/v1/devices?fcmToken=...)
+        val unregResult = deviceService.unregisterDevice(testFcmToken)
+        assertTrue("unregisterDevice failed: ${unregResult.exceptionOrNull()?.message}", unregResult.isSuccess)
+
+        // 9. Logout
         val logoutResult = authService.logout()
         assertTrue("Logout failed", logoutResult.isSuccess)
         assertTrue(!TokenStorage.isAuthenticated)

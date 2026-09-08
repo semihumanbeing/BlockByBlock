@@ -129,6 +129,10 @@
   - **0초 체감 사전 캐싱 엔진**: 현재 페이지 렌더링 완료 후 `page.hasNext == true`이면 다음 페이지(`page + 1`) 및 이전 페이지(`page - 1`)를 백그라운드에서 자동 사전 로딩하여 캐시에 보관, 페이지 전환 시 0ms 딜레이로 즉시 전환
   - 상태 변경/수정/추가/삭제 시 캐시 무효화 및 현재 페이지 자동 갱신 지원
   - **하단 페이지 네비게이션 컨트롤러 (`InventoryPaginationControls`)**: `[◀ 이전] N / Total [다음 ▶]` 내비게이션 지원 (2페이지 이상 시 노출)
+- **마스터 식재료 카탈로그 검색어 인메모리 캐싱 (`catalogCache`)**:
+  - 검색어(`query`), 카테고리(`category`), 다국어 언어(`lang`)를 복합 키(`CatalogCacheKey`)로 관리하는 인메모리 캐시 도입
+  - 이미 검색했던 검색어나 카테고리 필터 전환 시 네트워크/DB 딜레이 0ms 즉시 렌더링
+  - 실패/오프라인 시에도 로컬 fallback 카탈로그 결과를 캐싱하여 즉시 복구 지원
 - **패키지**: `com.dahee.blockbyblock.presentation.inventory` 및 `domain/model/Ingredient.kt`, `domain/model/PageResult.kt`, `data/datasource/MasterIngredientCatalog.kt`, `data/repository/InMemoryIngredientRepository.kt`, `data/repository/NetworkIngredientRepository.kt`
 
 ### 4) 웹 전용 스플래시 로딩 화면 (Front-Facing 3D Toy Bento Snap-In)
@@ -215,6 +219,11 @@
     - **오늘 날짜 (`TODAY`)**: 초록색 하이라이트 테두리 + `TODAY` 뱃지 강조
     - **순수 레고 블록 트레이**: `총 N개` 등 개수 텍스트를 제거하고, 해당 일자에 등록된 **위에서 본 레고 블록 이미지만 가로로 착착착 쌓아놓은 깔끔한 비주얼** 노출
     - **날짜 카드 터치 시 ➔ 해당 날짜의 일별 식단 화면으로 즉시 전환**: 해당 날짜의 아침/점심/저녁/간식 전체를 바로 조회하고 수정할 수 있도록 유기적 연결
+  - **주간 식단 0초 체감 인메모리 캐시 & 전후 1주일 백그라운드 사전 로딩 (Prefetching)**:
+    - `weeklyMealCache`(`weekStartDate` 키 기반)를 통해 주간 식단 조회 결과를 인메모리에 보관
+    - 현재 주차 로딩 완료 시 이전 주(`-7일`) 및 다음 주(`+7일`)를 백그라운드 코루틴으로 사전 적재
+    - 주간 네비게이션(`[◀]`, `[▶]`) 시 네트워크 딜레이 없이 0ms 즉시 화면 전환 및 연속적인 인접 주차 버퍼링
+    - 식단 슬롯 저장(`onSaveSlot`) 및 삭제(`onDeleteSlot`) 시 해당 일자의 주차 캐시를 즉시 갱신/동기화하여 데이터 정합성 보장
 - **패키지**: `com.dahee.blockbyblock.presentation.mealplan` 및 `domain/model/MealRecord.kt`, `domain/repository/MealRecordRepository.kt`, `data/repository/InMemoryMealRecordRepository.kt`, `data/repository/NetworkMealRecordRepository.kt`
 
 #### 7) 인터랙티브 온보딩 튜토리얼 시스템 (Phase 6 구현 완료)
@@ -250,6 +259,20 @@
 - **계정 관리 (`MeScreen.kt`)**:
   - 화면 하단에 **`[로그아웃]`** 및 **`[회원 탈퇴]`** 카드 추가 (클릭 시 2차 안전 확인 다이얼로그 노출 ➔ 로그아웃 시 다시 첫 로그인 화면으로 복귀).
 - **패키지**: `com.dahee.blockbyblock.presentation.auth` (`AuthScreen.kt`) 및 `com.dahee.blockbyblock.presentation.me.components` (`ProfileEditDialog.kt`, `BlockAvatarView.kt`)
+
+#### 9) 공통 API 에러 핸들링 & Silent Token Refresh 아키텍처 (Network Error Management)
+- **백엔드 공통 에러 규격 (`ApiErrorResponse` & `FieldErrorDetail`)**:
+  - `code` (예: `INVALID_INPUT_VALUE`, `TOKEN_REUSE_DETECTED`, `ACCESS_DENIED` 등), `message`, `errors: List<FieldErrorDetail>` 구조를 완전 지원.
+- **커스텀 예외 클래스 (`ApiError`) & 폼 필드 매핑 유틸 (`applyFormApiErrors`)**:
+  - `isAuthError()`, `isValidationError()`, `isServerError()`, `isAccessDenied()`, `isTokenExpired()`, `isTokenReuseDetected()` 등 간편한 상태 판별 헬퍼 제공.
+  - `getFieldErrorMessage(fieldName)` (대소문자 무시 지원) 및 `extractFieldErrorMap()`을 통해 서버 유효성 검증 실패 메시지를 UI 입력 필드에 직관적으로 바인딩.
+- **Ktor 3.1.1 기반 무중단 토큰 갱신 (Silent Refresh with Mutex)**:
+  - `ApiClient`에 Ktor `Auth` 플러그인 연동: 요청 시 `Bearer <accessToken>` 자동 주입.
+  - 401 수신 시 `refreshClient`와 `Mutex` 락을 통해 단 1회의 `/api/v1/auth/refresh` 호출로 토큰을 갱신하고, 대기 중이던 동시 요청들을 새 토큰으로 자동 재시도.
+  - `TOKEN_REUSE_DETECTED` 감지 또는 리프레시 실패 시 즉시 토큰을 비우고 `ApiClient.forceLogout` 콜백을 호출하여 로그인 화면으로 안전하게 복귀.
+- **전역 토스트 알림 연동**:
+  - 403 Forbidden ("접근 권한이 없습니다."), 500+ Internal Server Error ("일시적인 서버 오류가 발생했습니다.") 발생 시 자동 토스트 핸들러 트리거.
+- **패키지**: `com.dahee.blockbyblock.data.remote.error` (`ApiError.kt`, `ErrorCode.kt`) 및 `com.dahee.blockbyblock.data.remote` (`ApiClient.kt`, `TokenStorage.kt`)
 
 ---
 
@@ -289,6 +312,15 @@ shared/src/commonMain/kotlin/com/dahee/blockbyblock/
 │       └── IngredientRepository.kt
 ├── data/
 │   ├── datasource/MasterIngredientCatalog.kt # 60여종 표준 식재료 마스터 DB
+│   ├── remote/
+│   │   ├── ApiClient.kt                      # Ktor HttpClient, 401 Silent Refresh, Mutex, 전역 토스트/에러 핸들러
+│   │   ├── ApiResponse.kt                    # ApiResponse<T>, ApiErrorResponse, FieldErrorDetail
+│   │   ├── TokenStorage.kt                   # 토큰 저장소 및 세션 강제 로그아웃 콜백
+│   │   ├── error/
+│   │   │   ├── ApiError.kt                   # 커스텀 ApiError 예외 클래스 & 폼 필드 에러 매핑 유틸
+│   │   │   └── ErrorCode.kt                  # 표준 ErrorCode 상수 정의
+│   │   ├── dto/                              # AuthDto, MealDto, BlockDto, IngredientDto, EquipmentDto...
+│   │   └── service/                          # AuthApiService, MealApiService, IngredientApiService...
 │   └── repository/
 │       ├── InMemoryEquipmentRepository.kt    # 장비 CRUD & Flow 반응형 저장소
 │       ├── InMemoryIngredientRepository.kt   # 식재료 CRUD & 상태/수량/단위 관리
@@ -354,6 +386,41 @@ shared/src/commonMain/kotlin/com/dahee/blockbyblock/
 10. **화면 QA 요청 포맷 규칙**: 사용자가 `"ㅇㅇ화면 QA해줘"`라고 요청할 때는 긴 서론이나 별도 마크다운 테이블 없이, **오직 엑셀/구글 스프레드시트 붙여넣기 전용 TSV 코드 블록(문제점\t영향도\t권장 조치) 하나로만 즉시 응답**합니다.
 11. **단일 이미지 에셋 저장 경로 원칙**: 모든 이미지/그래픽 에셋은 오직 **`shared/src/commonMain/composeResources/drawable/` 단일 경로**에만 저장합니다. 루트의 `/images` 등 별도 폴더로 분산 저장하지 않으며, 향후 신규 이미지 생성 시에도 반드시 이 경로로 직접 저장합니다.
 12. **임의의 UI 설명/안내 문구 추가 절대 금지**: 부가적인 부가 설명 텍스트나 힌트 문구를 임의로 추가하지 않고, 오직 사용자가 명시적으로 요청한 텍스트만 UI에 반영합니다.
+
+---
+
+### 8) 프론트엔드 공통 에러 규격 연동 & Axios 인터셉터 및 폼 에러 바인딩 (Phase 7 완료)
+- **백엔드 공통 실패 규격 연동 (`ApiErrorResponse`, `FieldErrorDetail`)**:
+  - `4xx`, `5xx` 공통 JSON 규격 대응 (`code`, `message`, `errors`)
+  - `ErrorCode` 13종 상수 정의 (`AUTHENTICATION_FAILED`, `EXPIRED_TOKEN`, `INVALID_TOKEN`, `TOKEN_REUSE_DETECTED`, `ACCESS_DENIED`, `INVALID_INPUT_VALUE`, `EMAIL_ALREADY_EXISTS`, `RESOURCE_NOT_FOUND`, `USER_NOT_FOUND`, `BLOCK_NOT_FOUND`, `MEAL_NOT_FOUND`, `METHOD_NOT_ALLOWED`, `INTERNAL_SERVER_ERROR`)
+- **커스텀 에러 클래스 (`ApiError`)**:
+  - `AxiosError` 래핑, `hasFieldErrors()`, `getFieldError(fieldName)`, `getFieldErrorMessage(fieldName)` 헬퍼 지원
+  - 네트워크/타임아웃/서버 에러 판별 헬퍼 제공 (`isAuthError()`, `isValidationError()`, `isAccessDenied()`, `isServerError()` 등)
+- **Axios 클라이언트 및 인터셉터 (`apiClient`)**:
+  - **Silent Refresh & Promise Queue Lock**: 동시 다발적 401 수신 시 `POST /api/v1/auth/refresh`는 1회만 실행하고 모든 대기 요청을 큐잉하여 새 토큰으로 자동 재시도
+  - **인증 실패 / 탈취 감지 (`TOKEN_REUSE_DETECTED`)**: Refresh Token 무효화 또는 탈취 감지 시 즉시 세션 클리어 후 `/login` 강제 리다이렉트
+  - **전역 토스트 알림**: 403 ("접근 권한이 없습니다."), 500 ("일시적인 서버 오류가 발생했습니다.")
+- **React Hook Form 에러 바인딩 헬퍼 (`setFormApiErrors`)**:
+  - `errors` 배열을 RHF의 `setError`에 자동 매핑, 첫 번째 에러 필드 자동 포커스(`shouldFocus`), 필드 매핑 테이블(`fieldMap`) 및 폼 루트 에러(`fallbackToRoot`) 완벽 지원
+- **패키지**: `src/types/api.ts`, `src/utils/error/ApiError.ts`, `src/services/apiClient.ts`, `src/utils/form/setFormApiErrors.ts`, `src/utils/toast/toast.ts`
+
+### 10) 현지 시간대(Timezone) 감지 & 푸시 디바이스 동기화 & 블록 유통기한 D-Day (Timezone & Push Notification Sync)
+- **사용자 현지 시간대(IANA Timezone) 자동 감지 (`DateTimeUtils`)**:
+  - `getCurrentTimeZone()` expect/actual 선언
+  - Android: `java.util.TimeZone.getDefault().id`
+  - iOS: `NSCalendar.currentCalendar.timeZone.name`
+  - Web (JS / WasmJs): `Intl.DateTimeFormat().resolvedOptions().timeZone`
+- **플랫폼별 처리 규칙 (Mobile vs Web 분기)**:
+  - **모바일 (Android / iOS)**:
+    - 앱 시작/세션 복원 및 로그인 직후: FCM 토큰 및 시간대를 `POST /api/v1/devices` (`RegisterDeviceRequest`)로 등록
+    - 로그아웃 시: `DELETE /api/v1/devices?fcmToken=...` 호출로 기기 토큰 해제
+  - **웹 (Web)**:
+    - `POST /api/v1/devices` 호출하지 않음
+    - 로그인 및 세션 복원 시 `PATCH /api/v1/users/me/timezone` (`UpdateTimezoneRequest`)으로 사용자 시간대 동기화
+- **블록 유통기한 응답 필드 바인딩 (Block Expiration Fields)**:
+  - 백엔드 응답 필드 `expirationDate` ("YYYY-MM-DD"), `daysRemaining` (Long, 0 = 오늘 만료, 음수 = 만료됨), `isExpiringSoon` (Boolean) 직접 바인딩
+  - UI 뱃지 및 서브타이틀: `D-3`, `오늘 만료`, `만료됨`, `2026-06-08까지` 등 다국어(`KoStrings`, `EnStrings`)와 일치시켜 직관적으로 렌더링
+- **패키지**: `com.dahee.blockbyblock.core.utils` (`DateTimeUtils.kt`), `com.dahee.blockbyblock.core.notification` (`PushNotificationManager.kt`), `data/remote/service` (`DeviceApiService.kt`, `UserApiService.kt`), `presentation/block` (`BlockInventoryScreen.kt`)
 
 ---
 

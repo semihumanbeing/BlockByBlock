@@ -9,7 +9,8 @@ data class UserResponse(
     val nickname: String,
     val avatarType: String,
     val onboardingCompleted: Boolean,
-    val lang: String = "KO"
+    val lang: String = "KO",
+    val timezone: String = "Asia/Seoul"
 )
 
 @Serializable
@@ -17,6 +18,11 @@ data class UpdateProfileRequest(
     val nickname: String,
     val avatarType: String,
     val lang: String? = null
+)
+
+@Serializable
+data class UpdateTimezoneRequest(
+    val timezone: String
 )
 
 @Serializable

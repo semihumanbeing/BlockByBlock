@@ -137,6 +137,8 @@ object KoStrings : AppStrings {
     override val shelfLifeExpired = "소비기한 만료"
     override fun shelfLifeExpiringSoon(days: Int) = "소비기한 ${days}일 (임박)"
     override fun shelfLifeDays(days: Int) = "소비기한 ${days}일"
+    override fun shelfLifeUntil(date: String) = "${date}까지"
+    override fun shelfLifeRemainingDDay(days: Long) = if (days < 0L) "만료됨" else if (days == 0L) "오늘 만료" else "D-$days"
     override val historyTitle = "히스토리"
     override val historySubtitle = "이전에 만든 블록 불러오기"
     override val createBlockSectionCookingTool = "조리 방법 (선택)"

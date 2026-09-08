@@ -60,6 +60,8 @@ data class BlockResponse(
     val blockColorHex: String,
     val quantity: Int,
     val shelfLifeDays: Int,
+    val expirationDate: String? = null,
+    val daysRemaining: Long? = null,
     val isExpiringSoon: Boolean = false,
     val memo: String? = null,
     val mainIngredients: List<String> = emptyList(),

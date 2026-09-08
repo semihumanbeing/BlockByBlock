@@ -137,6 +137,8 @@ object EnStrings : AppStrings {
     override val shelfLifeExpired = "Expired"
     override fun shelfLifeExpiringSoon(days: Int) = "Expires in $days days (Soon)"
     override fun shelfLifeDays(days: Int) = "$days days shelf life"
+    override fun shelfLifeUntil(date: String) = "Until $date"
+    override fun shelfLifeRemainingDDay(days: Long) = if (days < 0L) "Expired" else if (days == 0L) "Expires today" else "D-$days"
     override val historyTitle = "History"
     override val historySubtitle = "Load previously made block"
     override val createBlockSectionCookingTool = "Cooking Method (Optional)"

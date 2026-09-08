@@ -353,8 +353,7 @@ class SharedLogicAndroidHostTest {
 
         // 3. Search "당근"
         viewModel.onCatalogSearchQueryChange("당근")
-        // Wait for debounce delay
-        kotlinx.coroutines.delay(200)
+        viewModel.catalogSearchJob?.join()
 
         assertTrue(viewModel.isCatalogCached("당근", null), "Query '당근' should be cached")
         val carrotResults = viewModel.uiState.value.catalogResults
@@ -362,7 +361,7 @@ class SharedLogicAndroidHostTest {
 
         // 4. Search another term "양파"
         viewModel.onCatalogSearchQueryChange("양파")
-        kotlinx.coroutines.delay(200)
+        viewModel.catalogSearchJob?.join()
         assertTrue(viewModel.isCatalogCached("양파", null), "Query '양파' should be cached")
 
         // 5. Instant switch back to "당근" with 0ms delay (cache hit)
@@ -373,7 +372,7 @@ class SharedLogicAndroidHostTest {
 
         // 6. Test category filter caching
         viewModel.onCatalogCategoryFilterChange(com.dahee.blockbyblock.domain.model.IngredientCategory.VEGETABLE)
-        kotlinx.coroutines.delay(200)
+        viewModel.catalogSearchJob?.join()
         assertTrue(viewModel.isCatalogCached("당근", com.dahee.blockbyblock.domain.model.IngredientCategory.VEGETABLE))
 
         // 7. Test clear cache
@@ -381,5 +380,160 @@ class SharedLogicAndroidHostTest {
         assertEquals(false, viewModel.isCatalogCached("당근", null))
 
         testJob.cancel()
+    }
+
+    @Test
+    fun testApiErrorParsingAndHelperMethods() {
+        // 1. Instantiation with field errors
+        val error = com.dahee.blockbyblock.data.remote.error.ApiError(
+            message = "입력값 검증에 실패했습니다.",
+            code = com.dahee.blockbyblock.data.remote.error.ErrorCode.INVALID_INPUT_VALUE,
+            status = 400,
+            errors = listOf(
+                com.dahee.blockbyblock.data.remote.FieldErrorDetail(
+                    field = "email",
+                    value = "invalid-email",
+                    reason = "이메일 형식이 올바르지 않습니다."
+                ),
+                com.dahee.blockbyblock.data.remote.FieldErrorDetail(
+                    field = "password",
+                    value = "123",
+                    reason = "비밀번호는 8자 이상이어야 합니다."
+                )
+            )
+        )
+
+        assertEquals("입력값 검증에 실패했습니다.", error.message)
+        assertEquals(com.dahee.blockbyblock.data.remote.error.ErrorCode.INVALID_INPUT_VALUE, error.code)
+        assertEquals(400, error.status)
+        assertTrue(error.hasFieldErrors())
+        assertTrue(error.isValidationError())
+        assertEquals(false, error.isAuthError())
+        assertEquals("이메일 형식이 올바르지 않습니다.", error.getFieldErrorMessage("email"))
+        // Case-insensitive lookup
+        assertEquals("이메일 형식이 올바르지 않습니다.", error.getFieldErrorMessage("EMAIL"))
+        assertEquals("비밀번호는 8자 이상이어야 합니다.", error.getFieldErrorMessage("Password"))
+        assertEquals(null, error.getFieldErrorMessage("unknownField"))
+
+        // Extract field error map
+        val map = error.extractFieldErrorMap()
+        assertEquals(2, map.size)
+        assertEquals("이메일 형식이 올바르지 않습니다.", map["email"])
+        assertEquals("비밀번호는 8자 이상이어야 합니다.", map["password"])
+
+        // Form error helper mapping
+        var capturedEmailErr: String? = null
+        var capturedPwErr: String? = null
+        val applied = com.dahee.blockbyblock.data.remote.error.applyFormApiErrors(
+            error = error,
+            onFieldError = { field, reason ->
+                if (field == "email") capturedEmailErr = reason
+                if (field == "password") capturedPwErr = reason
+            }
+        )
+        assertTrue(applied)
+        assertEquals("이메일 형식이 올바르지 않습니다.", capturedEmailErr)
+        assertEquals("비밀번호는 8자 이상이어야 합니다.", capturedPwErr)
+    }
+
+    @Test
+    fun testApiErrorClassificationAndJsonParsing() {
+        // 1. JSON parsing from HttpResponse text
+        val jsonText = """
+            {
+                "code": "EXPIRED_TOKEN",
+                "message": "액세스 토큰이 만료되었습니다.",
+                "errors": []
+            }
+        """.trimIndent()
+        val parsed = com.dahee.blockbyblock.data.remote.error.ApiError.fromHttpResponse(401, jsonText)
+        assertEquals(com.dahee.blockbyblock.data.remote.error.ErrorCode.EXPIRED_TOKEN, parsed.code)
+        assertEquals(401, parsed.status)
+        assertTrue(parsed.isAuthError())
+        assertTrue(parsed.isTokenExpired())
+        assertEquals(false, parsed.isTokenReuseDetected())
+
+        // 2. Token reuse detected classification
+        val reuseError = com.dahee.blockbyblock.data.remote.error.ApiError(
+            message = "토큰 재사용 감지",
+            code = com.dahee.blockbyblock.data.remote.error.ErrorCode.TOKEN_REUSE_DETECTED,
+            status = 401
+        )
+        assertTrue(reuseError.isAuthError())
+        assertTrue(reuseError.isTokenReuseDetected())
+
+        // 3. Access denied classification
+        val forbidden = com.dahee.blockbyblock.data.remote.error.ApiError(
+            message = "접근 권한 없음",
+            code = com.dahee.blockbyblock.data.remote.error.ErrorCode.ACCESS_DENIED,
+            status = 403
+        )
+        assertTrue(forbidden.isAccessDenied())
+
+        // 4. Server error classification
+        val serverErr = com.dahee.blockbyblock.data.remote.error.ApiError(
+            message = "내부 오류",
+            code = com.dahee.blockbyblock.data.remote.error.ErrorCode.INTERNAL_SERVER_ERROR,
+            status = 500
+        )
+        assertTrue(serverErr.isServerError())
+    }
+
+    @Test
+    fun testForceLogoutAndToastHandling() {
+        // Test TokenStorage force logout
+        var logoutReason: String? = null
+        com.dahee.blockbyblock.data.remote.TokenStorage.setAuthFailureHandler { reason ->
+            logoutReason = reason
+        }
+
+        com.dahee.blockbyblock.data.remote.TokenStorage.setTokens("test_acc", "test_ref")
+        assertTrue(com.dahee.blockbyblock.data.remote.TokenStorage.hasTokens())
+
+        com.dahee.blockbyblock.data.remote.ApiClient.forceLogout("TOKEN_REUSE_DETECTED")
+        assertEquals(false, com.dahee.blockbyblock.data.remote.TokenStorage.hasTokens())
+        assertEquals("TOKEN_REUSE_DETECTED", logoutReason)
+
+        // Test ApiClient toast notification
+        var capturedToast: String? = null
+        com.dahee.blockbyblock.data.remote.ApiClient.setToastHandler { msg ->
+            capturedToast = msg
+        }
+        com.dahee.blockbyblock.data.remote.ApiClient.showToast("접근 권한이 없습니다.")
+        assertEquals("접근 권한이 없습니다.", capturedToast)
+
+        com.dahee.blockbyblock.data.remote.TokenStorage.setAuthFailureHandler(null)
+        com.dahee.blockbyblock.data.remote.ApiClient.setToastHandler(null)
+    }
+
+    @Test
+    fun testCurrentTimezoneAndExpirationDDayStrings() {
+        // 1. Timezone detection
+        val tz = com.dahee.blockbyblock.core.utils.getCurrentTimeZone()
+        assertTrue(tz.isNotBlank(), "Timezone identifier must not be blank")
+
+        // 2. Korean D-Day and Expiration strings
+        val koStrings = com.dahee.blockbyblock.core.i18n.KoStrings
+        assertEquals("D-3", koStrings.shelfLifeRemainingDDay(3))
+        assertEquals("오늘 만료", koStrings.shelfLifeRemainingDDay(0))
+        assertEquals("만료됨", koStrings.shelfLifeRemainingDDay(-1))
+        assertEquals("2026-06-08까지", koStrings.shelfLifeUntil("2026-06-08"))
+
+        // 3. English D-Day and Expiration strings
+        val enStrings = com.dahee.blockbyblock.core.i18n.EnStrings
+        assertEquals("D-3", enStrings.shelfLifeRemainingDDay(3))
+        assertEquals("Expires today", enStrings.shelfLifeRemainingDDay(0))
+        assertEquals("Expired", enStrings.shelfLifeRemainingDDay(-1))
+        assertEquals("Until 2026-06-08", enStrings.shelfLifeUntil("2026-06-08"))
+
+        // 4. PushNotificationManager token management
+        com.dahee.blockbyblock.core.notification.PushNotificationManager.setDeviceFcmToken("mock_fcm_token_123")
+        assertEquals("mock_fcm_token_123", com.dahee.blockbyblock.core.notification.PushNotificationManager.getDeviceFcmToken())
+        assertEquals("mock_fcm_token_123", com.dahee.blockbyblock.core.notification.PushNotificationManager.getOrCreateDeviceFcmToken())
+
+        com.dahee.blockbyblock.core.notification.PushNotificationManager.setDeviceFcmToken(null)
+        val generatedToken = com.dahee.blockbyblock.core.notification.PushNotificationManager.getOrCreateDeviceFcmToken()
+        assertTrue(generatedToken.isNotBlank())
+        com.dahee.blockbyblock.core.notification.PushNotificationManager.setDeviceFcmToken(null)
     }
 }

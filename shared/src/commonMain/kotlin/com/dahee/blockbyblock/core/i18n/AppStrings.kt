@@ -125,6 +125,8 @@ interface AppStrings {
     val shelfLifeExpired: String
     fun shelfLifeExpiringSoon(days: Int): String
     fun shelfLifeDays(days: Int): String
+    fun shelfLifeUntil(date: String): String
+    fun shelfLifeRemainingDDay(days: Long): String
     val historyTitle: String
     val historySubtitle: String
     val createBlockSectionCookingTool: String

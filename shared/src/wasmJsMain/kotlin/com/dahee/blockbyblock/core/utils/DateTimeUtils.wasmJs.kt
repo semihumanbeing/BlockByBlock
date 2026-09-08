@@ -24,3 +24,9 @@ actual fun getCurrentDateIso(): String {
 }
 
 actual fun getCurrentEpochMillis(): Long = Date.now().toLong()
+
+@OptIn(ExperimentalWasmJsInterop::class)
+@JsFun("() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch (e) { return 'UTC'; } }")
+private external fun jsGetTimezone(): String
+
+actual fun getCurrentTimeZone(): String = jsGetTimezone()

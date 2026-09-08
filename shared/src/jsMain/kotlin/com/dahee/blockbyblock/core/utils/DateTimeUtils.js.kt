@@ -13,3 +13,11 @@ actual fun getCurrentDateIso(): String {
 }
 
 actual fun getCurrentEpochMillis(): Long = Date.now().toLong()
+
+actual fun getCurrentTimeZone(): String {
+    return try {
+        js("Intl.DateTimeFormat().resolvedOptions().timeZone") as String
+    } catch (_: Throwable) {
+        "UTC"
+    }
+}

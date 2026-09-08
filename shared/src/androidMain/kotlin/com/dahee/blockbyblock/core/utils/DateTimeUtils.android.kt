@@ -13,3 +13,5 @@ actual fun getCurrentDateIso(): String {
 }
 
 actual fun getCurrentEpochMillis(): Long = System.currentTimeMillis()
+
+actual fun getCurrentTimeZone(): String = java.util.TimeZone.getDefault().id

@@ -44,6 +44,19 @@ class UserApiService {
         }
     }
 
+    suspend fun updateTimezone(timezone: String): Result<UserResponse> = runCatching {
+        val response: HttpResponse = ApiClient.client.patch(ApiClient.endpoint("api/v1/users/me/timezone")) {
+            setBody(com.dahee.blockbyblock.data.remote.dto.UpdateTimezoneRequest(timezone))
+        }
+        if (response.status.isSuccess()) {
+            val body = response.body<ApiResponse<UserResponse>>()
+            TokenStorage.setUserInfo(body.data.id, body.data.lang)
+            body.data
+        } else {
+            throw parseError(response)
+        }
+    }
+
     suspend fun updateOnboarding(request: UpdateOnboardingRequest): Result<OnboardingResponse> = runCatching {
         val response: HttpResponse = ApiClient.client.patch(ApiClient.endpoint("api/v1/users/me/onboarding")) {
             setBody(request)
@@ -65,14 +78,7 @@ class UserApiService {
         }
     }
 
-    private suspend fun parseError(response: HttpResponse): Exception {
-        val text = response.bodyAsText()
-        val message = try {
-            val err = ApiClient.jsonConfig.decodeFromString<ApiErrorResponse>(text)
-            err.message ?: err.error ?: "Request failed (${response.status.value})"
-        } catch (_: Exception) {
-            "Request failed (${response.status.value}): $text"
-        }
-        return Exception(message)
+    private suspend fun parseError(response: HttpResponse): com.dahee.blockbyblock.data.remote.error.ApiError {
+        return ApiClient.parseError(response)
     }
 }

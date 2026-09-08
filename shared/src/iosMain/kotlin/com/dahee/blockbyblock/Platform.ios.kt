@@ -22,6 +22,7 @@ class IOSPlatform: Platform {
             }
         }
     override val defaultBaseUrl: String = "http://localhost:8000"
+    override val deviceType: String? = "IOS"
 
     override fun getPersistentString(key: String): String? {
         return NSUserDefaults.standardUserDefaults.stringForKey(key)
