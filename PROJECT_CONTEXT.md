@@ -124,7 +124,12 @@
   - `보유중 (IN_STOCK)` 및 `전체 (ALL)` 탭에서 `SAUCE_SEASONING` 카테고리는 하단 전용 **`부재료` 콤팩트 카드 박스**에 `FlowRow` 칩으로 분리 노출되어 신선 주재료 스크롤을 어지럽히지 않음
   - 각 부재료 칩 우측의 **상태 버튼**을 탭하면 **`[장바구니]` ➔ `[보유중]` ➔ `[소진됨]` ➔ `[장바구니]`** 순으로 1-tap 원터치 순환 전환
   - `장바구니 (SHOPPING_CART)` 탭에서는 신선 주재료와 다 쓴 부재료가 완전 통합되어 마트 장보기 시 누락 없이 한 번에 체크 구매 가능 (체크 시 다시 `보유중` 부재료 섹션으로 자동 복귀)
-- **패키지**: `com.dahee.blockbyblock.presentation.inventory` 및 `domain/model/Ingredient.kt`, `data/datasource/MasterIngredientCatalog.kt`, `data/repository/InMemoryIngredientRepository.kt`
+- **대용량 서버 사이드 페이징(PageResponse) 및 0초 체감 백그라운드 사전 로딩(Prefetching)**:
+  - 서버 사이드 페이징 API (`GET /api/v1/ingredients?page=N&size=12&status=...&category=...`) 연동
+  - **0초 체감 사전 캐싱 엔진**: 현재 페이지 렌더링 완료 후 `page.hasNext == true`이면 다음 페이지(`page + 1`) 및 이전 페이지(`page - 1`)를 백그라운드에서 자동 사전 로딩하여 캐시에 보관, 페이지 전환 시 0ms 딜레이로 즉시 전환
+  - 상태 변경/수정/추가/삭제 시 캐시 무효화 및 현재 페이지 자동 갱신 지원
+  - **하단 페이지 네비게이션 컨트롤러 (`InventoryPaginationControls`)**: `[◀ 이전] N / Total [다음 ▶]` 내비게이션 지원 (2페이지 이상 시 노출)
+- **패키지**: `com.dahee.blockbyblock.presentation.inventory` 및 `domain/model/Ingredient.kt`, `domain/model/PageResult.kt`, `data/datasource/MasterIngredientCatalog.kt`, `data/repository/InMemoryIngredientRepository.kt`, `data/repository/NetworkIngredientRepository.kt`
 
 ### 4) 웹 전용 스플래시 로딩 화면 (Front-Facing 3D Toy Bento Snap-In)
 - **정면 뷰 3D 토이 브릭 음식 도시락 (Front-Facing Toy Bento Module)**:
@@ -190,8 +195,11 @@
   - **칸(카드) 전체 터치로 수정**: 칸을 터치하면 바로 해당 날짜/끼니의 식단 편집 모달 오픈
   - **우측 상단 쓰레기통 `[삭제]` 아이콘 버튼 & 확인 팝업**: 기록이 있는 끼니 카드의 우측 상단에 쓰레기통 아이콘 버튼이 노출되며, 터치 시 **"해당 끼니의 식단 기록을 삭제하시겠습니까?" 확인 팝업**을 거쳐 안전하게 삭제 지원
 - **2. 끼니별 식단 기록 모달 (`MealRecordDialog.kt`)**:
-  - **위쪽 (먹을 블록 영역 - Tray)**:
-    - 텍스트 없이 **오직 위에서 본 2X4 레고 블록 모양(`LegoTopViewBlock`)**이 레퍼런스처럼 가로로 층층이 착착착 이어붙어 쌓임
+  - **위쪽 (먹을 블록 영역 - Bento Lunchbox Tray)**:
+    - 텍스트 없이 **오직 위에서 본 레고 블록 모양(`FoodBlockTopView`)**이 도시락 통(`BentoLunchBoxView`) 안에 가로로 층층이 착착착 이어붙어 쌓임
+    - **동일 블록의 다중 배치(중복 배치) 지원**: 동일한 푸드 블록(예: 닭가슴살 2칸)을 원하는 수량만큼 식단/프리셋에 개별 칸으로 배치 가능
+    - **입력 및 배치 순서(sortOrder) 완벽 유지**: 사용자가 블록을 추가하거나 정렬한 순서(`sortOrder`: 0, 1, 2...)가 서버에 정확히 저장되고 새로고침 후에도 변함없이 유지
+    - **배치 고유 ID 기반 Compose Keying (`key(item.instanceId)`)**: 백엔드가 각 블록 배치마다 발급하는 고유 `id`(`instanceId`)를 Compose 렌더링 키로 사용하여 동일 블록 중복 배치 시에도 리렌더링 충돌 없이 안정적으로 동작
     - **터치 시 해당 블록이 쏙 빠지면서 아래 보관함 목록으로 즉시 되돌아감**
   - **아래쪽 (보관함 블록 목록 - Pool)**:
     - **실시간 검색창 (`AppTextField`)**: 블록 이름을 검색하여 원하는 블록을 빠르게 필터링
@@ -199,6 +207,7 @@
       - 카드를 클릭할 때마다 해당 블록이 위쪽(먹을 블록)에 **1개씩 추가되어 블록이 쌓임**
       - 여러 번 클릭하면 남은 블록 개수만큼 연속으로 식단에 추가 가능
   - **하단 메모 입력창 (`AppTextField`)**: 해당 끼니에 대한 간단한 텍스트 메모 작성
+  - **식단 프리셋 저장 & 적용**: 현재 배치된 블록 조합(순서 및 중복 블록 포함)을 원터치 프리셋으로 저장하고 불러오기 지원
   - **명시적 저장 프로세스**: **`[저장하기]` 버튼을 눌러야만 최종 수정/저장**되며, 원치 않을 경우 `[취소]` 가능
 - **3. 이번 주 탭 (7일 주간 타임라인 조회 & 일별 식단 전환)**:
   - **주간 네비게이터 바**: `[◀]` `2026년 8월 5주차 (8.24 ~ 8.30)` `[▶]`
@@ -206,7 +215,7 @@
     - **오늘 날짜 (`TODAY`)**: 초록색 하이라이트 테두리 + `TODAY` 뱃지 강조
     - **순수 레고 블록 트레이**: `총 N개` 등 개수 텍스트를 제거하고, 해당 일자에 등록된 **위에서 본 레고 블록 이미지만 가로로 착착착 쌓아놓은 깔끔한 비주얼** 노출
     - **날짜 카드 터치 시 ➔ 해당 날짜의 일별 식단 화면으로 즉시 전환**: 해당 날짜의 아침/점심/저녁/간식 전체를 바로 조회하고 수정할 수 있도록 유기적 연결
-- **패키지**: `com.dahee.blockbyblock.presentation.mealplan` 및 `domain/model/MealRecord.kt`, `domain/repository/MealRecordRepository.kt`, `data/repository/InMemoryMealRecordRepository.kt`
+- **패키지**: `com.dahee.blockbyblock.presentation.mealplan` 및 `domain/model/MealRecord.kt`, `domain/repository/MealRecordRepository.kt`, `data/repository/InMemoryMealRecordRepository.kt`, `data/repository/NetworkMealRecordRepository.kt`
 
 #### 7) 인터랙티브 온보딩 튜토리얼 시스템 (Phase 6 구현 완료)
 - **별도 가짜 페이지 없이 실제 앱 화면 기반 가이드 투어**:
