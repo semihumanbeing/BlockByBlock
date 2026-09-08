@@ -165,7 +165,13 @@ fun AuthScreen(
                             )
                         )
                     }.onFailure { err ->
-                        errorMessage = err.message ?: "Login failed"
+                        if (err is com.dahee.blockbyblock.data.remote.error.ApiError && err.hasFieldErrors()) {
+                            val emailErr = err.getFieldErrorMessage("email")
+                            val pwErr = err.getFieldErrorMessage("password")
+                            errorMessage = emailErr ?: pwErr ?: err.message
+                        } else {
+                            errorMessage = err.message ?: "Login failed"
+                        }
                     }
                 } else {
                     val nickname = emailInput.substringBefore("@")
@@ -182,7 +188,14 @@ fun AuthScreen(
                             )
                         )
                     }.onFailure { err ->
-                        errorMessage = err.message ?: "Sign up failed"
+                        if (err is com.dahee.blockbyblock.data.remote.error.ApiError && err.hasFieldErrors()) {
+                            val emailErr = err.getFieldErrorMessage("email")
+                            val pwErr = err.getFieldErrorMessage("password")
+                            val nickErr = err.getFieldErrorMessage("nickname")
+                            errorMessage = emailErr ?: pwErr ?: nickErr ?: err.message
+                        } else {
+                            errorMessage = err.message ?: "Sign up failed"
+                        }
                     }
                 }
             }

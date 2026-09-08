@@ -74,6 +74,19 @@ object TokenStorage {
         } catch (_: Throwable) {}
     }
 
+    private var authFailureHandler: ((reason: String?) -> Unit)? = null
+
+    fun setAuthFailureHandler(handler: ((reason: String?) -> Unit)?) {
+        authFailureHandler = handler
+    }
+
+    fun forceLogout(reason: String? = null) {
+        clearTokens()
+        authFailureHandler?.invoke(reason)
+    }
+
+    fun hasTokens(): Boolean = !_accessToken.value.isNullOrBlank()
+
     val isAuthenticated: Boolean
-        get() = !_accessToken.value.isNullOrBlank()
+        get() = hasTokens()
 }

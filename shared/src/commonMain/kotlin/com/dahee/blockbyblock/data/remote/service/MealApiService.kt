@@ -106,14 +106,7 @@ class MealApiService {
         }
     }
 
-    private suspend fun parseError(response: HttpResponse): Exception {
-        val text = response.bodyAsText()
-        val message = try {
-            val err = ApiClient.jsonConfig.decodeFromString<ApiErrorResponse>(text)
-            err.message ?: err.error ?: "Request failed (${response.status.value})"
-        } catch (_: Exception) {
-            "Request failed (${response.status.value}): $text"
-        }
-        return Exception(message)
+    private suspend fun parseError(response: HttpResponse): com.dahee.blockbyblock.data.remote.error.ApiError {
+        return ApiClient.parseError(response)
     }
 }
