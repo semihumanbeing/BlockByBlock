@@ -12,6 +12,7 @@ import com.dahee.blockbyblock.domain.repository.FoodBlockRepository
 import com.dahee.blockbyblock.domain.repository.MealRecordRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -48,6 +49,11 @@ class MealPlanViewModel(
     private val _navState = MutableStateFlow(DateNavigationState())
     private val _dialogState = MutableStateFlow(SlotDialogInternalState())
     private val _languageState = MutableStateFlow(initialLanguage)
+
+    // In-memory cache for weekly meal records keyed by weekStartDate ("YYYY-MM-DD")
+    private val weeklyMealCache = mutableMapOf<String, List<DayMealRecord>>()
+    private val activePrefetchJobs = mutableMapOf<String, Job>()
+    private var loadWeekJob: Job? = null
 
     fun setLanguage(language: com.dahee.blockbyblock.core.i18n.AppLanguage) {
         _languageState.value = language
@@ -120,9 +126,80 @@ class MealPlanViewModel(
     )
 
     init {
+        loadWeek(_navState.value.weekStartDate)
         viewModelScope.launch {
-            mealRecordRepository.fetchWeeklyMeals(_navState.value.weekStartDate)
             mealRecordRepository.fetchMealPresets()
+        }
+    }
+
+    fun loadWeek(startDate: String, forceRefresh: Boolean = false) {
+        val prevWeek = offsetDate(startDate, -7)
+        val nextWeek = offsetDate(startDate, 7)
+
+        if (!forceRefresh && weeklyMealCache.containsKey(startDate)) {
+            // Already cached: 0ms delay. Trigger background prefetch for adjacent weeks
+            prefetchWeek(prevWeek)
+            prefetchWeek(nextWeek)
+            return
+        }
+
+        loadWeekJob?.cancel()
+        loadWeekJob = viewModelScope.launch {
+            val result = mealRecordRepository.fetchWeeklyMeals(startDate)
+            result.onSuccess { records ->
+                weeklyMealCache[startDate] = records
+                // Background prefetch adjacent weeks
+                prefetchWeek(prevWeek)
+                prefetchWeek(nextWeek)
+            }
+        }
+    }
+
+    private fun prefetchWeek(startDate: String) {
+        if (weeklyMealCache.containsKey(startDate)) return
+        if (activePrefetchJobs[startDate]?.isActive == true) return
+
+        val job = viewModelScope.launch {
+            try {
+                val result = mealRecordRepository.fetchWeeklyMeals(startDate)
+                result.onSuccess { records ->
+                    weeklyMealCache[startDate] = records
+                }
+            } catch (_: Exception) {
+                // Silently ignore background prefetch errors
+            } finally {
+                activePrefetchJobs.remove(startDate)
+            }
+        }
+        activePrefetchJobs[startDate] = job
+    }
+
+    fun isWeekCached(weekStartDate: String): Boolean = weeklyMealCache.containsKey(weekStartDate)
+
+    fun invalidateWeekCache(weekStartDate: String? = null) {
+        if (weekStartDate != null) {
+            weeklyMealCache.remove(weekStartDate)
+            loadWeek(weekStartDate, forceRefresh = true)
+        } else {
+            weeklyMealCache.clear()
+            loadWeek(_navState.value.weekStartDate, forceRefresh = true)
+        }
+    }
+
+    internal fun updateWeekCacheForDay(dayRecord: DayMealRecord) {
+        val monday = getMondayOfWeek(dayRecord.dateString)
+        val cached = weeklyMealCache[monday]
+        if (cached != null) {
+            val updated = cached.filterNot { it.dateString == dayRecord.dateString } + dayRecord
+            weeklyMealCache[monday] = updated
+        }
+    }
+
+    internal fun removeDayFromWeekCache(dateString: String) {
+        val monday = getMondayOfWeek(dateString)
+        val cached = weeklyMealCache[monday]
+        if (cached != null) {
+            weeklyMealCache[monday] = cached.filterNot { it.dateString == dateString }
         }
     }
 
@@ -132,43 +209,62 @@ class MealPlanViewModel(
 
     fun onPreviousDay() {
         val prevDate = offsetDate(_navState.value.selectedDateString, -1)
-        _navState.value = _navState.value.copy(selectedDateString = prevDate)
+        val targetWeek = getMondayOfWeek(prevDate)
+        _navState.value = _navState.value.copy(
+            selectedDateString = prevDate,
+            weekStartDate = targetWeek
+        )
+        loadWeek(targetWeek)
     }
 
     fun onNextDay() {
         val nextDate = offsetDate(_navState.value.selectedDateString, 1)
-        _navState.value = _navState.value.copy(selectedDateString = nextDate)
+        val targetWeek = getMondayOfWeek(nextDate)
+        _navState.value = _navState.value.copy(
+            selectedDateString = nextDate,
+            weekStartDate = targetWeek
+        )
+        loadWeek(targetWeek)
     }
 
     fun onSelectDateAndOpenDayView(dateString: String) {
+        val targetWeek = getMondayOfWeek(dateString)
         _navState.value = _navState.value.copy(
             selectedDateString = dateString,
+            weekStartDate = targetWeek,
             selectedTab = MealPlanTab.TODAY
         )
+        loadWeek(targetWeek)
     }
 
     fun onResetToToday() {
         val today = getCurrentDateIso()
+        val currentMonday = getMondayOfWeek(today)
         _navState.value = _navState.value.copy(
             selectedDateString = today,
-            weekStartDate = getMondayOfWeek(today),
+            weekStartDate = currentMonday,
             selectedTab = MealPlanTab.TODAY
         )
+        loadWeek(currentMonday)
     }
 
     fun onPreviousWeek() {
         val prevWeek = offsetDate(_navState.value.weekStartDate, -7)
         _navState.value = _navState.value.copy(weekStartDate = prevWeek)
+        loadWeek(prevWeek)
     }
 
     fun onNextWeek() {
         val nextWeek = offsetDate(_navState.value.weekStartDate, 7)
         _navState.value = _navState.value.copy(weekStartDate = nextWeek)
+        loadWeek(nextWeek)
     }
 
     fun onCurrentWeek() {
         val today = getCurrentDateIso()
-        _navState.value = _navState.value.copy(weekStartDate = getMondayOfWeek(today))
+        val currentMonday = getMondayOfWeek(today)
+        _navState.value = _navState.value.copy(weekStartDate = currentMonday)
+        loadWeek(currentMonday)
     }
 
     fun onOpenSlotDialog(dateString: String, dateLabel: String, mealType: MealType) {
@@ -323,6 +419,7 @@ class MealPlanViewModel(
 
             val updatedDay = existingDay.updateSlot(updatedSlot).copy(updatedAt = currentTimeMillis())
             mealRecordRepository.saveMealRecord(updatedDay)
+            updateWeekCacheForDay(updatedDay)
             onCloseSlotDialog()
             onSlotSavedListener?.invoke()
         }
@@ -341,8 +438,10 @@ class MealPlanViewModel(
                 updatedDay.extra.memo.isBlank()
             ) {
                 mealRecordRepository.deleteMealRecord(updatedDay.id)
+                removeDayFromWeekCache(updatedDay.dateString)
             } else {
                 mealRecordRepository.saveMealRecord(updatedDay)
+                updateWeekCacheForDay(updatedDay)
             }
         }
     }
@@ -564,7 +663,7 @@ class MealPlanViewModel(
             return "$startMonday ~ $endSunday"
         }
 
-        private fun offsetDate(baseDate: String, days: Int): String {
+        fun offsetDate(baseDate: String, days: Int): String {
             val parts = baseDate.split("-")
             if (parts.size != 3) return baseDate
             var y = parts[0].toIntOrNull() ?: 2026

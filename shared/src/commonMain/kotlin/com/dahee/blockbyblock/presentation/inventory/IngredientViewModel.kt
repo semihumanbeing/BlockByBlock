@@ -41,6 +41,15 @@ class IngredientViewModel(
     private val activePrefetchJobs = mutableMapOf<PageCacheKey, Job>()
     private var loadJob: Job? = null
 
+    // In-memory cache for master catalog search queries keyed by query, category, and language
+    private data class CatalogCacheKey(
+        val query: String,
+        val category: IngredientCategory?,
+        val lang: String
+    )
+
+    private val catalogCache = mutableMapOf<CatalogCacheKey, List<CatalogIngredient>>()
+
     init {
         loadPage(page = 1)
         observeAllIngredients()
@@ -283,19 +292,49 @@ class IngredientViewModel(
         searchCatalog(_uiState.value.catalogSearchQuery, newCat)
     }
 
+    fun isCatalogCached(query: String, category: IngredientCategory?, lang: String = currentLanguage.name): Boolean {
+        return catalogCache.containsKey(CatalogCacheKey(query = query.trim(), category = category, lang = lang))
+    }
+
+    fun clearCatalogCache() {
+        catalogCache.clear()
+    }
+
     private fun searchCatalog(query: String, category: IngredientCategory?) {
+        val trimmedQuery = query.trim()
+        val langCode = currentLanguage.name
+        val cacheKey = CatalogCacheKey(
+            query = trimmedQuery,
+            category = category,
+            lang = langCode
+        )
+
+        // If cached in memory, display immediately with 0ms delay
+        val cached = catalogCache[cacheKey]
+        if (cached != null) {
+            catalogSearchJob?.cancel()
+            _uiState.update { current ->
+                if (current.catalogSearchQuery == query && current.catalogCategoryFilter == category) {
+                    current.copy(catalogResults = cached)
+                } else {
+                    current
+                }
+            }
+            return
+        }
+
         catalogSearchJob?.cancel()
         catalogSearchJob = scope.launch {
-            if (query.isNotBlank()) {
+            if (trimmedQuery.isNotBlank()) {
                 delay(150)
             }
-            val langCode = currentLanguage.name
             val result = repository.fetchCatalogIngredients(
-                query = query.ifBlank { null },
+                query = trimmedQuery.ifBlank { null },
                 category = category,
                 lang = langCode
             )
             result.onSuccess { items ->
+                catalogCache[cacheKey] = items
                 _uiState.update { current ->
                     if (current.catalogSearchQuery == query && current.catalogCategoryFilter == category) {
                         current.copy(catalogResults = items)
@@ -304,8 +343,15 @@ class IngredientViewModel(
                     }
                 }
             }.onFailure {
-                val fallback = MasterIngredientCatalog.search(query, category, langCode)
-                _uiState.update { it.copy(catalogResults = fallback) }
+                val fallback = MasterIngredientCatalog.search(trimmedQuery, category, langCode)
+                catalogCache[cacheKey] = fallback
+                _uiState.update { current ->
+                    if (current.catalogSearchQuery == query && current.catalogCategoryFilter == category) {
+                        current.copy(catalogResults = fallback)
+                    } else {
+                        current
+                    }
+                }
             }
         }
     }
