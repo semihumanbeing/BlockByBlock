@@ -22,7 +22,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dahee.blockbyblock.core.i18n.LocalStrings
@@ -257,8 +261,7 @@ private fun MoldItemCard(
         MoldCapacityFormatter.formatCapacity(equipment.displayCapacity, capacityUnit)
     }
 
-    val defaultNamePattern = "${equipment.displayCapacity}ml ${equipment.cellCount}칸"
-    val hasCustomName = equipment.name.isNotBlank() && equipment.name != defaultNamePattern && !equipment.name.startsWith(capacityLabel)
+    val hasCustomName = !equipment.isDefaultName
 
     AppCard(
         modifier = modifier.fillMaxWidth(),
@@ -266,7 +269,7 @@ private fun MoldItemCard(
         borderColor = AppColors.Border.copy(alpha = 0.6f),
         borderWidth = 0.5.dp,
         elevation = 1.dp,
-        padding = 16.dp,
+        padding = 12.dp,
         onClick = onClick
     ) {
         Row(
@@ -278,10 +281,10 @@ private fun MoldItemCard(
                 preset = equipment.moldPreset ?: MoldGridPreset.CUSTOM,
                 moldColor = AppColors.hexToColor(equipment.moldColorHex),
                 cellCount = equipment.cellCount,
-                size = 60.dp
+                size = 54.dp
             )
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
             // Capacity & Slots or Custom Name
             Column(
@@ -291,64 +294,53 @@ private fun MoldItemCard(
                 if (hasCustomName) {
                     Text(
                         text = equipment.name,
-                        fontSize = 15.5.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = AppColors.TextPrimary,
-                        maxLines = 1
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(2.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = capacityLabel,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = AppColors.TextSecondary
-                        )
-                        Text(
-                            text = "·",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AppColors.TextMuted
-                        )
-                        Text(
-                            text = strings.slotCount(equipment.cellCount),
-                            fontSize = 13.sp,
-                            color = AppColors.TextSecondary
-                        )
+                    val subText = buildAnnotatedString {
+                        withStyle(SpanStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium, color = AppColors.TextSecondary)) {
+                            append(capacityLabel)
+                        }
+                        withStyle(SpanStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AppColors.TextMuted)) {
+                            append(" · ")
+                        }
+                        withStyle(SpanStyle(fontSize = 13.sp, color = AppColors.TextSecondary)) {
+                            append(strings.slotCount(equipment.cellCount))
+                        }
                     }
+                    Text(
+                        text = subText,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 } else {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = capacityLabel,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AppColors.TextPrimary
-                        )
-
-                        Text(
-                            text = "·",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AppColors.TextMuted
-                        )
-
-                        Text(
-                            text = strings.slotCount(equipment.cellCount),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = AppColors.TextSecondary
-                        )
+                    val moldDetailText = buildAnnotatedString {
+                        withStyle(SpanStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)) {
+                            append(capacityLabel)
+                        }
+                        withStyle(SpanStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AppColors.TextMuted)) {
+                            append(" · ")
+                        }
+                        withStyle(SpanStyle(fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold, color = AppColors.TextSecondary)) {
+                            append(strings.slotCount(equipment.cellCount))
+                        }
                     }
+                    Text(
+                        text = moldDetailText,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             // Quantity Stepper ([-] [N개] [+])
             EditableNumberStepper(
@@ -358,8 +350,6 @@ private fun MoldItemCard(
                 step = 1,
                 minValue = 1
             )
-
-            Spacer(modifier = Modifier.width(8.dp))
         }
     }
 }

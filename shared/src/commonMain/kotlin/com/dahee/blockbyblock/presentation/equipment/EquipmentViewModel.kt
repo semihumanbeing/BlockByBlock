@@ -17,13 +17,22 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import com.dahee.blockbyblock.core.i18n.AppLanguage
+import com.dahee.blockbyblock.core.i18n.getStrings
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class EquipmentViewModel(
-    private val repository: EquipmentRepository
+    private val repository: EquipmentRepository,
+    initialLanguage: AppLanguage = AppLanguage.KO
 ) : ViewModel() {
+
+    private var currentLanguage: AppLanguage = initialLanguage
+
+    fun setLanguage(language: AppLanguage) {
+        currentLanguage = language
+    }
 
     private val _screenMode = MutableStateFlow(EquipmentScreenMode.LIST)
     private val _moldDrafts = MutableStateFlow(EquipmentUiState.defaultMoldDrafts)
@@ -87,25 +96,8 @@ class EquipmentViewModel(
         if (oldUnit != unit) {
             _moldDrafts.update { list ->
                 list.map { draft ->
-                    if (draft.name.isNotBlank()) {
-                        val oldCapStr = MoldCapacityFormatter.formatCapacity(draft.displayCapacity, oldUnit)
-                        val oldPresetStr = MoldCapacityFormatter.formatPreset(draft.preset, oldUnit)
-                        val newCapStr = MoldCapacityFormatter.formatCapacity(draft.displayCapacity, unit)
-
-                        val oldAutoNames = listOf(
-                            "$oldCapStr ${draft.cellCount}칸",
-                            "$oldPresetStr ${draft.cellCount}칸",
-                            "$oldCapStr ${draft.cellCount} Slot",
-                            "$oldPresetStr ${draft.cellCount} Slot",
-                            oldCapStr,
-                            oldPresetStr
-                        )
-
-                        if (oldAutoNames.contains(draft.name)) {
-                            draft.copy(name = "$newCapStr ${draft.cellCount}칸")
-                        } else {
-                            draft
-                        }
+                    if (draft.name.isNotBlank() && Equipment.isDefaultMoldName(draft.name, draft.displayCapacity, draft.capacityMl)) {
+                        draft.copy(name = "")
                     } else {
                         draft
                     }
@@ -168,7 +160,7 @@ class EquipmentViewModel(
                 MoldDraftConfig(
                     id = "draft_${preset.name}",
                     preset = preset,
-                    name = existing.name,
+                    name = if (existing.isDefaultName) "" else existing.name,
                     isSelected = true,
                     capacityMl = existing.customCapacityMl ?: preset.capacityMl,
                     cellCount = existing.cellCount,
@@ -198,7 +190,7 @@ class EquipmentViewModel(
                 MoldDraftConfig(
                     id = "draft_custom_${mold.id}_${index}",
                     preset = MoldGridPreset.CUSTOM,
-                    name = mold.name,
+                    name = if (mold.isDefaultName) "" else mold.name,
                     isSelected = true,
                     capacityMl = mold.customCapacityMl ?: mold.displayCapacity,
                     cellCount = mold.cellCount,
@@ -385,7 +377,8 @@ class EquipmentViewModel(
                 } else {
                     MoldCapacityFormatter.formatPreset(moldDraft.preset, _capacityUnit.value)
                 }
-                val fallbackName = "$capacityLabel ${moldDraft.cellCount}칸"
+                val strings = getStrings(currentLanguage)
+                val fallbackName = "$capacityLabel ${strings.slotCount(moldDraft.cellCount)}"
                 val moldName = moldDraft.name.ifBlank { fallbackName }
 
                 Equipment(

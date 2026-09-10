@@ -19,4 +19,29 @@ data class Equipment(
 ) {
     val displayCapacity: Int
         get() = customCapacityMl ?: moldPreset?.capacityMl ?: 250
+
+    val isDefaultName: Boolean
+        get() = isDefaultMoldName(name, displayCapacity, customCapacityMl)
+
+    companion object {
+        private val AUTO_GENERATED_MOLD_REGEX = Regex(
+            """^(((\d+(/\d+)?(\.\d+)?\s*(ml|Cup|Tbsp))|Custom)\s*)?[\(·/]?\s*(\d+\s*(칸|slots?|구|cell|cells)?)?\s*\)?$""",
+            RegexOption.IGNORE_CASE
+        )
+
+        fun isDefaultMoldName(name: String, displayCapacity: Int = 0, customCapacityMl: Int? = null): Boolean {
+            if (name.isBlank()) return true
+            val trimmed = name.trim()
+            if (AUTO_GENERATED_MOLD_REGEX.matches(trimmed)) return true
+
+            val fallbackKoreanPattern = Regex("""^.*?\b\d+\s*칸\s*$""")
+            val startsWithCapacity = (displayCapacity > 0 && trimmed.startsWith("${displayCapacity}ml", ignoreCase = true)) ||
+                    (customCapacityMl != null && trimmed.startsWith("${customCapacityMl}ml", ignoreCase = true)) ||
+                    trimmed.startsWith("Custom", ignoreCase = true)
+
+            if (startsWithCapacity && fallbackKoreanPattern.matches(trimmed)) return true
+
+            return false
+        }
+    }
 }

@@ -70,7 +70,7 @@ fun SingleMoldEditDialog(
     val strings = LocalStrings.current
     val focusManager = LocalFocusManager.current
     val preset = equipment.moldPreset ?: MoldGridPreset.CUSTOM
-    var moldName by remember { mutableStateOf(equipment.name) }
+    var moldName by remember { mutableStateOf(if (equipment.isDefaultName) "" else equipment.name) }
     var capacityMl by remember { mutableStateOf(equipment.customCapacityMl ?: equipment.displayCapacity) }
     var cellCount by remember { mutableStateOf(equipment.cellCount) }
     var quantity by remember { mutableStateOf(equipment.quantity) }
@@ -363,7 +363,7 @@ fun SingleMoldEditDialog(
                             } else {
                                 MoldCapacityFormatter.formatPreset(preset, capacityUnit, strings.moldPresetLabel(MoldGridPreset.CUSTOM))
                             }
-                            val fallbackName = "${capacityLabel} ${cellCount}${strings.unitSlot}"
+                            val fallbackName = "${capacityLabel} ${strings.slotCount(cellCount)}"
                             val updatedName = moldName.ifBlank { fallbackName }
                             val updatedEquipment = equipment.copy(
                                 name = updatedName,
