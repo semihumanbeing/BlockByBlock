@@ -25,7 +25,7 @@ class NetworkIngredientRepository(
     override fun getAllIngredients(): Flow<List<Ingredient>> = _ingredients.asStateFlow()
 
     override suspend fun fetchIngredients(): Result<List<Ingredient>> {
-        return apiService.getIngredients().map { response ->
+        return apiService.getIngredients(page = 1, size = 1000).map { response ->
             val mapped = response.allIngredients.map { mapResponseToIngredient(it) }
             _ingredients.value = mapped
             mapped

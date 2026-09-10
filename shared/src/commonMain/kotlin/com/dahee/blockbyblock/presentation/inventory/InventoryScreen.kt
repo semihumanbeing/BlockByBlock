@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Kitchen
@@ -94,7 +95,7 @@ fun InventoryScreen(
             onSearchQueryChange = { viewModel.onCatalogSearchQueryChange(it) },
             selectedCategory = uiState.catalogCategoryFilter,
             onCategoryFilterChange = { viewModel.onCatalogCategoryFilterChange(it) },
-            catalogResults = uiState.catalogResults,
+            catalogResults = uiState.catalogPagedResults,
             registeredIngredients = uiState.registeredIngredients,
             onAddFromCatalog = { item, status ->
                 viewModel.onAddFromCatalog(item, status)
@@ -105,6 +106,9 @@ fun InventoryScreen(
             onRemoveIngredient = { id ->
                 viewModel.onDeleteIngredient(id)
             },
+            currentPage = uiState.catalogCurrentPage,
+            totalPages = uiState.catalogTotalPages,
+            onPageChange = { viewModel.onCatalogPageChange(it) },
             onDismiss = { viewModel.onCloseSearchCatalogDialog() }
         )
     }
@@ -195,36 +199,35 @@ fun InventoryScreen(
                             )
                         }
 
-                        // 2. [Cook Now] Button for Web (Identical size and height, placed next to search button)
-                        if (isWeb) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .shadow(2.dp, RoundedCornerShape(10.dp), spotColor = AppColors.Shadow)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(AppColors.Primary)
-                                    .border(1.dp, AppColors.PrimaryDark, RoundedCornerShape(10.dp))
-                                    .pointerHoverIcon(PointerIcon.Hand)
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
-                                        onClick = onCookClick
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 9.dp)
-                            ) {
-                                Image(
-                                    painter = painterResource(Res.drawable.other_utensils),
-                                    contentDescription = strings.cookBtn,
-                                    modifier = Modifier.size(16.dp)
+                        // 2. [Create Block] Button (Available on both mobile and web)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .shadow(2.dp, RoundedCornerShape(10.dp), spotColor = AppColors.Shadow)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(AppColors.Primary)
+                                .border(1.dp, AppColors.PrimaryDark, RoundedCornerShape(10.dp))
+                                .pointerHoverIcon(PointerIcon.Hand)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = onCookClick
                                 )
-                                Spacer(modifier = Modifier.width(5.dp))
-                                Text(
-                                    text = strings.cookBtn,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            }
+                                .padding(horizontal = 12.dp, vertical = 9.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = strings.cookBtn,
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = strings.cookBtn,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
                         }
                     }
                 }
@@ -446,19 +449,6 @@ fun InventoryScreen(
                             seasonings = seasoningIngredients,
                             onToggleStatus = { viewModel.onToggleChecklistStatus(it) },
                             onOpenEdit = { viewModel.onOpenEditDialog(it) }
-                        )
-                    }
-                }
-
-                // Bottom Pagination Controls
-                if (uiState.totalPages > 1) {
-                    item {
-                        InventoryPaginationControls(
-                            currentPage = uiState.currentPage,
-                            totalPages = uiState.totalPages,
-                            hasPrevious = uiState.hasPreviousPage,
-                            hasNext = uiState.hasNextPage,
-                            onPageChange = { viewModel.onPageChange(it) }
                         )
                     }
                 }
@@ -696,105 +686,4 @@ private fun PantrySeasoningChip(
     }
 }
 
-@Composable
-private fun InventoryPaginationControls(
-    currentPage: Int,
-    totalPages: Int,
-    hasPrevious: Boolean,
-    hasNext: Boolean,
-    onPageChange: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val strings = LocalStrings.current
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Prev Page Button
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(if (hasPrevious) AppColors.SurfaceVariant else Color.Transparent)
-                .border(
-                    width = 0.5.dp,
-                    color = if (hasPrevious) AppColors.Border else Color.Transparent,
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .pointerHoverIcon(if (hasPrevious) PointerIcon.Hand else PointerIcon.Default)
-                .clickable(
-                    enabled = hasPrevious,
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = { onPageChange(currentPage - 1) }
-                )
-                .padding(horizontal = 12.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = strings.prevPageBtn,
-                tint = if (hasPrevious) AppColors.TextPrimary else AppColors.TextMuted,
-                modifier = Modifier.size(14.dp)
-            )
-            Text(
-                text = strings.prevPageBtn,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = if (hasPrevious) AppColors.TextPrimary else AppColors.TextMuted
-            )
-        }
-
-        Spacer(modifier = Modifier.width(18.dp))
-
-        // Page Indicator
-        Text(
-            text = "$currentPage / $totalPages",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = AppColors.TextSecondary
-        )
-
-        Spacer(modifier = Modifier.width(18.dp))
-
-        // Next Page Button
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(if (hasNext) AppColors.SurfaceVariant else Color.Transparent)
-                .border(
-                    width = 0.5.dp,
-                    color = if (hasNext) AppColors.Border else Color.Transparent,
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .pointerHoverIcon(if (hasNext) PointerIcon.Hand else PointerIcon.Default)
-                .clickable(
-                    enabled = hasNext,
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = { onPageChange(currentPage + 1) }
-                )
-                .padding(horizontal = 12.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = strings.nextPageBtn,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = if (hasNext) AppColors.TextPrimary else AppColors.TextMuted
-            )
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = strings.nextPageBtn,
-                tint = if (hasNext) AppColors.TextPrimary else AppColors.TextMuted,
-                modifier = Modifier.size(14.dp)
-            )
-        }
-    }
-}
 

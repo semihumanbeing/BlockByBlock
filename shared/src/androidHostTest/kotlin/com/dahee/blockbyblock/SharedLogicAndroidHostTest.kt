@@ -81,7 +81,7 @@ class SharedLogicAndroidHostTest {
     }
 
     @Test
-    fun testIngredientViewModelPagingAndCache() = kotlinx.coroutines.runBlocking {
+    fun testIngredientViewModelUnpaginatedInventoryAndPreserveOrder() = kotlinx.coroutines.runBlocking {
         val repo = com.dahee.blockbyblock.data.repository.InMemoryIngredientRepository()
         for (i in 1..25) {
             repo.upsertIngredient(
@@ -102,35 +102,79 @@ class SharedLogicAndroidHostTest {
             scope = testScope
         )
 
-        // Initial state should load page 1
+        // 1. Inventory list is NOT paginated: all 25 items are displayed directly
         val state1 = viewModel.uiState.value
-        assertEquals(1, state1.currentPage)
-        assertEquals(12, state1.displayedIngredients.size)
-        assertEquals(3, state1.totalPages)
-        assertEquals(true, state1.hasNextPage)
-        assertEquals(false, state1.hasPreviousPage)
+        assertEquals(25, state1.displayedIngredients.size)
+        assertEquals(25, state1.registeredIngredients.size)
 
-        // Switch to page 2
-        viewModel.onPageChange(2)
+        // 2. Initial order: ing_25 is at index 0, ing_15 is at index 10, ing_1 is at index 24 (since upsert inserts at front)
+        val initialIndex15 = state1.displayedIngredients.indexOfFirst { it.id == "ing_15" }
+        assertEquals(10, initialIndex15)
+
+        // 3. Mark ing_15 as consumed (status OUT_OF_STOCK) -> Order must NOT change!
+        viewModel.onMarkAsConsumed("ing_15")
+        val stateAfterConsumed = viewModel.uiState.value
+        val afterConsumedIndex15 = stateAfterConsumed.displayedIngredients.indexOfFirst { it.id == "ing_15" }
+        // Must stay at the exact same index, NEVER jumping to index 0
+        assertEquals(initialIndex15, afterConsumedIndex15)
+        assertEquals(com.dahee.blockbyblock.domain.model.IngredientStatus.OUT_OF_STOCK, stateAfterConsumed.displayedIngredients[initialIndex15].status)
+
+        // 4. Move ing_15 to cart -> Order still remains identical
+        viewModel.onMoveToCart("ing_15")
+        val stateAfterCart = viewModel.uiState.value
+        val afterCartIndex15 = stateAfterCart.displayedIngredients.indexOfFirst { it.id == "ing_15" }
+        assertEquals(initialIndex15, afterCartIndex15)
+        assertEquals(com.dahee.blockbyblock.domain.model.IngredientStatus.CART, stateAfterCart.displayedIngredients[initialIndex15].status)
+
+        // 5. Restore ing_15 to stock -> Order still remains identical
+        viewModel.onRestoreToStock("ing_15")
+        val stateAfterRestore = viewModel.uiState.value
+        val afterRestoreIndex15 = stateAfterRestore.displayedIngredients.indexOfFirst { it.id == "ing_15" }
+        assertEquals(initialIndex15, afterRestoreIndex15)
+        assertEquals(com.dahee.blockbyblock.domain.model.IngredientStatus.STOCK, stateAfterRestore.displayedIngredients[initialIndex15].status)
+
+        // 6. Checklist 1-tap circular toggle -> Order still remains identical
+        viewModel.onToggleChecklistStatus("ing_15")
+        val stateAfterToggle = viewModel.uiState.value
+        val afterToggleIndex15 = stateAfterToggle.displayedIngredients.indexOfFirst { it.id == "ing_15" }
+        assertEquals(initialIndex15, afterToggleIndex15)
+        assertEquals(com.dahee.blockbyblock.domain.model.IngredientStatus.OUT_OF_STOCK, stateAfterToggle.displayedIngredients[initialIndex15].status)
+
+        testJob.cancel()
+    }
+
+    @Test
+    fun testCatalogSearchPagination() = kotlinx.coroutines.runBlocking {
+        val testJob = kotlinx.coroutines.Job()
+        val testScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined + testJob)
+
+        val repo = com.dahee.blockbyblock.data.repository.InMemoryIngredientRepository()
+        val viewModel = com.dahee.blockbyblock.presentation.inventory.IngredientViewModel(
+            repository = repo,
+            scope = testScope
+        )
+
+        // 1. Open catalog dialog -> page 1 should be active
+        viewModel.onOpenSearchCatalogDialog()
+        val state1 = viewModel.uiState.value
+        assertEquals(1, state1.catalogCurrentPage)
+        assertEquals(com.dahee.blockbyblock.presentation.inventory.IngredientViewModel.CATALOG_PAGE_SIZE, state1.catalogPagedResults.size)
+        assertTrue(state1.catalogTotalPages > 1, "Catalog should have multiple pages")
+        val page1FirstItem = state1.catalogPagedResults.first().id
+
+        // 2. Navigate to page 2
+        viewModel.onCatalogPageChange(2)
         val state2 = viewModel.uiState.value
-        assertEquals(2, state2.currentPage)
-        assertEquals(12, state2.displayedIngredients.size)
-        assertEquals(true, state2.hasNextPage)
-        assertEquals(true, state2.hasPreviousPage)
+        assertEquals(2, state2.catalogCurrentPage)
+        assertEquals(com.dahee.blockbyblock.presentation.inventory.IngredientViewModel.CATALOG_PAGE_SIZE, state2.catalogPagedResults.size)
+        val page2FirstItem = state2.catalogPagedResults.first().id
+        assertTrue(page1FirstItem != page2FirstItem, "Page 2 should have different items from Page 1")
 
-        // Switch to page 3
-        viewModel.onPageChange(3)
-        val state3 = viewModel.uiState.value
-        assertEquals(3, state3.currentPage)
-        assertEquals(1, state3.displayedIngredients.size)
-        assertEquals(false, state3.hasNextPage)
-        assertEquals(true, state3.hasPreviousPage)
-
-        // Switch back to page 2 (instant from cache)
-        viewModel.onPageChange(2)
-        val stateBack2 = viewModel.uiState.value
-        assertEquals(2, stateBack2.currentPage)
-        assertEquals(12, stateBack2.displayedIngredients.size)
+        // 3. Search resets catalog to page 1
+        viewModel.onCatalogSearchQueryChange("당근")
+        viewModel.catalogSearchJob?.join()
+        val stateSearch = viewModel.uiState.value
+        assertEquals(1, stateSearch.catalogCurrentPage)
 
         testJob.cancel()
     }
@@ -525,6 +569,12 @@ class SharedLogicAndroidHostTest {
         assertEquals("Expires today", enStrings.shelfLifeRemainingDDay(0))
         assertEquals("Expired", enStrings.shelfLifeRemainingDDay(-1))
         assertEquals("Until 2026-06-08", enStrings.shelfLifeUntil("2026-06-08"))
+        assertEquals("2칸", koStrings.slotCount(2))
+        assertEquals("4칸", koStrings.slotCount(4))
+        assertEquals("1 slot", enStrings.slotCount(1))
+        assertEquals("2 slots", enStrings.slotCount(2))
+        assertEquals("4 slots", enStrings.slotCount(4))
+        assertEquals("6 slots", enStrings.slotCount(6))
 
         // 4. PushNotificationManager token management
         com.dahee.blockbyblock.core.notification.PushNotificationManager.setDeviceFcmToken("mock_fcm_token_123")
@@ -535,5 +585,58 @@ class SharedLogicAndroidHostTest {
         val generatedToken = com.dahee.blockbyblock.core.notification.PushNotificationManager.getOrCreateDeviceFcmToken()
         assertTrue(generatedToken.isNotBlank())
         com.dahee.blockbyblock.core.notification.PushNotificationManager.setDeviceFcmToken(null)
+    }
+
+    @Test
+    fun testMoldDefaultNameDetection() {
+        val defaultNames = listOf(
+            "500ml 2칸",
+            "500ml 6칸",
+            "250ml 4칸",
+            "125ml 6칸",
+            "30ml 16칸",
+            "Custom 6칸",
+            "200ml 6칸",
+            "2 Cup 2칸",
+            "1/2 Cup 6칸",
+            "500ml (2칸)",
+            "500ml · 2칸",
+            "500ml 2 slots",
+            "500ml 1 slot",
+            "500ml",
+            "Custom",
+            "2칸",
+            "6칸",
+            ""
+        )
+
+        for (name in defaultNames) {
+            val mold = com.dahee.blockbyblock.domain.model.Equipment(
+                id = "1",
+                name = name,
+                category = com.dahee.blockbyblock.domain.model.EquipmentCategory.MOLD,
+                customCapacityMl = 500,
+                cellCount = 2
+            )
+            assertTrue(mold.isDefaultName, "Expected '$name' to be recognized as a default mold name")
+        }
+
+        val customNames = listOf(
+            "소고기 몰드",
+            "베베락 이유식 용기",
+            "Blue Silicone Tray",
+            "Baby Food Cubes 1"
+        )
+
+        for (name in customNames) {
+            val mold = com.dahee.blockbyblock.domain.model.Equipment(
+                id = "2",
+                name = name,
+                category = com.dahee.blockbyblock.domain.model.EquipmentCategory.MOLD,
+                customCapacityMl = 500,
+                cellCount = 2
+            )
+            assertTrue(!mold.isDefaultName, "Expected '$name' to be recognized as a custom mold name")
+        }
     }
 }

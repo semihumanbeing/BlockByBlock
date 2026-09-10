@@ -40,6 +40,10 @@ data class IngredientUiState(
     val catalogCategoryFilter: IngredientCategory? = null,
     val catalogTargetStatus: IngredientStatus = IngredientStatus.STOCK,
     val catalogResults: List<CatalogIngredient> = MasterIngredientCatalog.items,
+    val catalogPagedResults: List<CatalogIngredient> = MasterIngredientCatalog.items.take(8),
+    val catalogCurrentPage: Int = 1,
+    val catalogPageSize: Int = 8,
+    val catalogTotalPages: Int = 1,
     val editingIngredient: Ingredient? = null,
     val undoDeleteState: UndoDeleteState? = null,
     val autoSaveToast: String? = null

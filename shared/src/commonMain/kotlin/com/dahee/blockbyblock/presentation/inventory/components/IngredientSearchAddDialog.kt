@@ -21,6 +21,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
@@ -64,6 +66,9 @@ fun IngredientSearchAddDialog(
     onAddFromCatalog: (CatalogIngredient, IngredientStatus) -> Unit,
     onAddCustomIngredient: (String, IngredientStatus) -> Unit,
     onRemoveIngredient: (String) -> Unit = {},
+    currentPage: Int = 1,
+    totalPages: Int = 1,
+    onPageChange: (Int) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val strings = LocalStrings.current
@@ -168,8 +173,8 @@ fun IngredientSearchAddDialog(
                         .weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Option to add custom ingredient if search query is entered
-                    if (searchQuery.isNotBlank()) {
+                    // Option to add custom ingredient if search query is entered (shown on page 1)
+                    if (searchQuery.isNotBlank() && currentPage == 1) {
                         val trimmedQuery = searchQuery.trim()
                         val alreadyRegistered = registeredIngredients.find {
                             it.name.trim().equals(trimmedQuery, ignoreCase = true)
@@ -384,7 +389,117 @@ fun IngredientSearchAddDialog(
                         }
                     }
                 }
+
+                // 5. Catalog Pagination Controls
+                if (totalPages > 1) {
+                    CatalogPaginationControls(
+                        currentPage = currentPage,
+                        totalPages = totalPages,
+                        onPageChange = onPageChange
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun CatalogPaginationControls(
+    currentPage: Int,
+    totalPages: Int,
+    onPageChange: (Int) -> Unit
+) {
+    val strings = LocalStrings.current
+    val hasPrevious = currentPage > 1
+    val hasNext = currentPage < totalPages
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 6.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Prev Page Button
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (hasPrevious) AppColors.SurfaceVariant else Color.Transparent)
+                .border(
+                    width = 0.5.dp,
+                    color = if (hasPrevious) AppColors.Border else Color.Transparent,
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .pointerHoverIcon(if (hasPrevious) PointerIcon.Hand else PointerIcon.Default)
+                .clickable(
+                    enabled = hasPrevious,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = { onPageChange(currentPage - 1) }
+                )
+                .padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = strings.prevPageBtn,
+                tint = if (hasPrevious) AppColors.TextPrimary else AppColors.TextMuted,
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                text = strings.prevPageBtn,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (hasPrevious) AppColors.TextPrimary else AppColors.TextMuted
+            )
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        // Page Indicator
+        Text(
+            text = "$currentPage / $totalPages",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = AppColors.TextSecondary
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        // Next Page Button
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (hasNext) AppColors.SurfaceVariant else Color.Transparent)
+                .border(
+                    width = 0.5.dp,
+                    color = if (hasNext) AppColors.Border else Color.Transparent,
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .pointerHoverIcon(if (hasNext) PointerIcon.Hand else PointerIcon.Default)
+                .clickable(
+                    enabled = hasNext,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = { onPageChange(currentPage + 1) }
+                )
+                .padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = strings.nextPageBtn,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (hasNext) AppColors.TextPrimary else AppColors.TextMuted
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = strings.nextPageBtn,
+                tint = if (hasNext) AppColors.TextPrimary else AppColors.TextMuted,
+                modifier = Modifier.size(14.dp)
+            )
         }
     }
 }

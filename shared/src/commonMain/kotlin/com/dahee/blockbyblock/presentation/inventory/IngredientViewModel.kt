@@ -30,15 +30,6 @@ class IngredientViewModel(
     val uiState: StateFlow<IngredientUiState> = _uiState.asStateFlow()
 
     private var toastJob: Job? = null
-
-    private data class PageCacheKey(
-        val tab: IngredientTab,
-        val category: IngredientCategory?,
-        val page: Int
-    )
-
-    private val pageCache = mutableMapOf<PageCacheKey, com.dahee.blockbyblock.domain.model.IngredientPagedResult>()
-    private val activePrefetchJobs = mutableMapOf<PageCacheKey, Job>()
     private var loadJob: Job? = null
 
     // In-memory cache for master catalog search queries keyed by query, category, and language
@@ -51,158 +42,88 @@ class IngredientViewModel(
     private val catalogCache = mutableMapOf<CatalogCacheKey, List<CatalogIngredient>>()
 
     init {
-        loadPage(page = 1)
         observeAllIngredients()
+        loadInitialIngredients()
     }
 
     private fun observeAllIngredients() {
         scope.launch {
             repository.getAllIngredients().collectLatest { allList ->
                 _uiState.update { current ->
-                    current.copy(registeredIngredients = allList)
+                    val filtered = filterIngredients(allList, current.selectedTab, current.selectedCategory)
+                    current.copy(
+                        registeredIngredients = allList,
+                        displayedIngredients = filtered,
+                        inStockCount = allList.count { it.status == IngredientStatus.STOCK },
+                        consumedCount = allList.count { it.status == IngredientStatus.OUT_OF_STOCK },
+                        shoppingCartCount = allList.count { it.status == IngredientStatus.CART },
+                        totalCount = allList.size,
+                        currentPage = 1,
+                        pageSize = allList.size.coerceAtLeast(1),
+                        totalPages = 1,
+                        totalElements = allList.size.toLong(),
+                        hasNextPage = false,
+                        hasPreviousPage = false,
+                        isPageLoading = false
+                    )
                 }
             }
         }
     }
 
-    fun loadPage(page: Int, forceRefresh: Boolean = false) {
-        val tab = _uiState.value.selectedTab
-        val category = _uiState.value.selectedCategory
-        val key = PageCacheKey(tab, category, page)
-
-        if (!forceRefresh && pageCache.containsKey(key)) {
-            val cached = pageCache[key]!!
-            applyPagedResult(cached)
-            // Background prefetch adjacent pages: next page and previous page
-            if (cached.page.hasNext) {
-                prefetchPage(tab, category, page + 1)
-            }
-            if (page > 1) {
-                prefetchPage(tab, category, page - 1)
-            }
-            return
-        }
-
+    fun loadInitialIngredients(forceRefresh: Boolean = false) {
         loadJob?.cancel()
         loadJob = scope.launch {
             _uiState.update { it.copy(isPageLoading = true) }
-            val status = tabToStatus(tab)
-            val result = repository.fetchIngredientsPaged(
-                page = page,
-                size = PAGE_SIZE,
-                status = status,
-                category = category,
-                query = null
-            )
-            result.onSuccess { pagedResult ->
-                pageCache[key] = pagedResult
-                applyPagedResult(pagedResult)
-
-                // Background prefetch adjacent pages: next page and previous page
-                if (pagedResult.page.hasNext) {
-                    prefetchPage(tab, category, page + 1)
-                }
-                if (page > 1) {
-                    prefetchPage(tab, category, page - 1)
-                }
-            }.onFailure {
-                _uiState.update { it.copy(isPageLoading = false) }
-            }
+            repository.fetchIngredients()
+            _uiState.update { it.copy(isPageLoading = false) }
         }
     }
 
-    private fun prefetchPage(tab: IngredientTab, category: IngredientCategory?, page: Int) {
-        if (page < 1) return
-        val key = PageCacheKey(tab, category, page)
-        if (pageCache.containsKey(key)) return
-        if (activePrefetchJobs[key]?.isActive == true) return
-
-        val job = scope.launch {
-            try {
-                val status = tabToStatus(tab)
-                val result = repository.fetchIngredientsPaged(
-                    page = page,
-                    size = PAGE_SIZE,
-                    status = status,
-                    category = category,
-                    query = null
-                )
-                result.onSuccess { pagedResult ->
-                    pageCache[key] = pagedResult
-                }
-            } catch (_: Exception) {
-                // Silently ignore background prefetch errors
-            } finally {
-                activePrefetchJobs.remove(key)
-            }
-        }
-        activePrefetchJobs[key] = job
+    fun loadPage(page: Int = 1, forceRefresh: Boolean = false) {
+        loadInitialIngredients(forceRefresh)
     }
 
-    private fun applyPagedResult(pagedResult: com.dahee.blockbyblock.domain.model.IngredientPagedResult) {
-        if (pagedResult.page.items.isEmpty() && pagedResult.page.page > 1) {
-            val fallbackPage = pagedResult.page.totalPages.coerceAtLeast(1)
-            if (fallbackPage != pagedResult.page.page) {
-                loadPage(page = fallbackPage, forceRefresh = true)
-                return
+    private fun filterIngredients(
+        items: List<Ingredient>,
+        tab: IngredientTab,
+        category: IngredientCategory?
+    ): List<Ingredient> {
+        return items.filter { item ->
+            val matchesTab = when (tab) {
+                IngredientTab.ALL -> true
+                IngredientTab.IN_STOCK -> item.status == IngredientStatus.STOCK
+                IngredientTab.SHOPPING_CART -> item.status == IngredientStatus.CART
             }
+            val matchesCategory = category == null || item.category == category
+            matchesTab && matchesCategory
         }
-
-        _uiState.update { current ->
-            current.copy(
-                displayedIngredients = pagedResult.page.items,
-                currentPage = pagedResult.page.page,
-                pageSize = pagedResult.page.size,
-                totalPages = pagedResult.page.totalPages.coerceAtLeast(1),
-                totalElements = pagedResult.page.totalElements,
-                hasNextPage = pagedResult.page.hasNext,
-                hasPreviousPage = pagedResult.page.hasPrevious,
-                inStockCount = pagedResult.counts.stock,
-                consumedCount = pagedResult.counts.outOfStock,
-                shoppingCartCount = pagedResult.counts.cart,
-                totalCount = pagedResult.counts.total,
-                isPageLoading = false
-            )
-        }
-    }
-
-    private fun tabToStatus(tab: IngredientTab): IngredientStatus? = when (tab) {
-        IngredientTab.ALL -> null
-        IngredientTab.IN_STOCK -> IngredientStatus.STOCK
-        IngredientTab.SHOPPING_CART -> IngredientStatus.CART
     }
 
     fun onPageChange(targetPage: Int) {
-        val maxPage = _uiState.value.totalPages.coerceAtLeast(1)
-        val clamped = targetPage.coerceIn(1, maxPage)
-        if (clamped == _uiState.value.currentPage) return
-        loadPage(page = clamped)
+        // Unpaginated inventory: no-op preserved for interface compatibility
     }
 
     fun onTabChange(newTab: IngredientTab) {
         if (_uiState.value.selectedTab == newTab) return
-        _uiState.update { it.copy(selectedTab = newTab, currentPage = 1) }
-        loadPage(page = 1)
+        _uiState.update { current ->
+            val filtered = filterIngredients(current.registeredIngredients, newTab, current.selectedCategory)
+            current.copy(selectedTab = newTab, displayedIngredients = filtered)
+        }
     }
 
     fun onCategoryFilterChange(category: IngredientCategory?) {
         val updated = if (_uiState.value.selectedCategory == category) null else category
-        _uiState.update { it.copy(selectedCategory = updated, currentPage = 1) }
-        loadPage(page = 1)
-    }
-
-    private fun invalidateCacheAndReload() {
-        activePrefetchJobs.values.forEach { it.cancel() }
-        activePrefetchJobs.clear()
-        pageCache.clear()
-        loadPage(page = _uiState.value.currentPage, forceRefresh = true)
+        _uiState.update { current ->
+            val filtered = filterIngredients(current.registeredIngredients, current.selectedTab, updated)
+            current.copy(selectedCategory = updated, displayedIngredients = filtered)
+        }
     }
 
     // Mark as consumed (Move to consumed state within inventory)
     fun onMarkAsConsumed(id: String) {
         scope.launch {
             repository.updateStatus(id, IngredientStatus.OUT_OF_STOCK)
-            invalidateCacheAndReload()
         }
     }
 
@@ -210,7 +131,6 @@ class IngredientViewModel(
     fun onMoveToCart(id: String) {
         scope.launch {
             repository.updateStatus(id, IngredientStatus.CART)
-            invalidateCacheAndReload()
         }
     }
 
@@ -218,7 +138,6 @@ class IngredientViewModel(
     fun onRestoreToStock(id: String) {
         scope.launch {
             repository.updateStatus(id, IngredientStatus.STOCK)
-            invalidateCacheAndReload()
         }
     }
 
@@ -234,7 +153,6 @@ class IngredientViewModel(
                     IngredientStatus.CART -> IngredientStatus.STOCK
                 }
                 repository.updateStatus(id, nextStatus)
-                invalidateCacheAndReload()
             }
         }
     }
@@ -253,6 +171,40 @@ class IngredientViewModel(
         }
     }
 
+    private fun updateCatalogResultsState(
+        allResults: List<CatalogIngredient>,
+        targetPage: Int = 1,
+        query: String = _uiState.value.catalogSearchQuery,
+        category: IngredientCategory? = _uiState.value.catalogCategoryFilter
+    ) {
+        val totalPages = if (allResults.isEmpty()) 1 else ((allResults.size - 1) / CATALOG_PAGE_SIZE) + 1
+        val safePage = targetPage.coerceIn(1, totalPages)
+        val startIndex = (safePage - 1) * CATALOG_PAGE_SIZE
+        val pagedItems = allResults.drop(startIndex).take(CATALOG_PAGE_SIZE)
+
+        _uiState.update { current ->
+            current.copy(
+                catalogSearchQuery = query,
+                catalogCategoryFilter = category,
+                catalogResults = allResults,
+                catalogPagedResults = pagedItems,
+                catalogCurrentPage = safePage,
+                catalogPageSize = CATALOG_PAGE_SIZE,
+                catalogTotalPages = totalPages
+            )
+        }
+    }
+
+    fun onCatalogPageChange(targetPage: Int) {
+        val totalPages = _uiState.value.catalogTotalPages.coerceAtLeast(1)
+        val clamped = targetPage.coerceIn(1, totalPages)
+        if (clamped == _uiState.value.catalogCurrentPage) return
+        updateCatalogResultsState(
+            allResults = _uiState.value.catalogResults,
+            targetPage = clamped
+        )
+    }
+
     fun onOpenSearchCatalogDialog() {
         val initialStatus = if (_uiState.value.selectedTab == IngredientTab.SHOPPING_CART) {
             IngredientStatus.CART
@@ -267,14 +219,12 @@ class IngredientViewModel(
         _uiState.update {
             it.copy(
                 isSearchCatalogDialogOpen = true,
-                catalogSearchQuery = "",
-                catalogCategoryFilter = null,
-                catalogTargetStatus = initialStatus,
-                catalogResults = initialItems
+                catalogTargetStatus = initialStatus
             )
         }
         val cacheKey = CatalogCacheKey(query = "", category = null, lang = currentLanguage.name)
         catalogCache[cacheKey] = initialItems
+        updateCatalogResultsState(allResults = initialItems, targetPage = 1, query = "", category = null)
         searchCatalog("", null)
     }
 
@@ -315,12 +265,8 @@ class IngredientViewModel(
         val cached = catalogCache[cacheKey]
         if (cached != null) {
             catalogSearchJob?.cancel()
-            _uiState.update { current ->
-                if (current.catalogSearchQuery == query && current.catalogCategoryFilter == category) {
-                    current.copy(catalogResults = cached)
-                } else {
-                    current
-                }
+            if (_uiState.value.catalogSearchQuery == query && _uiState.value.catalogCategoryFilter == category) {
+                updateCatalogResultsState(allResults = cached, targetPage = 1, query = query, category = category)
             }
             return
         }
@@ -337,22 +283,14 @@ class IngredientViewModel(
             )
             result.onSuccess { items ->
                 catalogCache[cacheKey] = items
-                _uiState.update { current ->
-                    if (current.catalogSearchQuery == query && current.catalogCategoryFilter == category) {
-                        current.copy(catalogResults = items)
-                    } else {
-                        current
-                    }
+                if (_uiState.value.catalogSearchQuery == query && _uiState.value.catalogCategoryFilter == category) {
+                    updateCatalogResultsState(allResults = items, targetPage = 1, query = query, category = category)
                 }
             }.onFailure {
                 val fallback = MasterIngredientCatalog.search(trimmedQuery, category, langCode)
                 catalogCache[cacheKey] = fallback
-                _uiState.update { current ->
-                    if (current.catalogSearchQuery == query && current.catalogCategoryFilter == category) {
-                        current.copy(catalogResults = fallback)
-                    } else {
-                        current
-                    }
+                if (_uiState.value.catalogSearchQuery == query && _uiState.value.catalogCategoryFilter == category) {
+                    updateCatalogResultsState(allResults = fallback, targetPage = 1, query = query, category = category)
                 }
             }
         }
@@ -378,7 +316,6 @@ class IngredientViewModel(
                     repository.updateStatus(existing.id, status)
                     val targetText = if (status == IngredientStatus.STOCK) "보유중" else "장바구니"
                     showAutoSaveToast("'${trimmedName}'이(가) ${targetText}에 추가되었습니다.")
-                    invalidateCacheAndReload()
                 }
                 return
             } else {
@@ -396,7 +333,6 @@ class IngredientViewModel(
                 category = catalogItem.category
             )
             repository.upsertIngredient(newIngredient)
-            invalidateCacheAndReload()
             showAutoSaveToast("'${trimmedName}'이(가) ${if (status == IngredientStatus.STOCK) "보유중" else "장바구니"}에 추가되었습니다.")
         }
     }
@@ -419,7 +355,6 @@ class IngredientViewModel(
                     repository.updateStatus(existing.id, status)
                     val targetText = if (status == IngredientStatus.STOCK) "보유중" else "장바구니"
                     showAutoSaveToast("'${trimmed}'이(가) ${targetText}에 추가되었습니다.")
-                    invalidateCacheAndReload()
                 }
                 return
             } else {
@@ -437,7 +372,6 @@ class IngredientViewModel(
                 category = guessCategoryByName(trimmed)
             )
             repository.upsertIngredient(newIngredient)
-            invalidateCacheAndReload()
             showAutoSaveToast("'${trimmed}'이(가) ${if (status == IngredientStatus.STOCK) "보유중" else "장바구니"}에 추가되었습니다.")
         }
     }
@@ -460,7 +394,6 @@ class IngredientViewModel(
         scope.launch {
             repository.upsertIngredient(ingredient.copy(name = trimmed))
             _uiState.update { it.copy(isAddDialogOpen = false, editingIngredient = null) }
-            invalidateCacheAndReload()
         }
     }
 
@@ -478,7 +411,6 @@ class IngredientViewModel(
                     undoDeleteState = UndoDeleteState(ingredient, message)
                 )
             }
-            invalidateCacheAndReload()
             undoJob = scope.launch {
                 delay(4000)
                 _uiState.update { it.copy(undoDeleteState = null) }
@@ -493,7 +425,6 @@ class IngredientViewModel(
         scope.launch {
             repository.upsertIngredient(lastState.ingredient)
             _uiState.update { it.copy(undoDeleteState = null) }
-            invalidateCacheAndReload()
         }
     }
 
@@ -511,7 +442,6 @@ class IngredientViewModel(
             scope.launch {
                 repository.deleteIngredient(id)
                 _uiState.update { it.copy(isAddDialogOpen = false, editingIngredient = null) }
-                invalidateCacheAndReload()
             }
         }
     }
@@ -534,6 +464,7 @@ class IngredientViewModel(
     }
 
     companion object {
+        const val CATALOG_PAGE_SIZE = 8
         private const val PAGE_SIZE = 12
     }
 
