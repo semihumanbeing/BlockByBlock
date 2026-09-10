@@ -106,7 +106,7 @@ fun App() {
     var currentLanguage by remember { mutableStateOf(initialLang) }
 
     val equipmentRepository = remember { com.dahee.blockbyblock.data.repository.NetworkEquipmentRepository() }
-    val equipmentViewModel = remember { EquipmentViewModel(equipmentRepository) }
+    val equipmentViewModel = remember { EquipmentViewModel(equipmentRepository, initialLanguage = initialLang) }
 
     val ingredientRepository = remember { com.dahee.blockbyblock.data.repository.NetworkIngredientRepository() }
     val ingredientViewModel = remember { IngredientViewModel(ingredientRepository, initialLanguage = initialLang) }
@@ -143,6 +143,9 @@ fun App() {
                 try {
                     val langEnum = com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(userRes.lang)
                     currentLanguage = langEnum
+                    equipmentViewModel.setLanguage(langEnum)
+                    ingredientViewModel.setLanguage(langEnum)
+                    mealPlanViewModel.setLanguage(langEnum)
                 } catch (_: Throwable) {}
                 val avatar = try {
                     com.dahee.blockbyblock.domain.model.ProfileAvatarType.valueOf(userRes.avatarType)
@@ -181,6 +184,9 @@ fun App() {
                             try {
                                 val langEnum = com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(userRes.lang)
                                 currentLanguage = langEnum
+                                equipmentViewModel.setLanguage(langEnum)
+                                ingredientViewModel.setLanguage(langEnum)
+                                mealPlanViewModel.setLanguage(langEnum)
                             } catch (_: Throwable) {}
                             val avatar = try {
                                 com.dahee.blockbyblock.domain.model.ProfileAvatarType.valueOf(userRes.avatarType)
@@ -514,6 +520,9 @@ fun App() {
                                             onLanguageChange = { newLang ->
                                                 currentLanguage = newLang
                                                 TokenStorage.setUserInfo(TokenStorage.getUserId(), newLang.name)
+                                                equipmentViewModel.setLanguage(newLang)
+                                                ingredientViewModel.setLanguage(newLang)
+                                                mealPlanViewModel.setLanguage(newLang)
                                                 coroutineScope.launch {
                                                     userApiService.updateProfile(
                                                         UpdateProfileRequest(

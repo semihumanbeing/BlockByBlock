@@ -122,6 +122,8 @@ interface AppStrings {
     val createBlockSectionOther: String
     val createBlockSubmitBtn: String
     val createBlockNamePlaceholder: String
+    val deleteBlockConfirmTitle: String
+    fun deleteBlockConfirmMsg(name: String): String
     val shelfLifeExpired: String
     fun shelfLifeExpiringSoon(days: Int): String
     fun shelfLifeDays(days: Int): String

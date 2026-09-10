@@ -26,16 +26,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,6 +77,7 @@ fun BlockInventoryScreen(
     val uiState by viewModel.uiState.collectAsState()
     val strings = LocalStrings.current
     val focusManager = LocalFocusManager.current
+    var pendingDeleteBlock by remember { mutableStateOf<FoodBlock?>(null) }
 
     if (uiState.isCreateScreenOpen) {
         CreateBlockScreen(
@@ -245,8 +250,8 @@ fun BlockInventoryScreen(
                         )
                     }
 
-                    LaunchedEffect(block.id) {
-                        if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+                    LaunchedEffect(block.id, pendingDeleteBlock) {
+                        if (pendingDeleteBlock == null && dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
                             dismissState.snapTo(SwipeToDismissBoxValue.Settled)
                         }
                     }
@@ -257,7 +262,7 @@ fun BlockInventoryScreen(
                         enableDismissFromEndToStart = true,
                         onDismiss = { dismissValue ->
                             if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
-                                viewModel.onDeleteBlock(block.id)
+                                pendingDeleteBlock = block
                             }
                         },
                         backgroundContent = {
@@ -295,7 +300,7 @@ fun BlockInventoryScreen(
                         FoodBlockCard(
                             block = block,
                             onClick = { viewModel.onOpenEditScreen(block) },
-                            onDelete = { viewModel.onDeleteBlock(block.id) }
+                            onDelete = { pendingDeleteBlock = block }
                         )
                     }
                 }
@@ -304,6 +309,50 @@ fun BlockInventoryScreen(
             item {
                 Spacer(modifier = Modifier.height(30.dp))
             }
+        }
+
+        // Delete Block Confirmation Dialog
+        pendingDeleteBlock?.let { block ->
+            AlertDialog(
+                onDismissRequest = { pendingDeleteBlock = null },
+                title = {
+                    Text(
+                        text = strings.deleteBlockConfirmTitle,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.TextPrimary
+                    )
+                },
+                text = {
+                    Text(
+                        text = strings.deleteBlockConfirmMsg(block.name),
+                        color = AppColors.TextSecondary
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.onDeleteBlock(block.id)
+                            pendingDeleteBlock = null
+                        }
+                    ) {
+                        Text(
+                            text = strings.delete,
+                            color = Color(0xFFE53935),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingDeleteBlock = null }) {
+                        Text(
+                            text = strings.cancel,
+                            color = AppColors.TextMuted
+                        )
+                    }
+                },
+                containerColor = AppColors.Surface,
+                shape = RoundedCornerShape(16.dp)
+            )
         }
     }
 }
@@ -454,7 +503,7 @@ private fun FoodBlockCard(
                 if (cookingInfo != null) {
                     Spacer(modifier = Modifier.height(3.dp))
                     Text(
-                        text = "🍳 $cookingInfo",
+                        text = cookingInfo,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         color = AppColors.TextSecondary

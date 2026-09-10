@@ -146,7 +146,7 @@ class NetworkFoodBlockRepository(
             id = res.id.toString(),
             name = res.name,
             moldId = res.moldId.toString(),
-            moldName = "${res.moldCapacityMl}ml ${res.moldCellCount}칸",
+            moldName = "${res.moldCapacityMl}ml",
             moldCapacityMl = res.moldCapacityMl,
             moldCellCount = res.moldCellCount,
             moldColorHex = res.blockColorHex,
