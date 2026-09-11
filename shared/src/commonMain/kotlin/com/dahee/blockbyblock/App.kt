@@ -51,6 +51,10 @@ import com.dahee.blockbyblock.presentation.navigation.NavTab
 import com.dahee.blockbyblock.presentation.tutorial.TutorialGuideBanner
 import com.dahee.blockbyblock.presentation.tutorial.TutorialStep
 import com.dahee.blockbyblock.presentation.tutorial.WelcomeProfileScreen
+import com.dahee.blockbyblock.data.repository.NetworkNotificationRepository
+import com.dahee.blockbyblock.presentation.notification.NotificationScreen
+import com.dahee.blockbyblock.presentation.notification.NotificationViewModel
+
 
 import androidx.compose.runtime.rememberCoroutineScope
 import com.dahee.blockbyblock.data.remote.TokenStorage
@@ -79,7 +83,9 @@ fun App() {
 
     var currentTab by remember { mutableStateOf(NavTab.MEAL_PLAN) }
     var isManagingEquipment by remember { mutableStateOf(false) }
+    var isViewingNotifications by remember { mutableStateOf(false) }
     var tutorialStep by remember { mutableStateOf(TutorialStep.WELCOME_PROFILE) }
+
 
     androidx.compose.runtime.DisposableEffect(Unit) {
         com.dahee.blockbyblock.data.remote.ApiClient.setAuthFailureHandler { _ ->
@@ -129,8 +135,14 @@ fun App() {
         )
     }
 
+    val notificationRepository = remember { NetworkNotificationRepository() }
+    val notificationViewModel = remember { NotificationViewModel(notificationRepository) }
+    val notificationUiState by notificationViewModel.uiState.collectAsState()
+    val unreadCount = notificationUiState.unreadCount
+
     val ingredientUiState by ingredientViewModel.uiState.collectAsState()
     val blockUiState by blockViewModel.uiState.collectAsState()
+
 
     val hasAddedIngredient = ingredientUiState.registeredIngredients.isNotEmpty()
     val hasCreatedBlock = blockUiState.blocks.isNotEmpty()
@@ -174,7 +186,9 @@ fun App() {
                 coroutineScope.launch { mealRecordRepository.fetchWeeklyMeals(com.dahee.blockbyblock.core.utils.getCurrentDateIso()) }
                 coroutineScope.launch { mealRecordRepository.fetchMealPresets() }
                 coroutineScope.launch { com.dahee.blockbyblock.core.notification.PushNotificationManager.syncDeviceOrTimezone(deviceApiService, userApiService) }
+                coroutineScope.launch { notificationViewModel.fetchUnreadCount() }
             }.onFailure {
+
                 val refresh = TokenStorage.getRefreshToken()
                 if (!refresh.isNullOrBlank()) {
                     val refreshRes = authApiService.refreshToken(refresh)
@@ -215,7 +229,9 @@ fun App() {
                             coroutineScope.launch { mealRecordRepository.fetchWeeklyMeals(com.dahee.blockbyblock.core.utils.getCurrentDateIso()) }
                             coroutineScope.launch { mealRecordRepository.fetchMealPresets() }
                             coroutineScope.launch { com.dahee.blockbyblock.core.notification.PushNotificationManager.syncDeviceOrTimezone(deviceApiService, userApiService) }
+                            coroutineScope.launch { notificationViewModel.fetchUnreadCount() }
                         }.onFailure {
+
                             TokenStorage.clearTokens()
                             isLoggedIn = false
                         }
@@ -365,7 +381,9 @@ fun App() {
                                     foodBlockRepository.fetchFoodBlocks()
                                     mealRecordRepository.fetchWeeklyMeals(com.dahee.blockbyblock.core.utils.getCurrentDateIso())
                                     mealRecordRepository.fetchMealPresets()
+                                    notificationViewModel.fetchUnreadCount()
                                 }
+
                                 if (!profile.onboardingCompleted) {
                                     tutorialStep = TutorialStep.WELCOME_PROFILE
                                 } else {
@@ -458,7 +476,34 @@ fun App() {
                                     .weight(1f)
                                     .fillMaxSize()
                             ) {
-                                if (isManagingEquipment) {
+                                if (isViewingNotifications) {
+                                    NotificationScreen(
+                                        viewModel = notificationViewModel,
+                                        onNavigateBack = {
+                                            isViewingNotifications = false
+                                            notificationViewModel.fetchUnreadCount()
+                                        },
+                                        onNavigateToBlock = { blockId ->
+                                            isViewingNotifications = false
+                                            isManagingEquipment = false
+                                            currentTab = NavTab.BLOCK
+                                            coroutineScope.launch {
+                                                var foundBlock = foodBlockRepository.getFoodBlocks().find { it.id == blockId.toString() }
+                                                if (foundBlock == null) {
+                                                    val res = foodBlockRepository.fetchFoodBlocks()
+                                                    if (res.isSuccess) {
+                                                        foundBlock = res.getOrNull()?.find { it.id == blockId.toString() }
+                                                    }
+                                                }
+                                                if (foundBlock != null) {
+                                                    blockViewModel.onOpenEditScreen(foundBlock)
+                                                }
+                                            }
+                                            notificationViewModel.fetchUnreadCount()
+
+                                        }
+                                    )
+                                } else if (isManagingEquipment) {
                                     EquipmentScreen(
                                         viewModel = equipmentViewModel,
                                         onNavigateBack = if (tutorialStep == TutorialStep.EQUIPMENT_SETUP) null else {
@@ -480,8 +525,14 @@ fun App() {
                                                 isManagingEquipment = false
                                                 currentTab = NavTab.BLOCK
                                                 blockViewModel.onOpenCreateScreen()
+                                            },
+                                            unreadCount = unreadCount,
+                                            onNavigateToNotifications = {
+                                                isViewingNotifications = true
+                                                notificationViewModel.refresh(showLoading = true)
                                             }
                                         )
+
                                         NavTab.BLOCK -> BlockInventoryScreen(
                                             viewModel = blockViewModel,
                                             onNavigateToInventory = {
@@ -553,15 +604,17 @@ fun App() {
                                 }
                             }
 
-                            if (!(isManagingEquipment && tutorialStep == TutorialStep.EQUIPMENT_SETUP)) {
+                            if (!isViewingNotifications && !(isManagingEquipment && tutorialStep == TutorialStep.EQUIPMENT_SETUP)) {
                                 AppBottomNav(
                                     currentTab = currentTab,
                                     onTabSelected = {
                                         currentTab = it
                                         isManagingEquipment = false
+                                        isViewingNotifications = false
                                     }
                                 )
                             }
+
                         }
                     }
                 }
