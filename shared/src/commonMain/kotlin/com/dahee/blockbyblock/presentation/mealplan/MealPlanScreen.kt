@@ -57,8 +57,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -69,8 +71,11 @@ import com.dahee.blockbyblock.core.ui.AppCard
 import com.dahee.blockbyblock.core.ui.AppTextField
 import com.dahee.blockbyblock.core.ui.AppToastBanner
 import com.dahee.blockbyblock.domain.model.DayMealRecord
+import com.dahee.blockbyblock.domain.model.FoodBlock
+import com.dahee.blockbyblock.domain.model.MealBlockStatus
 import com.dahee.blockbyblock.domain.model.MealSlotRecord
 import com.dahee.blockbyblock.domain.model.MealType
+import com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed
 import com.dahee.blockbyblock.presentation.mealplan.components.BentoLunchBoxView
 import com.dahee.blockbyblock.presentation.mealplan.components.MealRecordDialog
 
@@ -78,8 +83,11 @@ import com.dahee.blockbyblock.presentation.mealplan.components.MealRecordDialog
 fun MealPlanScreen(
     viewModel: MealPlanViewModel,
     onCreateBlockClick: (() -> Unit)? = null,
+    unreadCount: Long = 0L,
+    onNavigateToNotifications: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+
     val strings = LocalStrings.current
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
@@ -94,10 +102,14 @@ fun MealPlanScreen(
 
     // Meal Saved Transient Notice Toast State
     var showSavedNotice by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(viewModel) {
         viewModel.onSlotSavedListener = {
             showSavedNotice = true
+        }
+        viewModel.onSaveErrorListener = { msg ->
+            errorMessage = msg
         }
     }
 
@@ -105,6 +117,13 @@ fun MealPlanScreen(
         if (showSavedNotice) {
             delay(2000)
             showSavedNotice = false
+        }
+    }
+
+    LaunchedEffect(errorMessage) {
+        if (errorMessage != null) {
+            delay(3500)
+            errorMessage = null
         }
     }
 
@@ -122,6 +141,8 @@ fun MealPlanScreen(
             onMoveToTop = { viewModel.onMoveBlockToTop(it) },
             onMoveToBottom = { viewModel.onMoveBlockToBottom(it) },
             savedPresets = uiState.savedPresets,
+            allFoodBlocks = uiState.allFoodBlocks,
+            onRefillBlockQuantity = { viewModel.onRefillBlockQuantity(it) },
             onSaveCurrentAsPreset = { viewModel.onSaveCurrentAsPreset(it) },
             onApplyPreset = { viewModel.onApplyPreset(it) },
             onDeletePreset = { viewModel.onDeletePreset(it) },
@@ -300,7 +321,30 @@ fun MealPlanScreen(
                 }
                 .padding(horizontal = 16.dp)
         ) {
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 0. Top Header: Title & Notification Bell
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = strings.mealPlanTitle,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.TextPrimary
+                )
+
+                com.dahee.blockbyblock.presentation.notification.components.NotificationBellButton(
+                    unreadCount = unreadCount,
+                    onClick = onNavigateToNotifications
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             // 1. Top Segmented Tab Switcher [오늘/일별 식단] | [이번 주]
             MealPlanTabSwitcher(
@@ -317,6 +361,7 @@ fun MealPlanScreen(
                     selectedDateString = uiState.selectedDateString,
                     isSelectedDateToday = uiState.isSelectedDateToday,
                     currentDayRecord = uiState.currentDayMealRecord,
+                    allFoodBlocks = uiState.allFoodBlocks,
                     onPreviousDay = { viewModel.onPreviousDay() },
                     onNextDay = { viewModel.onNextDay() },
                     onResetToToday = { viewModel.onResetToToday() },
@@ -333,20 +378,23 @@ fun MealPlanScreen(
                     },
                     onSavePresetSlot = { mealType ->
                         val slot = uiState.currentDayMealRecord?.getSlot(mealType)
-                        val defaultName = if (slot != null && slot.customTitle.isNotBlank()) {
-                            slot.customTitle
-                        } else if (slot != null && slot.blocks.isNotEmpty()) {
-                            "${strings.mealTypeName(mealType)} (${slot.blocks.map { it.blockName }.distinct().joinToString(", ")})"
-                        } else {
-                            strings.mealTypeName(mealType)
+                        val slotStatuses = if (slot != null) determineBlockStatusesIndexed(slot.blocks, uiState.allFoodBlocks) else emptyList()
+                        val hasInvalidInSlot = slotStatuses.any { it != MealBlockStatus.AVAILABLE }
+                        if (slot != null && slot.blocks.isNotEmpty() && !hasInvalidInSlot) {
+                            val defaultName = if (slot.customTitle.isNotBlank()) {
+                                slot.customTitle
+                            } else {
+                                "${strings.mealTypeName(mealType)} (${slot.blocks.map { it.blockName }.distinct().joinToString(", ")})"
+                            }
+                            presetNameInput = defaultName
+                            pendingSavePresetMealType = mealType
                         }
-                        presetNameInput = defaultName
-                        pendingSavePresetMealType = mealType
                     }
                 )
                 MealPlanTab.WEEK -> WeekMealView(
                     currentWeekLabel = uiState.currentWeekLabel,
                     weekDays = uiState.weekDays,
+                    allFoodBlocks = uiState.allFoodBlocks,
                     onPreviousWeek = { viewModel.onPreviousWeek() },
                     onNextWeek = { viewModel.onNextWeek() },
                     onCurrentWeek = { viewModel.onCurrentWeek() },
@@ -364,6 +412,17 @@ fun MealPlanScreen(
         AppToastBanner(
             visible = showSavedNotice,
             message = strings.presetSaved,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp)
+        )
+
+        // Error Toast Badge (e.g. 400 Bad Request)
+        AppToastBanner(
+            visible = errorMessage != null,
+            message = errorMessage ?: "",
+            icon = Icons.Default.Close,
+            iconTint = Color(0xFFEF4444),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 24.dp)
@@ -426,6 +485,7 @@ private fun TodayMealView(
     selectedDateString: String,
     isSelectedDateToday: Boolean,
     currentDayRecord: DayMealRecord?,
+    allFoodBlocks: List<FoodBlock>? = null,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onResetToToday: () -> Unit,
@@ -579,6 +639,7 @@ private fun TodayMealView(
                     MealSlotCard(
                         mealType = mealType,
                         slot = slotRecord,
+                        allFoodBlocks = allFoodBlocks,
                         onClick = { onOpenSlot(mealType) },
                         onSavePresetClick = { onSavePresetSlot(mealType) },
                         onDeleteClick = { onPromptDeleteSlot(mealType) },
@@ -597,6 +658,7 @@ private fun TodayMealView(
 private fun MealSlotCard(
     mealType: MealType,
     slot: MealSlotRecord,
+    allFoodBlocks: List<FoodBlock>? = null,
     onClick: () -> Unit,
     onSavePresetClick: () -> Unit,
     onDeleteClick: () -> Unit,
@@ -691,11 +753,18 @@ private fun MealSlotCard(
                 )
 
                 if (hasContent) {
+                    val slotStatuses = remember(slot.blocks, allFoodBlocks) {
+                        determineBlockStatusesIndexed(slot.blocks, allFoodBlocks)
+                    }
+                    val hasInvalidInSlot = remember(slotStatuses) {
+                        slotStatuses.any { it != MealBlockStatus.AVAILABLE }
+                    }
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        if (hasBlocks) {
+                        if (hasBlocks && !hasInvalidInSlot) {
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(7.dp))
@@ -763,6 +832,7 @@ private fun MealSlotCard(
                 // [Left 50%] Bento Box Container
                 BentoLunchBoxView(
                     blocks = slot.blocks,
+                    allFoodBlocks = allFoodBlocks,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight(),
@@ -799,18 +869,31 @@ private fun MealSlotCard(
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             groupedBlocks.forEach { (sampleBlock, count) ->
+                                val blockStatus = remember(sampleBlock.blockId, allFoodBlocks) {
+                                    val foodBlock = allFoodBlocks?.firstOrNull { it.id == sampleBlock.blockId }
+                                    when {
+                                        allFoodBlocks == null -> MealBlockStatus.AVAILABLE
+                                        foodBlock == null -> MealBlockStatus.DELETED
+                                        foodBlock.quantity <= 0 -> MealBlockStatus.OUT_OF_STOCK
+                                        else -> MealBlockStatus.AVAILABLE
+                                    }
+                                }
+
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.Top,
+                                    verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(5.dp)
                                 ) {
-                                    // Color Indicator (aligned with the first line of text)
+                                    // Color Indicator (aligned with the text)
                                     Box(
                                         modifier = Modifier
-                                            .padding(top = 4.dp)
+                                            .padding(top = 1.dp)
                                             .size(8.dp)
                                             .clip(CircleShape)
-                                            .background(AppColors.hexToColor(sampleBlock.blockColorHex))
+                                            .background(
+                                                if (blockStatus == MealBlockStatus.DELETED) AppColors.TextMuted.copy(alpha = 0.5f)
+                                                else AppColors.hexToColor(sampleBlock.blockColorHex)
+                                            )
                                             .border(0.5.dp, Color.Black.copy(alpha = 0.15f), CircleShape)
                                     )
 
@@ -819,12 +902,43 @@ private fun MealSlotCard(
                                         text = sampleBlock.blockName,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = AppColors.TextPrimary,
+                                        color = if (blockStatus == MealBlockStatus.DELETED) AppColors.TextMuted else AppColors.TextPrimary,
                                         lineHeight = 15.sp,
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.weight(1f)
                                     )
+
+                                    if (blockStatus == MealBlockStatus.OUT_OF_STOCK) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(3.dp))
+                                                .background(Color(0xFFF97316).copy(alpha = 0.15f))
+                                                .border(0.5.dp, Color(0xFFF97316), RoundedCornerShape(3.dp))
+                                                .padding(horizontal = 3.dp, vertical = 1.dp)
+                                        ) {
+                                            Text(
+                                                text = strings.depletedShortBadge,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFEA580C)
+                                            )
+                                        }
+                                    } else if (blockStatus == MealBlockStatus.DELETED) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(3.dp))
+                                                .background(AppColors.SurfaceVariant)
+                                                .padding(horizontal = 3.dp, vertical = 1.dp)
+                                        ) {
+                                            Text(
+                                                text = strings.deletedBlockBadge,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = AppColors.TextMuted
+                                            )
+                                        }
+                                    }
 
                                     // Quantity "× N개"
                                     Text(
@@ -866,6 +980,7 @@ private fun MealSlotCard(
 private fun WeekMealView(
     currentWeekLabel: String,
     weekDays: List<DayMealPlanUiModel>,
+    allFoodBlocks: List<FoodBlock>? = null,
     onPreviousWeek: () -> Unit,
     onNextWeek: () -> Unit,
     onCurrentWeek: () -> Unit,
@@ -1030,6 +1145,7 @@ private fun WeekMealView(
 
                                 BentoLunchBoxView(
                                     blocks = blocks,
+                                    allFoodBlocks = allFoodBlocks,
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight(),
@@ -1061,6 +1177,7 @@ private fun WeekMealView(
 
                                     BentoLunchBoxView(
                                         blocks = blocks,
+                                        allFoodBlocks = allFoodBlocks,
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxHeight(),

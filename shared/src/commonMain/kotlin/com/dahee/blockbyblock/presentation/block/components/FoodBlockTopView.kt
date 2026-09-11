@@ -6,8 +6,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import blockbyblock.shared.generated.resources.Res
@@ -96,7 +99,8 @@ fun FoodBlockTopView(
     modifier: Modifier = Modifier,
     moldCapacityMl: Int = 250,
     width: Dp? = null,
-    height: Dp = 96.dp
+    height: Dp = 96.dp,
+    isGrayscale: Boolean = false
 ) {
     val category = BlockSizeCategory.fromCapacity(moldCapacityMl)
     val drawableRes = getFoodBlockTopDrawable(colorHex = colorHex, moldCapacityMl = moldCapacityMl)
@@ -110,6 +114,10 @@ fun FoodBlockTopView(
 
     val finalHeight = if (category == BlockSizeCategory.MINI && width == null) height * (50f / 96f) else height
 
+    val colorFilter = if (isGrayscale) {
+        remember { ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }) }
+    } else null
+
     Box(
         modifier = modifier
             .width(finalWidth)
@@ -119,6 +127,7 @@ fun FoodBlockTopView(
         Image(
             painter = painterResource(drawableRes),
             contentDescription = "Top-view Food Block",
+            colorFilter = colorFilter,
             modifier = Modifier.fillMaxSize()
         )
     }

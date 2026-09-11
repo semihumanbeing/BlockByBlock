@@ -11,6 +11,7 @@ import com.dahee.blockbyblock.data.remote.dto.SaveMealSlotRequest
 import com.dahee.blockbyblock.data.remote.service.MealApiService
 import com.dahee.blockbyblock.domain.model.DayMealRecord
 import com.dahee.blockbyblock.domain.model.MealBlockItem
+import com.dahee.blockbyblock.domain.model.MealBlockStatus
 import com.dahee.blockbyblock.domain.model.MealPreset
 import com.dahee.blockbyblock.domain.model.MealSlotRecord
 import com.dahee.blockbyblock.domain.model.MealType
@@ -85,13 +86,15 @@ class NetworkMealRecordRepository(
                     memo = slot.memo.ifBlank { null },
                     blocks = blocksReq
                 )
-                apiService.saveMealSlot(
+                val res = apiService.saveMealSlot(
                     date = record.dateString,
                     mealType = slot.mealType.name,
                     request = req
                 )
+                res.getOrThrow()
             } else {
-                apiService.deleteMealSlot(record.dateString, slot.mealType.name)
+                val res = apiService.deleteMealSlot(record.dateString, slot.mealType.name)
+                res.getOrThrow()
             }
         }
 
@@ -171,6 +174,7 @@ class NetworkMealRecordRepository(
         val sortedBlocks = res.blocks.sortedBy { it.sortOrder }
         val blocks = sortedBlocks.flatMap { b ->
             val placementId = b.id?.toString() ?: "slot_${res.id}_block_${b.blockId}_${b.sortOrder}"
+            val status = MealBlockStatus.from(b.blockStatus)
             (1..b.quantity.coerceAtLeast(1)).map { q ->
                 MealBlockItem(
                     instanceId = if (q == 1) placementId else "${placementId}_$q",
@@ -179,7 +183,10 @@ class NetworkMealRecordRepository(
                     blockColorHex = b.blockColorHex,
                     moldCapacityMl = b.moldCapacityMl,
                     moldCellCount = b.moldCellCount,
-                    sortOrder = b.sortOrder
+                    sortOrder = b.sortOrder,
+                    currentStock = b.currentStock,
+                    isDeleted = b.isDeleted,
+                    blockStatus = status
                 )
             }
         }
@@ -195,6 +202,7 @@ class NetworkMealRecordRepository(
         val sortedBlocks = res.blocks.sortedBy { it.sortOrder }
         val blocks = sortedBlocks.flatMap { b ->
             val placementId = b.id?.toString() ?: "preset_${res.id}_block_${b.blockId}_${b.sortOrder}"
+            val status = MealBlockStatus.from(b.blockStatus)
             (1..b.quantity.coerceAtLeast(1)).map { q ->
                 MealBlockItem(
                     instanceId = if (q == 1) placementId else "${placementId}_$q",
@@ -203,7 +211,10 @@ class NetworkMealRecordRepository(
                     blockColorHex = b.blockColorHex,
                     moldCapacityMl = b.moldCapacityMl,
                     moldCellCount = b.moldCellCount,
-                    sortOrder = b.sortOrder
+                    sortOrder = b.sortOrder,
+                    currentStock = b.currentStock,
+                    isDeleted = b.isDeleted,
+                    blockStatus = status
                 )
             }
         }
@@ -212,7 +223,7 @@ class NetworkMealRecordRepository(
             name = res.name,
             blocks = blocks,
             memo = res.memo ?: "",
-            createdAt = getCurrentEpochMillis()
+            createdAt = res.createdAt?.let { com.dahee.blockbyblock.core.utils.parseIsoToEpochMillis(it) } ?: getCurrentEpochMillis()
         )
     }
 }

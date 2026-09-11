@@ -39,11 +39,7 @@ class InMemoryFoodBlockRepository : FoodBlockRepository {
         if (index >= 0) {
             val item = current[index]
             val newQty = (item.quantity + delta).coerceAtLeast(0)
-            if (newQty <= 0) {
-                current.removeAt(index)
-            } else {
-                current[index] = item.copy(quantity = newQty)
-            }
+            current[index] = item.copy(quantity = newQty)
             _blocksFlow.value = current
         }
     }

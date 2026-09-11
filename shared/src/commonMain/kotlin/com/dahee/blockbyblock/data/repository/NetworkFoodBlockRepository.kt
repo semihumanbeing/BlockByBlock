@@ -108,21 +108,17 @@ class NetworkFoodBlockRepository(
         if (numericId != null) {
             val result = apiService.updateQuantity(numericId, delta = delta)
             result.onSuccess { res ->
-                if (res.quantity <= 0) {
-                    _blocksFlow.update { list -> list.filterNot { it.id == id } }
-                } else {
-                    _blocksFlow.update { list ->
-                        list.map { if (it.id == id) it.copy(quantity = res.quantity) else it }
-                    }
+                _blocksFlow.update { list ->
+                    list.map { if (it.id == id) it.copy(quantity = res.quantity.coerceAtLeast(0)) else it }
                 }
                 return
             }
         }
         _blocksFlow.update { list ->
-            list.mapNotNull { item ->
+            list.map { item ->
                 if (item.id == id) {
-                    val newQty = item.quantity + delta
-                    if (newQty <= 0) null else item.copy(quantity = newQty)
+                    val newQty = (item.quantity + delta).coerceAtLeast(0)
+                    item.copy(quantity = newQty)
                 } else {
                     item
                 }
@@ -160,7 +156,9 @@ class NetworkFoodBlockRepository(
             memo = res.memo ?: "",
             expirationDate = res.expirationDate,
             daysRemaining = res.daysRemaining,
-            isExpiringSoon = res.isExpiringSoon
+            isExpiringSoon = res.isExpiringSoon,
+            createdAt = res.createdAt?.let { com.dahee.blockbyblock.core.utils.parseIsoToEpochMillis(it) } ?: 0L,
+            createdAtIso = res.createdAt
         )
     }
 }

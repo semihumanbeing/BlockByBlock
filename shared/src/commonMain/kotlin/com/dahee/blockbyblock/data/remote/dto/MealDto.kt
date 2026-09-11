@@ -18,7 +18,10 @@ data class MealBlockResponse(
     val moldCellCount: Int = 0,
     val blockColorHex: String = "#FF7043",
     val quantity: Int = 1,
-    val sortOrder: Int = 0
+    val sortOrder: Int = 0,
+    val currentStock: Int? = null,
+    val isDeleted: Boolean? = null,
+    val blockStatus: String? = null // "AVAILABLE" | "OUT_OF_STOCK" | "DELETED"
 )
 
 @Serializable

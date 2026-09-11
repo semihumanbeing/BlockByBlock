@@ -5,9 +5,11 @@ import com.dahee.blockbyblock.core.utils.getCurrentEpochMillis
 import com.dahee.blockbyblock.domain.model.DayMealRecord
 import com.dahee.blockbyblock.domain.model.FoodBlock
 import com.dahee.blockbyblock.domain.model.MealBlockItem
+import com.dahee.blockbyblock.domain.model.MealBlockStatus
 import com.dahee.blockbyblock.domain.model.MealPreset
 import com.dahee.blockbyblock.domain.model.MealSlotRecord
 import com.dahee.blockbyblock.domain.model.MealType
+import com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed
 import com.dahee.blockbyblock.domain.repository.FoodBlockRepository
 import com.dahee.blockbyblock.domain.repository.MealRecordRepository
 import kotlinx.coroutines.CoroutineScope
@@ -117,7 +119,8 @@ class MealPlanViewModel(
             slotAvailableBlocks = dialog.availablePieces,
             slotTitleInput = dialog.title,
             slotMemoInput = dialog.memo,
-            savedPresets = presets
+            savedPresets = presets,
+            allFoodBlocks = foodBlocks
         )
     }.stateIn(
         scope = viewModelScope,
@@ -279,17 +282,19 @@ class MealPlanViewModel(
             val allPieces = mutableListOf<AvailableBlockPiece>()
 
             allFoodBlocks.forEach { block ->
-                for (i in 1..block.quantity.coerceAtLeast(1)) {
-                    allPieces.add(
-                        AvailableBlockPiece(
-                            instanceId = "${block.id}-piece-$i",
-                            blockId = block.id,
-                            blockName = block.name,
-                            blockColorHex = block.blockColorHex,
-                            moldCapacityMl = block.moldCapacityMl,
-                            moldCellCount = block.moldCellCount
+                if (block.quantity > 0) {
+                    for (i in 1..block.quantity) {
+                        allPieces.add(
+                            AvailableBlockPiece(
+                                instanceId = "${block.id}-piece-$i",
+                                blockId = block.id,
+                                blockName = block.name,
+                                blockColorHex = block.blockColorHex,
+                                moldCapacityMl = block.moldCapacityMl,
+                                moldCellCount = block.moldCellCount
+                            )
                         )
-                    )
+                    }
                 }
             }
 
@@ -391,37 +396,48 @@ class MealPlanViewModel(
     }
 
     var onSlotSavedListener: (() -> Unit)? = null
+    var onSaveErrorListener: ((String) -> Unit)? = null
 
     fun onSaveSlot() {
         val dialog = _dialogState.value
         if (dialog.selectedBlocks.isEmpty()) {
             return
         }
+        val currentFoodBlocks = uiState.value.allFoodBlocks
+        val statuses = determineBlockStatusesIndexed(dialog.selectedBlocks, currentFoodBlocks)
+        if (statuses.any { it != MealBlockStatus.AVAILABLE }) {
+            return
+        }
         viewModelScope.launch {
-            val existingDay = mealRecordRepository.getMealRecordByDate(dialog.dateString)
-                ?: DayMealRecord(
-                    id = "meal-${dialog.dateString}",
-                    dateString = dialog.dateString
+            try {
+                val existingDay = mealRecordRepository.getMealRecordByDate(dialog.dateString)
+                    ?: DayMealRecord(
+                        id = "meal-${dialog.dateString}",
+                        dateString = dialog.dateString
+                    )
+
+                val customTitleToSave = if (dialog.mealType == MealType.SNACK || dialog.mealType == MealType.EXTRA) {
+                    dialog.title.trim().ifBlank { if (dialog.mealType == MealType.SNACK) "간식" else "추가" }
+                } else {
+                    dialog.title.trim()
+                }
+
+                val updatedSlot = MealSlotRecord(
+                    mealType = dialog.mealType,
+                    blocks = dialog.selectedBlocks.mapIndexed { index, b -> b.copy(sortOrder = index) },
+                    memo = dialog.memo.trim(),
+                    customTitle = customTitleToSave
                 )
 
-            val customTitleToSave = if (dialog.mealType == MealType.SNACK || dialog.mealType == MealType.EXTRA) {
-                dialog.title.trim().ifBlank { if (dialog.mealType == MealType.SNACK) "간식" else "추가" }
-            } else {
-                dialog.title.trim()
+                val updatedDay = existingDay.updateSlot(updatedSlot).copy(updatedAt = currentTimeMillis())
+                mealRecordRepository.saveMealRecord(updatedDay)
+                updateWeekCacheForDay(updatedDay)
+                onCloseSlotDialog()
+                onSlotSavedListener?.invoke()
+            } catch (e: Exception) {
+                val msg = e.message ?: "식단 저장에 실패했습니다."
+                onSaveErrorListener?.invoke(msg)
             }
-
-            val updatedSlot = MealSlotRecord(
-                mealType = dialog.mealType,
-                blocks = dialog.selectedBlocks.mapIndexed { index, b -> b.copy(sortOrder = index) },
-                memo = dialog.memo.trim(),
-                customTitle = customTitleToSave
-            )
-
-            val updatedDay = existingDay.updateSlot(updatedSlot).copy(updatedAt = currentTimeMillis())
-            mealRecordRepository.saveMealRecord(updatedDay)
-            updateWeekCacheForDay(updatedDay)
-            onCloseSlotDialog()
-            onSlotSavedListener?.invoke()
         }
     }
 
@@ -449,39 +465,57 @@ class MealPlanViewModel(
     fun onSaveCurrentAsPreset(presetName: String) {
         val dialog = _dialogState.value
         if (dialog.selectedBlocks.isEmpty()) return
+        val currentFoodBlocks = uiState.value.allFoodBlocks
+        val statuses = determineBlockStatusesIndexed(dialog.selectedBlocks, currentFoodBlocks)
+        if (statuses.any { it != MealBlockStatus.AVAILABLE }) return
+
         val defaultName = if (dialog.title.isNotBlank()) dialog.title.trim()
         else dialog.selectedBlocks.joinToString(" + ") { it.blockName }
         val finalName = presetName.trim().ifBlank { defaultName }
 
         viewModelScope.launch {
-            val newPreset = MealPreset(
-                id = "preset-${currentTimeMillis()}",
-                name = finalName,
-                blocks = dialog.selectedBlocks.mapIndexed { index, b -> b.copy(sortOrder = index) },
-                memo = dialog.memo.trim(),
-                createdAt = currentTimeMillis()
-            )
-            mealRecordRepository.saveMealPreset(newPreset)
+            try {
+                val newPreset = MealPreset(
+                    id = "preset-${currentTimeMillis()}",
+                    name = finalName,
+                    blocks = dialog.selectedBlocks.mapIndexed { index, b -> b.copy(sortOrder = index) },
+                    memo = dialog.memo.trim(),
+                    createdAt = currentTimeMillis()
+                )
+                mealRecordRepository.saveMealPreset(newPreset)
+            } catch (e: Exception) {
+                val msg = e.message ?: "프리셋 저장에 실패했습니다."
+                onSaveErrorListener?.invoke(msg)
+            }
         }
     }
 
     fun onSaveSlotAsPreset(dateString: String, mealType: MealType, presetName: String? = null) {
         viewModelScope.launch {
-            val dayRecord = mealRecordRepository.getMealRecordByDate(dateString) ?: return@launch
-            val slot = dayRecord.getSlot(mealType)
-            if (slot.blocks.isEmpty()) return@launch
-            val defaultName = if (slot.customTitle.isNotBlank()) slot.customTitle
-            else "${slot.mealType.title} 식단 (${slot.blocks.joinToString(", ") { it.blockName }})"
-            val finalName = presetName?.trim()?.ifBlank { defaultName } ?: defaultName
+            try {
+                val dayRecord = mealRecordRepository.getMealRecordByDate(dateString) ?: return@launch
+                val slot = dayRecord.getSlot(mealType)
+                if (slot.blocks.isEmpty()) return@launch
+                val currentFoodBlocks = uiState.value.allFoodBlocks
+                val statuses = determineBlockStatusesIndexed(slot.blocks, currentFoodBlocks)
+                if (statuses.any { it != MealBlockStatus.AVAILABLE }) return@launch
 
-            val newPreset = MealPreset(
-                id = "preset-${currentTimeMillis()}",
-                name = finalName,
-                blocks = slot.blocks.mapIndexed { index, b -> b.copy(sortOrder = index) },
-                memo = slot.memo,
-                createdAt = currentTimeMillis()
-            )
-            mealRecordRepository.saveMealPreset(newPreset)
+                val defaultName = if (slot.customTitle.isNotBlank()) slot.customTitle
+                else "${slot.mealType.title} 식단 (${slot.blocks.joinToString(", ") { it.blockName }})"
+                val finalName = presetName?.trim()?.ifBlank { defaultName } ?: defaultName
+
+                val newPreset = MealPreset(
+                    id = "preset-${currentTimeMillis()}",
+                    name = finalName,
+                    blocks = slot.blocks.mapIndexed { index, b -> b.copy(sortOrder = index) },
+                    memo = slot.memo,
+                    createdAt = currentTimeMillis()
+                )
+                mealRecordRepository.saveMealPreset(newPreset)
+            } catch (e: Exception) {
+                val msg = e.message ?: "프리셋 저장에 실패했습니다."
+                onSaveErrorListener?.invoke(msg)
+            }
         }
     }
 
@@ -490,17 +524,19 @@ class MealPlanViewModel(
             val allFoodBlocks = foodBlockRepository.getFoodBlocks()
             val allPieces = mutableListOf<AvailableBlockPiece>()
             allFoodBlocks.forEach { block ->
-                for (i in 1..block.quantity.coerceAtLeast(1)) {
-                    allPieces.add(
-                        AvailableBlockPiece(
-                            instanceId = "${block.id}-piece-$i",
-                            blockId = block.id,
-                            blockName = block.name,
-                            blockColorHex = block.blockColorHex,
-                            moldCapacityMl = block.moldCapacityMl,
-                            moldCellCount = block.moldCellCount
+                if (block.quantity > 0) {
+                    for (i in 1..block.quantity) {
+                        allPieces.add(
+                            AvailableBlockPiece(
+                                instanceId = "${block.id}-piece-$i",
+                                blockId = block.id,
+                                blockName = block.name,
+                                blockColorHex = block.blockColorHex,
+                                moldCapacityMl = block.moldCapacityMl,
+                                moldCellCount = block.moldCellCount
+                            )
                         )
-                    )
+                    }
                 }
             }
 
@@ -525,6 +561,41 @@ class MealPlanViewModel(
                 title = if (_dialogState.value.title.isBlank()) preset.name else _dialogState.value.title,
                 memo = if (_dialogState.value.memo.isBlank()) preset.memo else _dialogState.value.memo
             )
+        }
+    }
+
+    fun onRefillBlockQuantity(blockId: String, delta: Int = 1) {
+        viewModelScope.launch {
+            foodBlockRepository.updateQuantity(blockId, delta)
+            val currentDialog = _dialogState.value
+            if (currentDialog.isOpen) {
+                val updatedFoodBlocks = foodBlockRepository.getFoodBlocks()
+                val allPieces = mutableListOf<AvailableBlockPiece>()
+                updatedFoodBlocks.forEach { block ->
+                    if (block.quantity > 0) {
+                        for (i in 1..block.quantity) {
+                            allPieces.add(
+                                AvailableBlockPiece(
+                                    instanceId = "${block.id}-piece-$i",
+                                    blockId = block.id,
+                                    blockName = block.name,
+                                    blockColorHex = block.blockColorHex,
+                                    moldCapacityMl = block.moldCapacityMl,
+                                    moldCellCount = block.moldCellCount
+                                )
+                            )
+                        }
+                    }
+                }
+                val availableList = allPieces.toMutableList()
+                currentDialog.selectedBlocks.forEach { sel ->
+                    val matchIdx = availableList.indexOfFirst { it.blockId == sel.blockId }
+                    if (matchIdx >= 0) {
+                        availableList.removeAt(matchIdx)
+                    }
+                }
+                _dialogState.value = currentDialog.copy(availablePieces = availableList)
+            }
         }
     }
 

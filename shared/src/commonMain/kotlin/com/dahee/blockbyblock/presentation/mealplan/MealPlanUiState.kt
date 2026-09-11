@@ -1,6 +1,7 @@
 package com.dahee.blockbyblock.presentation.mealplan
 
 import com.dahee.blockbyblock.domain.model.DayMealRecord
+import com.dahee.blockbyblock.domain.model.FoodBlock
 import com.dahee.blockbyblock.domain.model.MealBlockItem
 import com.dahee.blockbyblock.domain.model.MealPreset
 import com.dahee.blockbyblock.domain.model.MealType
@@ -63,5 +64,6 @@ data class MealPlanUiState(
     val slotAvailableBlocks: List<AvailableBlockPiece> = emptyList(), // Blocks available to pick (Bottom)
     val slotTitleInput: String = "",
     val slotMemoInput: String = "",
-    val savedPresets: List<MealPreset> = emptyList()
+    val savedPresets: List<MealPreset> = emptyList(),
+    val allFoodBlocks: List<FoodBlock> = emptyList()
 )

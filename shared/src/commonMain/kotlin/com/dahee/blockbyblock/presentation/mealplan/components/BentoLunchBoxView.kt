@@ -2,6 +2,7 @@ package com.dahee.blockbyblock.presentation.mealplan.components
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,16 +28,27 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.theme.AppColors
+import com.dahee.blockbyblock.domain.model.FoodBlock
 import com.dahee.blockbyblock.domain.model.MealBlockItem
+import com.dahee.blockbyblock.domain.model.MealBlockStatus
+import com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed
 import com.dahee.blockbyblock.presentation.block.components.FoodBlockTopView
 
 /**
@@ -55,6 +67,7 @@ fun BentoLunchBoxView(
     modifier: Modifier = Modifier,
     blockHeight: Dp = 76.dp,
     isDynamicExpandable: Boolean = false,
+    allFoodBlocks: List<FoodBlock>? = null,
     onBlockClick: ((MealBlockItem) -> Unit)? = null,
     emptyPlaceholder: (@Composable () -> Unit)? = null
 ) {
@@ -87,6 +100,10 @@ fun BentoLunchBoxView(
         Modifier
             .fillMaxSize()
             .padding(horizontal = 6.dp, vertical = 2.dp)
+    }
+
+    val blockStatuses = remember(blocks, allFoodBlocks) {
+        determineBlockStatusesIndexed(blocks, allFoodBlocks)
     }
 
     BoxWithConstraints(
@@ -129,8 +146,9 @@ fun BentoLunchBoxView(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.Start),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                blocks.forEach { item ->
+                                blocks.forEachIndexed { index, item ->
                                     key(item.instanceId) {
+                                        val status = blockStatuses.getOrElse(index) { MealBlockStatus.AVAILABLE }
                                         val blockModifier = if (onBlockClick != null) {
                                             Modifier
                                                 .pointerHoverIcon(PointerIcon.Hand)
@@ -144,13 +162,12 @@ fun BentoLunchBoxView(
                                             Modifier.clip(RoundedCornerShape(8.dp))
                                         }
 
-                                        Box(modifier = blockModifier) {
-                                            FoodBlockTopView(
-                                                colorHex = item.blockColorHex,
-                                                moldCapacityMl = item.moldCapacityMl,
-                                                height = blockHeight
-                                            )
-                                        }
+                                        BentoFoodBlockItem(
+                                            item = item,
+                                            status = status,
+                                            height = blockHeight,
+                                            modifier = blockModifier
+                                        )
                                     }
                                 }
                             }
@@ -168,8 +185,9 @@ fun BentoLunchBoxView(
                                     horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.Start),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    blocks.forEach { item ->
+                                    blocks.forEachIndexed { index, item ->
                                         key(item.instanceId) {
+                                            val status = blockStatuses.getOrElse(index) { MealBlockStatus.AVAILABLE }
                                             val blockModifier = if (onBlockClick != null) {
                                                 Modifier
                                                     .pointerHoverIcon(PointerIcon.Hand)
@@ -183,13 +201,12 @@ fun BentoLunchBoxView(
                                                 Modifier.clip(RoundedCornerShape(6.dp))
                                             }
 
-                                            Box(modifier = blockModifier) {
-                                                FoodBlockTopView(
-                                                    colorHex = item.blockColorHex,
-                                                    moldCapacityMl = item.moldCapacityMl,
-                                                    height = computedHeight
-                                                )
-                                            }
+                                            BentoFoodBlockItem(
+                                                item = item,
+                                                status = status,
+                                                height = computedHeight,
+                                                modifier = blockModifier
+                                            )
                                         }
                                     }
                                 }
@@ -229,6 +246,102 @@ fun BentoLunchBoxView(
                     .background(Color(0xFFDBD3C8))
                     .border(0.75.dp, Color(0xFFC7BEB2), RoundedCornerShape(2.dp))
             )
+        }
+    }
+}
+
+@Composable
+private fun BentoFoodBlockItem(
+    item: MealBlockItem,
+    status: MealBlockStatus,
+    height: Dp,
+    modifier: Modifier = Modifier
+) {
+    val strings = LocalStrings.current
+
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        // 1. Food block top-down image (30% alpha if depleted, 45% alpha if deleted, full alpha otherwise)
+        Box(
+            modifier = when (status) {
+                MealBlockStatus.OUT_OF_STOCK -> Modifier.alpha(0.3f)
+                MealBlockStatus.DELETED -> Modifier.alpha(0.45f)
+                MealBlockStatus.AVAILABLE -> Modifier
+            }
+        ) {
+            FoodBlockTopView(
+                colorHex = item.blockColorHex,
+                moldCapacityMl = item.moldCapacityMl,
+                height = height,
+                isGrayscale = (status == MealBlockStatus.DELETED)
+            )
+        }
+
+        // 2. Depleted status: Dashed border & Orange [소진됨 0개] badge
+        if (status == MealBlockStatus.OUT_OF_STOCK) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .drawBehind {
+                        val strokeWidth = if (height < 50.dp) 1.dp.toPx() else 1.5.dp.toPx()
+                        val dashLength = if (height < 50.dp) 4.dp.toPx() else 6.dp.toPx()
+                        val gapLength = if (height < 50.dp) 3.dp.toPx() else 4.dp.toPx()
+                        val cornerRadius = if (height < 50.dp) 4.dp.toPx() else 6.dp.toPx()
+                        drawRoundRect(
+                            color = Color(0xFFF97316),
+                            topLeft = Offset(strokeWidth / 2f, strokeWidth / 2f),
+                            size = Size(size.width - strokeWidth, size.height - strokeWidth),
+                            cornerRadius = CornerRadius(cornerRadius, cornerRadius),
+                            style = Stroke(
+                                width = strokeWidth,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength), 0f)
+                            )
+                        )
+                    }
+            )
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color(0xFFF97316))
+                    .padding(
+                        horizontal = if (height < 50.dp) 2.dp else 4.dp,
+                        vertical = if (height < 50.dp) 1.dp else 2.dp
+                    )
+            ) {
+                Text(
+                    text = if (height < 45.dp) strings.depletedShortBadge else strings.depletedBlockBadge,
+                    fontSize = if (height < 50.dp) 7.sp else 9.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    maxLines = 1
+                )
+            }
+        }
+
+        // 3. Deleted or depleted status: Gray badge
+        if (status == MealBlockStatus.DELETED) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(Color(0xFF6B7280).copy(alpha = 0.9f))
+                    .padding(
+                        horizontal = if (height < 50.dp) 2.dp else 4.dp,
+                        vertical = if (height < 50.dp) 1.dp else 2.dp
+                    )
+            ) {
+                Text(
+                    text = strings.deletedBlockBadge,
+                    fontSize = if (height < 50.dp) 7.sp else 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1
+                )
+            }
         }
     }
 }

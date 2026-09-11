@@ -18,7 +18,10 @@ data class MealBlockItem(
     val blockColorHex: String = "#FF7043",
     val moldCapacityMl: Int = 250,
     val moldCellCount: Int = 4,
-    val sortOrder: Int = 0
+    val sortOrder: Int = 0,
+    val currentStock: Int? = null,
+    val isDeleted: Boolean? = null,
+    val blockStatus: MealBlockStatus? = null
 )
 
 /**
@@ -74,4 +77,59 @@ data class MealPreset(
     val memo: String = "",
     val createdAt: Long = 0L
 )
+
+/**
+ * Availability status of a food block placed in a meal plan or preset.
+ * Matches backend blockStatus ("AVAILABLE" | "OUT_OF_STOCK" | "DELETED").
+ */
+enum class MealBlockStatus {
+    AVAILABLE,
+    OUT_OF_STOCK,
+    DELETED;
+
+    companion object {
+        fun from(status: String?): MealBlockStatus? =
+            entries.find { it.name.equals(status, ignoreCase = true) }
+    }
+}
+
+/**
+ * Calculates the status of each block in a list according to current food block inventory.
+ * Accurately tracks instance count so if a block has 1 in stock, the 2nd instance is marked OUT_OF_STOCK.
+ */
+fun determineBlockStatusesIndexed(
+    blocks: List<MealBlockItem>,
+    allFoodBlocks: List<FoodBlock>?
+): List<MealBlockStatus> {
+    if (allFoodBlocks == null) {
+        return blocks.map { item ->
+            when {
+                item.blockStatus != null -> item.blockStatus
+                item.isDeleted == true -> MealBlockStatus.DELETED
+                item.currentStock != null && item.currentStock <= 0 -> MealBlockStatus.OUT_OF_STOCK
+                else -> MealBlockStatus.AVAILABLE
+            }
+        }
+    }
+
+    val foodBlocksMap = allFoodBlocks.associateBy { it.id }
+    val remainingStock = allFoodBlocks.associate { it.id to it.quantity }.toMutableMap()
+
+    return blocks.map { item ->
+        val foodBlock = foodBlocksMap[item.blockId]
+        when {
+            item.isDeleted == true || item.blockStatus == MealBlockStatus.DELETED -> MealBlockStatus.DELETED
+            foodBlock == null -> MealBlockStatus.DELETED
+            else -> {
+                val stock = remainingStock[item.blockId] ?: 0
+                if (stock <= 0) {
+                    MealBlockStatus.OUT_OF_STOCK
+                } else {
+                    remainingStock[item.blockId] = stock - 1
+                    MealBlockStatus.AVAILABLE
+                }
+            }
+        }
+    }
+}
 
