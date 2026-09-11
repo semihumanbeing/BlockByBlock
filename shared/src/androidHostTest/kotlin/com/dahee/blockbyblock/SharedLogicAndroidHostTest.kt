@@ -5,6 +5,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collect
 
 class SharedLogicAndroidHostTest {
@@ -639,4 +640,269 @@ class SharedLogicAndroidHostTest {
             assertTrue(!mold.isDefaultName, "Expected '$name' to be recognized as a custom mold name")
         }
     }
+
+    @Test
+    fun testNotificationDtoSerializationAndDualCompatibility() {
+        val json = com.dahee.blockbyblock.data.remote.ApiClient.jsonConfig
+
+        // 1. User Prompt JSON format (type, content, targetId)
+        val promptJson = """
+            {
+                "id": 101,
+                "type": "EXPIRING_BLOCK",
+                "title": "소분 블록 유통기한 임박",
+                "content": "당근 큐브 유통기한이 3일 남았습니다.",
+                "isRead": false,
+                "targetId": 55,
+                "createdAt": "2026-09-10T09:00:00Z"
+            }
+        """.trimIndent()
+        val dto1 = json.decodeFromString<com.dahee.blockbyblock.data.remote.dto.NotificationResponse>(promptJson)
+        assertEquals(101L, dto1.id)
+        assertEquals("EXPIRING_BLOCK", dto1.actualType)
+        assertEquals("당근 큐브 유통기한이 3일 남았습니다.", dto1.actualContent)
+        assertEquals(55L, dto1.targetId)
+        assertEquals(false, dto1.isRead)
+
+        // 2. Backend Controller JSON format (notificationType, body)
+        val backendJson = """
+            {
+                "id": 102,
+                "notificationType": "BLOCK_EXPIRED",
+                "title": "소분 블록 만료",
+                "body": "소고기 블록의 유통기한이 만료되었습니다.",
+                "isRead": true,
+                "targetId": 77,
+                "createdAt": "2026-09-08T12:00:00Z"
+            }
+        """.trimIndent()
+        val dto2 = json.decodeFromString<com.dahee.blockbyblock.data.remote.dto.NotificationResponse>(backendJson)
+        assertEquals(102L, dto2.id)
+        assertEquals("BLOCK_EXPIRED", dto2.actualType)
+        assertEquals("소고기 블록의 유통기한이 만료되었습니다.", dto2.actualContent)
+        assertEquals(77L, dto2.targetId)
+        assertEquals(true, dto2.isRead)
+
+        // 3. NotificationListResponse dual compatibility (items vs content)
+        val listBackendJson = """
+            {
+                "items": [$backendJson],
+                "totalCount": 1,
+                "unreadCount": 0,
+                "page": 1,
+                "size": 20,
+                "totalPages": 1
+            }
+        """.trimIndent()
+        val listDto = json.decodeFromString<com.dahee.blockbyblock.data.remote.dto.NotificationListResponse>(listBackendJson)
+        assertEquals(1, listDto.actualContent.size)
+        assertEquals(1L, listDto.actualTotalElements)
+        assertEquals(false, listDto.actualHasNext)
+
+        // 4. UnreadCountResponse dual compatibility (unreadCount vs count)
+        val unreadJson = """{"unreadCount": 5}"""
+        val unreadDto = json.decodeFromString<com.dahee.blockbyblock.data.remote.dto.UnreadCountResponse>(unreadJson)
+        assertEquals(5L, unreadDto.actualCount)
+
+        val countJson = """{"count": 12}"""
+        val countDto = json.decodeFromString<com.dahee.blockbyblock.data.remote.dto.UnreadCountResponse>(countJson)
+        assertEquals(12L, countDto.actualCount)
+    }
+
+    @Test
+    fun testRelativeTimeFormatting() {
+        val koStrings = com.dahee.blockbyblock.core.i18n.KoStrings
+        val enStrings = com.dahee.blockbyblock.core.i18n.EnStrings
+
+        assertEquals("방금 전", koStrings.notificationTimeJustNow)
+        assertEquals("Just now", enStrings.notificationTimeJustNow)
+        assertEquals("5분 전", koStrings.notificationTimeMinutesAgo(5))
+        assertEquals("5m ago", enStrings.notificationTimeMinutesAgo(5))
+        assertEquals("3시간 전", koStrings.notificationTimeHoursAgo(3))
+        assertEquals("3h ago", enStrings.notificationTimeHoursAgo(3))
+        assertEquals("어제", koStrings.notificationTimeYesterday)
+        assertEquals("Yesterday", enStrings.notificationTimeYesterday)
+        assertEquals("2일 전", koStrings.notificationTimeDaysAgo(2))
+        assertEquals("2d ago", enStrings.notificationTimeDaysAgo(2))
+
+        // Empty string returns empty
+        assertEquals("", com.dahee.blockbyblock.core.utils.formatRelativeTime("", koStrings))
+
+        // Deterministic relative time with fixed nowInstant
+        val seoulTz = kotlinx.datetime.TimeZone.of("Asia/Seoul")
+        val nowInstant = kotlinx.datetime.Instant.parse("2026-09-11T12:00:00Z") // 21:00 in Seoul
+
+        // 1. Just now (< 1 min)
+        assertEquals("방금 전", com.dahee.blockbyblock.core.utils.formatRelativeTime("2026-09-11T11:59:30Z", koStrings, nowInstant, seoulTz))
+        assertEquals("Just now", com.dahee.blockbyblock.core.utils.formatRelativeTime("2026-09-11T11:59:30Z", enStrings, nowInstant, seoulTz))
+
+        // 2. 5 minutes ago (< 60 min)
+        assertEquals("5분 전", com.dahee.blockbyblock.core.utils.formatRelativeTime("2026-09-11T11:55:00Z", koStrings, nowInstant, seoulTz))
+        assertEquals("5m ago", com.dahee.blockbyblock.core.utils.formatRelativeTime("2026-09-11T11:55:00Z", enStrings, nowInstant, seoulTz))
+
+        // 3. 2 hours ago (< 24h, same calendar day in Seoul)
+        assertEquals("2시간 전", com.dahee.blockbyblock.core.utils.formatRelativeTime("2026-09-11T10:00:00Z", koStrings, nowInstant, seoulTz))
+        assertEquals("2h ago", com.dahee.blockbyblock.core.utils.formatRelativeTime("2026-09-11T10:00:00Z", enStrings, nowInstant, seoulTz))
+
+        // 4. Yesterday (previous calendar day in Seoul)
+        assertEquals("어제", com.dahee.blockbyblock.core.utils.formatRelativeTime("2026-09-10T12:00:00Z", koStrings, nowInstant, seoulTz))
+        assertEquals("Yesterday", com.dahee.blockbyblock.core.utils.formatRelativeTime("2026-09-10T12:00:00Z", enStrings, nowInstant, seoulTz))
+
+        // 5. 2 days ago (2..6 days)
+        assertEquals("2일 전", com.dahee.blockbyblock.core.utils.formatRelativeTime("2026-09-09T12:00:00Z", koStrings, nowInstant, seoulTz))
+        assertEquals("2d ago", com.dahee.blockbyblock.core.utils.formatRelativeTime("2026-09-09T12:00:00Z", enStrings, nowInstant, seoulTz))
+
+        // 6. >= 7 days: formatted as local date "YYYY.MM.DD"
+        assertEquals("2026.09.01", com.dahee.blockbyblock.core.utils.formatRelativeTime("2026-09-01T12:00:00Z", koStrings, nowInstant, seoulTz))
+    }
+
+    @Test
+    fun testUtcParsingAndLocalTimeZoneConversion() {
+        val seoulTz = kotlinx.datetime.TimeZone.of("Asia/Seoul") // UTC+9
+        val nyTz = kotlinx.datetime.TimeZone.of("America/New_York") // UTC-4 in September (EDT)
+
+        // 1. UTC ISO string converted to Seoul local time (05:20 UTC -> 14:20 KST)
+        val utcIso = "2026-09-11T05:20:00Z"
+        val seoulLdt = com.dahee.blockbyblock.core.utils.toLocalLocalDateTime(utcIso, seoulTz)
+        assertNotNull(seoulLdt)
+        assertEquals(2026, seoulLdt.year)
+        @Suppress("DEPRECATION")
+        assertEquals(9, seoulLdt.monthNumber)
+        @Suppress("DEPRECATION")
+        assertEquals(11, seoulLdt.dayOfMonth)
+        assertEquals(14, seoulLdt.hour)
+        assertEquals(20, seoulLdt.minute)
+
+        // Formatted strings in Seoul
+        assertEquals("2026-09-11", com.dahee.blockbyblock.core.utils.formatIsoToLocalDateString(utcIso, seoulTz))
+        assertEquals("2026.09.11 14:20", com.dahee.blockbyblock.core.utils.formatIsoToLocalDateTimeString(utcIso, seoulTz))
+        assertEquals("14:20", com.dahee.blockbyblock.core.utils.formatIsoToLocalTime(utcIso, seoulTz))
+        assertEquals("2026년 9월 11일", com.dahee.blockbyblock.core.utils.formatIsoToLocalDisplayDate(utcIso, com.dahee.blockbyblock.core.i18n.AppLanguage.KO, seoulTz))
+        assertEquals("Sep 11, 2026", com.dahee.blockbyblock.core.utils.formatIsoToLocalDisplayDate(utcIso, com.dahee.blockbyblock.core.i18n.AppLanguage.EN, seoulTz))
+
+        // 2. Cross-day boundary: UTC 20:00 (Sep 11) is 05:00 next day (Sep 12) in Seoul
+        val lateUtcIso = "2026-09-11T20:00:00Z"
+        val nextDayLdt = com.dahee.blockbyblock.core.utils.toLocalLocalDateTime(lateUtcIso, seoulTz)
+        assertNotNull(nextDayLdt)
+        @Suppress("DEPRECATION")
+        assertEquals(12, nextDayLdt.dayOfMonth)
+        assertEquals(5, nextDayLdt.hour)
+        assertEquals("2026-09-12", com.dahee.blockbyblock.core.utils.formatIsoToLocalDateString(lateUtcIso, seoulTz))
+        assertEquals("2026.09.12 05:00", com.dahee.blockbyblock.core.utils.formatIsoToLocalDateTimeString(lateUtcIso, seoulTz))
+
+        // In New York (EDT, UTC-4), 20:00 UTC is 16:00 (Sep 11)
+        val nyLdt = com.dahee.blockbyblock.core.utils.toLocalLocalDateTime(lateUtcIso, nyTz)
+        assertNotNull(nyLdt)
+        @Suppress("DEPRECATION")
+        assertEquals(11, nyLdt.dayOfMonth)
+        assertEquals(16, nyLdt.hour)
+        assertEquals("2026-09-11", com.dahee.blockbyblock.core.utils.formatIsoToLocalDateString(lateUtcIso, nyTz))
+
+        // 3. Robust ISO normalization (omitted trailing 'Z' treated as UTC)
+        val noZIso = "2026-09-11T05:20:00"
+        val noZLdt = com.dahee.blockbyblock.core.utils.toLocalLocalDateTime(noZIso, seoulTz)
+        assertNotNull(noZLdt)
+        assertEquals(14, noZLdt.hour)
+
+        // 4. Epoch millis parsing
+        val epoch = com.dahee.blockbyblock.core.utils.parseIsoToEpochMillis("2026-09-11T00:00:00Z")
+        assertTrue(epoch > 0L)
+    }
+
+    @Test
+    fun testInMemoryNotificationRepositoryAndViewModel() = kotlinx.coroutines.runBlocking {
+        val initialList = listOf(
+            com.dahee.blockbyblock.domain.model.AppNotification(
+                id = 1L,
+                type = com.dahee.blockbyblock.domain.model.NotificationType.EXPIRING_BLOCK,
+                title = "소분 블록 유통기한 임박",
+                content = "3일 남음",
+                isRead = false,
+                targetId = 10L,
+                createdAt = "2026-09-10T10:00:00Z"
+            ),
+            com.dahee.blockbyblock.domain.model.AppNotification(
+                id = 2L,
+                type = com.dahee.blockbyblock.domain.model.NotificationType.NOTICE,
+                title = "공지사항",
+                content = "새로운 기능이 추가되었습니다.",
+                isRead = true,
+                targetId = null,
+                createdAt = "2026-09-09T10:00:00Z"
+            ),
+            com.dahee.blockbyblock.domain.model.AppNotification(
+                id = 3L,
+                type = com.dahee.blockbyblock.domain.model.NotificationType.BLOCK_EXPIRED,
+                title = "블록 만료",
+                content = "만료되었습니다.",
+                isRead = false,
+                targetId = 20L,
+                createdAt = "2026-09-08T10:00:00Z"
+            )
+        )
+
+        val repo = com.dahee.blockbyblock.data.repository.InMemoryNotificationRepository(initialList)
+
+        // Check initial unread count (id 1 and 3 are unread)
+        val initialCount = repo.fetchUnreadCount().getOrThrow()
+        assertEquals(2L, initialCount)
+        assertEquals(2L, repo.unreadCount.value)
+
+        // Query all notifications (page 1, size 2)
+        val allPaged = repo.getNotifications(unreadOnly = false, page = 1, size = 2).getOrThrow()
+        assertEquals(2, allPaged.notifications.size)
+        assertEquals(3L, allPaged.totalElements)
+        assertEquals(2, allPaged.totalPages)
+        assertTrue(allPaged.hasNext)
+
+        // Query unread only
+        val unreadPaged = repo.getNotifications(unreadOnly = true, page = 1, size = 10).getOrThrow()
+        assertEquals(2, unreadPaged.notifications.size)
+        assertEquals(2L, unreadPaged.totalElements)
+
+        // Mark single notification as read
+        repo.markAsRead(1L)
+        assertEquals(1L, repo.unreadCount.value)
+
+        // Mark all as read
+        repo.markAllAsRead()
+        assertEquals(0L, repo.unreadCount.value)
+
+        // Delete single notification
+        repo.deleteNotification(2L)
+        val afterDelete = repo.getNotifications(unreadOnly = false, page = 1, size = 10).getOrThrow()
+        assertEquals(2, afterDelete.notifications.size)
+
+        // Delete all notifications
+        repo.deleteAllNotifications()
+        val afterDeleteAll = repo.getNotifications(unreadOnly = false, page = 1, size = 10).getOrThrow()
+        assertEquals(0, afterDeleteAll.notifications.size)
+        assertEquals(0L, repo.unreadCount.value)
+
+        // Test ViewModel with new repo
+        val testScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default + kotlinx.coroutines.Job())
+        val repo2 = com.dahee.blockbyblock.data.repository.InMemoryNotificationRepository(initialList)
+        val viewModel = com.dahee.blockbyblock.presentation.notification.NotificationViewModel(repo2, customScope = testScope)
+
+        try {
+            // Allow coroutines in init to run
+            kotlinx.coroutines.delay(100)
+            assertEquals(2L, viewModel.uiState.value.unreadCount)
+            assertEquals(3, viewModel.uiState.value.notifications.size)
+
+            // Test filter toggle
+            viewModel.setFilter(unreadOnly = true)
+            kotlinx.coroutines.delay(100)
+            assertTrue(viewModel.uiState.value.unreadOnly)
+            assertEquals(2, viewModel.uiState.value.notifications.size)
+
+            // Test markAllAsRead in ViewModel
+            viewModel.markAllAsRead()
+            kotlinx.coroutines.delay(100)
+            assertEquals(0L, viewModel.uiState.value.unreadCount)
+        } finally {
+            testScope.cancel()
+        }
+    }
+
 }

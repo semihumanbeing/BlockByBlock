@@ -16,6 +16,7 @@ kotlin-wrappers = "2026.8.4"
 material3 = "1.11.0-alpha07"
 ktor = "3.1.1"
 kotlinx-serialization = "1.8.0"
+kotlinx-datetime = "0.6.2"
 androidx-credentials = "1.5.0"
 googleid = "1.1.1"
 
@@ -50,6 +51,7 @@ ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "kto
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
 ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
