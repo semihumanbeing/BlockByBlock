@@ -16,12 +16,22 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,6 +39,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Kitchen
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
@@ -42,10 +53,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -87,6 +102,7 @@ fun InventoryScreen(
     val focusManager = LocalFocusManager.current
     val platform = remember { getPlatform() }
     val isWeb = platform.isWeb
+    var isPantryExpanded by rememberSaveable { mutableStateOf(true) }
 
     // 1. Master Catalog Search & Add Dialog
     if (uiState.isSearchCatalogDialogOpen) {
@@ -134,15 +150,29 @@ fun InventoryScreen(
                 focusManager.clearFocus()
             }
     ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+        val isPantrySeparationActive = (uiState.selectedTab == IngredientTab.IN_STOCK || uiState.selectedTab == IngredientTab.ALL) && uiState.selectedCategory == null
+        val freshIngredients = if (isPantrySeparationActive) {
+            uiState.displayedIngredients.filter { it.category != IngredientCategory.SAUCE_SEASONING }
+        } else {
+            uiState.displayedIngredients
+        }
+        val seasoningIngredients = if (isPantrySeparationActive) {
+            uiState.displayedIngredients.filter { it.category == IngredientCategory.SAUCE_SEASONING }
+        } else {
+            emptyList()
+        }
+
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
-            item {
-                Spacer(modifier = Modifier.height(14.dp))
-                // Top Header: Title & [Search Ingredients] Button
+            // Pinned Top Elements Area (Never scrolls away)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Top Header: Title & Action Buttons ([Search Ingredients], [Create Block])
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -168,7 +198,7 @@ fun InventoryScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // 1. [Search Ingredients] Button (Warm Terracotta Accent Color)
+                        // 1. [Search Ingredients] Button
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -199,7 +229,7 @@ fun InventoryScreen(
                             )
                         }
 
-                        // 2. [Create Block] Button (Available on both mobile and web)
+                        // 2. [Create Block] Button
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -231,15 +261,12 @@ fun InventoryScreen(
                         }
                     }
                 }
-            }
 
-            // 1. Tab Selector: [All] [In Stock] [Shopping Cart]
-            item {
+                // 1. Tab Selector: [All] [In Stock] [Shopping Cart]
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // All Tab
                     AppChip(
                         text = "${strings.inventoryTabAll} (${uiState.totalCount})",
                         selected = uiState.selectedTab == IngredientTab.ALL,
@@ -247,7 +274,6 @@ fun InventoryScreen(
                         modifier = Modifier.weight(1f)
                     )
 
-                    // In Stock Tab (Shows only in-stock count)
                     AppChip(
                         text = "${strings.inventoryTabInStock} (${uiState.inStockCount})",
                         selected = uiState.selectedTab == IngredientTab.IN_STOCK,
@@ -255,7 +281,6 @@ fun InventoryScreen(
                         modifier = Modifier.weight(1f)
                     )
 
-                    // Shopping Cart Tab
                     AppChip(
                         text = "${strings.inventoryTabShoppingCart} (${uiState.shoppingCartCount})",
                         selected = uiState.selectedTab == IngredientTab.SHOPPING_CART,
@@ -263,10 +288,8 @@ fun InventoryScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
-            }
 
-            // 2. Category Filter Chips (Horizontal scroll)
-            item {
+                // 2. Category Filter Chips (Horizontal scroll)
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -293,169 +316,234 @@ fun InventoryScreen(
                         )
                     }
                 }
-            }
 
-            // 3. Checklist Ingredients List
-            val isPantrySeparationActive = (uiState.selectedTab == IngredientTab.IN_STOCK || uiState.selectedTab == IngredientTab.ALL) && uiState.selectedCategory == null
-            val freshIngredients = if (isPantrySeparationActive) {
-                uiState.displayedIngredients.filter { it.category != IngredientCategory.SAUCE_SEASONING }
-            } else {
-                uiState.displayedIngredients
-            }
-            val seasoningIngredients = if (isPantrySeparationActive) {
-                uiState.displayedIngredients.filter { it.category == IngredientCategory.SAUCE_SEASONING }
-            } else {
-                emptyList()
-            }
-
-            if (freshIngredients.isEmpty() && seasoningIngredients.isEmpty()) {
-                item {
-                    AppCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        padding = 28.dp
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Image(
-                                painter = painterResource(Res.drawable.shopping_cart),
-                                contentDescription = strings.inventoryEmptyTitle,
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.size(80.dp)
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = if (uiState.selectedTab == IngredientTab.SHOPPING_CART) {
-                                    strings.cartEmptyTitle
-                                } else {
-                                    strings.inventoryEmptyTitle
-                                },
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AppColors.TextSecondary
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = if (uiState.selectedTab == IngredientTab.SHOPPING_CART) {
-                                    strings.cartEmptyDesc
-                                } else {
-                                    strings.inventoryEmptyDesc
-                                },
-                                fontSize = 12.sp,
-                                color = AppColors.TextMuted,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(14.dp))
-                            AppButton(
-                                text = strings.inventorySearchBtn,
-                                variant = ButtonVariant.ACCENT,
-                                onClick = { viewModel.onOpenSearchCatalogDialog() },
-                                height = 36.dp
-                            )
-                        }
-                    }
-                }
-            } else {
-                item {
-                    Text(
-                        text = strings.inventorySwipeToDeleteHint,
-                        fontSize = 11.sp,
-                        color = AppColors.TextMuted,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                // 3. Collapsible Pantry Seasonings Section at TOP
+                if (seasoningIngredients.isNotEmpty()) {
+                    PantrySeasoningsSection(
+                        seasonings = seasoningIngredients,
+                        isExpanded = isPantryExpanded,
+                        onToggleExpand = { isPantryExpanded = !isPantryExpanded },
+                        onToggleStatus = { viewModel.onToggleChecklistStatus(it) },
+                        onOpenEdit = { viewModel.onOpenEditDialog(it) }
                     )
                 }
 
-                items(freshIngredients, key = { it.id }) { ingredient ->
-                    val dismissState = remember(ingredient.id) {
-                        SwipeToDismissBoxState(
-                            initialValue = SwipeToDismissBoxValue.Settled,
-                            positionalThreshold = { totalDistance -> totalDistance * 0.45f }
-                        )
-                    }
-
-                    // Reset dismiss state to Settled whenever item enters composition (e.g. after undoing deletion)
-                    LaunchedEffect(ingredient.id) {
-                        if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
-                            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
-                        }
-                    }
-
-                    SwipeToDismissBox(
-                        state = dismissState,
-                        enableDismissFromStartToEnd = false,
-                        enableDismissFromEndToStart = true,
-                        onDismiss = { dismissValue ->
-                            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
-                                viewModel.onDeleteIngredientWithUndo(
-                                    ingredient = ingredient,
-                                    message = strings.itemDeletedToast(ingredient.name)
+                // 4. Main Ingredients Section Header
+                if (freshIngredients.isNotEmpty()) {
+                    if (seasoningIngredients.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 4.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = strings.inventoryMainSectionTitle,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.TextPrimary
+                                )
+                                Text(
+                                    text = strings.pieceCount(freshIngredients.size),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.Primary
                                 )
                             }
-                        },
-                        backgroundContent = {
-                            val isSwiping = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
-                            if (isSwiping) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(Color(0xFFE53935))
-                                        .padding(end = 20.dp),
-                                    contentAlignment = Alignment.CenterEnd
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = strings.delete,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Text(
-                                            text = strings.delete,
-                                            color = Color.White,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                            }
+                            Text(
+                                text = strings.inventorySwipeToDeleteHint,
+                                fontSize = 11.sp,
+                                color = AppColors.TextMuted
+                            )
                         }
-                    ) {
-                        IngredientItemCard(
-                            ingredient = ingredient,
-                            onToggleStatus = { viewModel.onToggleChecklistStatus(ingredient.id) },
-                            onMarkAsConsumed = { viewModel.onMarkAsConsumed(ingredient.id) },
-                            onMoveToCart = { viewModel.onMoveToCart(ingredient.id) },
-                            onRestoreToStock = { viewModel.onRestoreToStock(ingredient.id) },
-                            onEdit = { viewModel.onOpenEditDialog(ingredient) },
-                            onDelete = {
-                                viewModel.onDeleteIngredientWithUndo(
-                                    ingredient = ingredient,
-                                    message = strings.itemDeletedToast(ingredient.name)
-                                )
-                            }
-                        )
-                    }
-                }
-
-                // Dedicated Pantry Seasonings Section at the bottom of In-Stock and All tabs
-                if (seasoningIngredients.isNotEmpty()) {
-                    item {
-                        PantrySeasoningsSection(
-                            seasonings = seasoningIngredients,
-                            onToggleStatus = { viewModel.onToggleChecklistStatus(it) },
-                            onOpenEdit = { viewModel.onOpenEditDialog(it) }
+                    } else {
+                        Text(
+                            text = strings.inventorySwipeToDeleteHint,
+                            fontSize = 11.sp,
+                            color = AppColors.TextMuted,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                         )
                     }
                 }
             }
 
-            item {
-                Spacer(modifier = Modifier.height(if (!isWeb) 80.dp else 24.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Scrollable Main Ingredients List
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                if (freshIngredients.isEmpty() && seasoningIngredients.isEmpty()) {
+                    item {
+                        AppCard(
+                            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                            padding = 28.dp
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Image(
+                                    painter = painterResource(Res.drawable.shopping_cart),
+                                    contentDescription = strings.inventoryEmptyTitle,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.size(80.dp)
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = if (uiState.selectedTab == IngredientTab.SHOPPING_CART) {
+                                        strings.cartEmptyTitle
+                                    } else {
+                                        strings.inventoryEmptyTitle
+                                    },
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.TextSecondary
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = if (uiState.selectedTab == IngredientTab.SHOPPING_CART) {
+                                        strings.cartEmptyDesc
+                                    } else {
+                                        strings.inventoryEmptyDesc
+                                    },
+                                    fontSize = 12.sp,
+                                    color = AppColors.TextMuted,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(14.dp))
+                                AppButton(
+                                    text = strings.inventorySearchBtn,
+                                    variant = ButtonVariant.ACCENT,
+                                    onClick = { viewModel.onOpenSearchCatalogDialog() },
+                                    height = 36.dp
+                                )
+                            }
+                        }
+                    }
+                } else if (freshIngredients.isNotEmpty()) {
+                    items(freshIngredients, key = { it.id }) { ingredient ->
+                        val dismissState = remember(ingredient.id) {
+                            SwipeToDismissBoxState(
+                                initialValue = SwipeToDismissBoxValue.Settled,
+                                positionalThreshold = { totalDistance -> totalDistance * 0.45f }
+                            )
+                        }
+
+                        // Reset dismiss state to Settled whenever item enters composition (e.g. after undoing deletion)
+                        LaunchedEffect(ingredient.id) {
+                            if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+                                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+                            }
+                        }
+
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            enableDismissFromStartToEnd = false,
+                            enableDismissFromEndToStart = true,
+                            onDismiss = { dismissValue ->
+                                if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                                    viewModel.onDeleteIngredientWithUndo(
+                                        ingredient = ingredient,
+                                        message = strings.itemDeletedToast(ingredient.name)
+                                    )
+                                }
+                            },
+                            backgroundContent = {
+                                val isSwiping = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
+                                if (isSwiping) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .background(Color(0xFFE53935))
+                                            .padding(end = 20.dp),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = strings.delete,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Text(
+                                                text = strings.delete,
+                                                color = Color.White,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        ) {
+                            IngredientItemCard(
+                                ingredient = ingredient,
+                                onToggleStatus = { viewModel.onToggleChecklistStatus(ingredient.id) },
+                                onMarkAsConsumed = { viewModel.onMarkAsConsumed(ingredient.id) },
+                                onMoveToCart = { viewModel.onMoveToCart(ingredient.id) },
+                                onRestoreToStock = { viewModel.onRestoreToStock(ingredient.id) },
+                                onEdit = { viewModel.onOpenEditDialog(ingredient) },
+                                onDelete = {
+                                    viewModel.onDeleteIngredientWithUndo(
+                                        ingredient = ingredient,
+                                        message = strings.itemDeletedToast(ingredient.name)
+                                    )
+                                }
+                            )
+                        }
+                    }
+                } else if (seasoningIngredients.isNotEmpty()) {
+                    item(key = "empty_main_ingredients") {
+                        AppCard(
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                            padding = 20.dp
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = strings.inventoryEmptyTitle,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.TextSecondary
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = strings.inventoryEmptyDesc,
+                                    fontSize = 12.sp,
+                                    color = AppColors.TextMuted,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                AppButton(
+                                    text = strings.inventorySearchBtn,
+                                    variant = ButtonVariant.ACCENT,
+                                    onClick = { viewModel.onOpenSearchCatalogDialog() },
+                                    height = 34.dp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(if (!isWeb) 80.dp else 24.dp))
+                }
             }
         }
 
@@ -519,19 +607,33 @@ fun InventoryScreen(
 @Composable
 private fun PantrySeasoningsSection(
     seasonings: List<Ingredient>,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
     onToggleStatus: (String) -> Unit,
     onOpenEdit: (Ingredient) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
+    val rotationState by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        animationSpec = tween(200)
+    )
 
     AppCard(
         modifier = modifier.fillMaxWidth(),
-        padding = 16.dp
+        padding = 14.dp
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onToggleExpand
+                    )
+                    .pointerHoverIcon(PointerIcon.Hand),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -547,33 +649,65 @@ private fun PantrySeasoningsSection(
                     )
                     Text(
                         text = strings.inventoryPantrySectionTitle,
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = AppColors.TextPrimary
                     )
+                    Text(
+                        text = strings.pieceCount(seasonings.size),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.Primary
+                    )
                 }
 
-                Text(
-                    text = strings.pieceCount(seasonings.size),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AppColors.Primary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = if (isExpanded) strings.inventoryPantryCollapse else strings.inventoryPantryExpand,
+                        fontSize = 12.sp,
+                        color = AppColors.TextMuted,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = if (isExpanded) strings.inventoryPantryCollapse else strings.inventoryPantryExpand,
+                        tint = AppColors.TextMuted,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .rotate(rotationState)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically(animationSpec = tween(200)) + fadeIn(animationSpec = tween(150)),
+                exit = shrinkVertically(animationSpec = tween(200)) + fadeOut(animationSpec = tween(150))
             ) {
-                seasonings.forEach { seasoning ->
-                    PantrySeasoningChip(
-                        seasoning = seasoning,
-                        onToggleStatus = { onToggleStatus(seasoning.id) },
-                        onOpenEdit = { onOpenEdit(seasoning) }
-                    )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 160.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        seasonings.forEach { seasoning ->
+                            PantrySeasoningChip(
+                                seasoning = seasoning,
+                                onToggleStatus = { onToggleStatus(seasoning.id) },
+                                onOpenEdit = { onOpenEdit(seasoning) }
+                            )
+                        }
+                    }
                 }
             }
         }

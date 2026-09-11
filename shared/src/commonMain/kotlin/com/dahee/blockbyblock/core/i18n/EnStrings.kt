@@ -162,6 +162,9 @@ object EnStrings : AppStrings {
     override val inventoryTabShoppingCart = "Shopping Cart"
     override val inventoryStatusConsumed = "Consumed"
     override val inventoryPantrySectionTitle = "Sub-Ingredients"
+    override val inventoryMainSectionTitle = "Main Ingredients"
+    override val inventoryPantryExpand = "Expand"
+    override val inventoryPantryCollapse = "Collapse"
     override val inventoryEmptyTitle = "No ingredients registered"
     override val inventoryEmptyDesc = "Use the input bar or add button above to add ingredients."
     override val inventoryEditTitle = "Edit Ingredient"
@@ -204,8 +207,14 @@ object EnStrings : AppStrings {
     }
     override val deleteMealRecordTitle = "Delete Meal"
     override fun deleteMealRecordConfirm(mealType: String) = "Are you sure you want to delete $mealType record?"
+    override val discardChangesTitle = "Discard changes?"
+    override val discardChangesMessage = "Your unsaved changes will be lost. Do you want to exit?"
+    override val discardChangesConfirm = "Exit"
+    override val continueEditing = "Keep Editing"
     override val backToToday = "Today"
+    override val mealPlanTitle = "Meal Plan"
     override val mealPlanTabDaily = "Daily Plan"
+
     override val mealPlanTabWeekly = "Weekly Plan"
     override val mealPlanHint = "What shall we eat?"
     override fun memoPrefix(memo: String) = "Memo: $memo"
@@ -227,6 +236,15 @@ object EnStrings : AppStrings {
     override val presetNamePlaceholder = "Preset name (e.g. Late-night snack)"
     override val deletePreset = "Delete Preset"
     override val presetSaved = "Meal preset saved successfully"
+    override val depletedBlockBadge = "Depleted"
+    override val depletedShortBadge = "Depleted"
+    override val deletedBlockBadge = "Depleted"
+    override val invalidBlocksWarning = "Cannot save: Contains depleted or deleted blocks."
+    override val replaceBlockAction = "Replace with another block"
+    override val refillQuantityAction = "Refill Quantity (+1)"
+    override val createBlockAction = "Create New Block"
+    override fun deletedBlockDesc(blockName: String) = "'$blockName' is depleted or deleted from inventory."
+    override fun depletedBlockDesc(blockName: String) = "'$blockName' is out of stock in inventory."
 
     // Tutorial & Onboarding
     override val tutorialWelcomeSubtitle = "Please enter your nickname"
@@ -300,4 +318,20 @@ object EnStrings : AppStrings {
         "Picking today's food blocks..",
         "Finding delicious block combos.."
     )
+
+    // Notifications
+    override val notificationTitle = "Notifications"
+    override val notificationMarkAllAsRead = "Mark all read"
+    override val notificationAllTab = "All"
+    override val notificationUnreadTab = "Unread"
+    override val notificationEmptyTitle = "No notifications"
+    override val notificationEmptySubtitle = "We'll let you know when new updates arrive"
+    override val notificationDelete = "Delete"
+    override val notificationDeleteAll = "Clear all"
+    override val notificationTimeJustNow = "Just now"
+    override fun notificationTimeMinutesAgo(minutes: Long) = "${minutes}m ago"
+    override fun notificationTimeHoursAgo(hours: Long) = "${hours}h ago"
+    override val notificationTimeYesterday = "Yesterday"
+    override fun notificationTimeDaysAgo(days: Long) = "${days}d ago"
 }
+

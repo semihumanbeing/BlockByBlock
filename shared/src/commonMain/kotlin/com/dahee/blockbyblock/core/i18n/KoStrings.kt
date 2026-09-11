@@ -162,6 +162,9 @@ object KoStrings : AppStrings {
     override val inventoryTabShoppingCart = "장바구니"
     override val inventoryStatusConsumed = "소진됨"
     override val inventoryPantrySectionTitle = "부재료 (상비 양념/소스)"
+    override val inventoryMainSectionTitle = "주요 식재료"
+    override val inventoryPantryExpand = "펼치기"
+    override val inventoryPantryCollapse = "접기"
     override val inventoryEmptyTitle = "보관 중인 재료가 없습니다"
     override val inventoryEmptyDesc = "우측 상단 [재료 검색]으로 쉽게 식재료를 등록해보세요!"
     override val inventoryEditTitle = "식재료 수정"
@@ -204,8 +207,14 @@ object KoStrings : AppStrings {
     }
     override val deleteMealRecordTitle = "식단 기록 삭제"
     override fun deleteMealRecordConfirm(mealType: String) = "${mealType} 식단 기록을 삭제하시겠습니까?"
+    override val discardChangesTitle = "작성 취소"
+    override val discardChangesMessage = "작성 중인 내용이 저장되지 않습니다. 나가시겠습니까?"
+    override val discardChangesConfirm = "나가기"
+    override val continueEditing = "계속 작성"
     override val backToToday = "오늘로"
+    override val mealPlanTitle = "식단"
     override val mealPlanTabDaily = "일별 식단"
+
     override val mealPlanTabWeekly = "주별 식단"
     override val mealPlanHint = "무엇을 먹을까요?"
     override fun memoPrefix(memo: String) = "메모: $memo"
@@ -227,6 +236,15 @@ object KoStrings : AppStrings {
     override val presetNamePlaceholder = "식단 이름 (예: 야식)"
     override val deletePreset = "식단 삭제"
     override val presetSaved = "식단이 저장되었습니다"
+    override val depletedBlockBadge = "소진"
+    override val depletedShortBadge = "소진"
+    override val deletedBlockBadge = "소진"
+    override val invalidBlocksWarning = "소진되거나 삭제된 블록이 포함되어 있어 저장할 수 없습니다."
+    override val replaceBlockAction = "다른 블록으로 교체"
+    override val refillQuantityAction = "수량 채우기 (+1개)"
+    override val createBlockAction = "새 블록 만들기"
+    override fun deletedBlockDesc(blockName: String) = "'${blockName}' 블록이 소진되었거나 삭제되었습니다."
+    override fun depletedBlockDesc(blockName: String) = "'${blockName}' 블록의 잔여 수량이 소진되었습니다."
 
     // Tutorial & Onboarding
     override val tutorialWelcomeSubtitle = "닉네임을 정해주세요"
@@ -300,4 +318,20 @@ object KoStrings : AppStrings {
         "오늘 먹을 블록 고르는 중..",
         "맛있는 블록 조합 찾는 중.."
     )
+
+    // Notifications
+    override val notificationTitle = "알림"
+    override val notificationMarkAllAsRead = "모두 읽음"
+    override val notificationAllTab = "전체"
+    override val notificationUnreadTab = "안 읽음"
+    override val notificationEmptyTitle = "알림이 없습니다"
+    override val notificationEmptySubtitle = "새로운 소식이 도착하면 알려드릴게요"
+    override val notificationDelete = "삭제"
+    override val notificationDeleteAll = "전체 삭제"
+    override val notificationTimeJustNow = "방금 전"
+    override fun notificationTimeMinutesAgo(minutes: Long) = "${minutes}분 전"
+    override fun notificationTimeHoursAgo(hours: Long) = "${hours}시간 전"
+    override val notificationTimeYesterday = "어제"
+    override fun notificationTimeDaysAgo(days: Long) = "${days}일 전"
 }
+

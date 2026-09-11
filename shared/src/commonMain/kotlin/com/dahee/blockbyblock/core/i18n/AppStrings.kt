@@ -150,6 +150,9 @@ interface AppStrings {
     val inventoryTabShoppingCart: String
     val inventoryStatusConsumed: String
     val inventoryPantrySectionTitle: String
+    val inventoryMainSectionTitle: String
+    val inventoryPantryExpand: String
+    val inventoryPantryCollapse: String
     val inventoryEmptyTitle: String
     val inventoryEmptyDesc: String
     val inventoryEditTitle: String
@@ -185,8 +188,14 @@ interface AppStrings {
     fun mealTypeName(type: MealType): String
     val deleteMealRecordTitle: String
     fun deleteMealRecordConfirm(mealType: String): String
+    val discardChangesTitle: String
+    val discardChangesMessage: String
+    val discardChangesConfirm: String
+    val continueEditing: String
     val backToToday: String
+    val mealPlanTitle: String
     val mealPlanTabDaily: String
+
     val mealPlanTabWeekly: String
     val mealPlanHint: String
     fun memoPrefix(memo: String): String
@@ -208,6 +217,15 @@ interface AppStrings {
     val presetNamePlaceholder: String
     val deletePreset: String
     val presetSaved: String
+    val depletedBlockBadge: String
+    val depletedShortBadge: String
+    val deletedBlockBadge: String
+    val invalidBlocksWarning: String
+    val replaceBlockAction: String
+    val refillQuantityAction: String
+    val createBlockAction: String
+    fun deletedBlockDesc(blockName: String): String
+    fun depletedBlockDesc(blockName: String): String
 
     // Tutorial & Onboarding
     val tutorialWelcomeSubtitle: String
@@ -273,4 +291,20 @@ interface AppStrings {
     val profileDeleteAccountConfirmTitle: String
     val profileDeleteAccountConfirmMsg: String
     val loadingMessages: List<String>
+
+    // Notifications
+    val notificationTitle: String
+    val notificationMarkAllAsRead: String
+    val notificationAllTab: String
+    val notificationUnreadTab: String
+    val notificationEmptyTitle: String
+    val notificationEmptySubtitle: String
+    val notificationDelete: String
+    val notificationDeleteAll: String
+    val notificationTimeJustNow: String
+    fun notificationTimeMinutesAgo(minutes: Long): String
+    fun notificationTimeHoursAgo(hours: Long): String
+    val notificationTimeYesterday: String
+    fun notificationTimeDaysAgo(days: Long): String
 }
+
