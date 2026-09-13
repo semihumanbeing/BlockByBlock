@@ -60,6 +60,7 @@ fun MeScreen(
     onNavigateToEquipment: () -> Unit = {},
     onRestartTutorial: () -> Unit = {},
     onLogout: () -> Unit = {},
+    onDeleteAccount: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
@@ -201,7 +202,7 @@ fun MeScreen(
                 TextButton(
                     onClick = {
                         isDeleteAccountDialogOpen = false
-                        onLogout()
+                        onDeleteAccount()
                     }
                 ) {
                     Text(

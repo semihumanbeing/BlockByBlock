@@ -619,6 +619,27 @@ fun App() {
                                                 }
                                                 notificationViewModel.reset()
                                                 isLoggedIn = false
+                                            },
+                                            onDeleteAccount = {
+                                                coroutineScope.launch {
+                                                    com.dahee.blockbyblock.core.notification.PushNotificationManager.onLogout(deviceApiService)
+                                                    val res = userApiService.withdraw()
+                                                    res.onSuccess {
+                                                        com.dahee.blockbyblock.data.remote.ApiClient.clearAuthTokens()
+                                                        notificationViewModel.reset()
+                                                        isLoggedIn = false
+                                                        userProfile = UserProfile()
+                                                    }.onFailure { err ->
+                                                        if (err is com.dahee.blockbyblock.data.remote.error.ApiError && err.status == 401) {
+                                                            com.dahee.blockbyblock.data.remote.ApiClient.clearAuthTokens()
+                                                            notificationViewModel.reset()
+                                                            isLoggedIn = false
+                                                            userProfile = UserProfile()
+                                                        } else {
+                                                            com.dahee.blockbyblock.data.remote.ApiClient.showToast(err.message ?: strings.authErrorNetwork)
+                                                        }
+                                                    }
+                                                }
                                             }
                                         )
                                     }
