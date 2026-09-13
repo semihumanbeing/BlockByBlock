@@ -880,6 +880,7 @@ class SharedLogicAndroidHostTest {
         assertEquals(0L, repo.unreadCount.value)
 
         // Test ViewModel with new repo
+        com.dahee.blockbyblock.data.remote.TokenStorage.setTokens("test_token", "test_refresh")
         val testScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default + kotlinx.coroutines.Job())
         val repo2 = com.dahee.blockbyblock.data.repository.InMemoryNotificationRepository(initialList)
         val viewModel = com.dahee.blockbyblock.presentation.notification.NotificationViewModel(repo2, customScope = testScope)
@@ -901,7 +902,20 @@ class SharedLogicAndroidHostTest {
             kotlinx.coroutines.delay(100)
             assertEquals(0L, viewModel.uiState.value.unreadCount)
         } finally {
+            com.dahee.blockbyblock.data.remote.TokenStorage.clearTokens()
             testScope.cancel()
+        }
+
+        // Test Unauthenticated guard: ViewModel skips fetch when not logged in
+        val unauthScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default + kotlinx.coroutines.Job())
+        try {
+            val unauthRepo = com.dahee.blockbyblock.data.repository.InMemoryNotificationRepository(initialList)
+            val unauthVm = com.dahee.blockbyblock.presentation.notification.NotificationViewModel(unauthRepo, customScope = unauthScope)
+            kotlinx.coroutines.delay(100)
+            assertEquals(0L, unauthVm.uiState.value.unreadCount)
+            assertEquals(0, unauthVm.uiState.value.notifications.size)
+        } finally {
+            unauthScope.cancel()
         }
     }
 

@@ -87,16 +87,6 @@ fun App() {
     var tutorialStep by remember { mutableStateOf(TutorialStep.WELCOME_PROFILE) }
 
 
-    androidx.compose.runtime.DisposableEffect(Unit) {
-        com.dahee.blockbyblock.data.remote.ApiClient.setAuthFailureHandler { _ ->
-            isLoggedIn = false
-            userProfile = UserProfile()
-        }
-        onDispose {
-            com.dahee.blockbyblock.data.remote.ApiClient.setAuthFailureHandler(null)
-        }
-    }
-
     val initialLang = remember {
         val savedLang = TokenStorage.getUserLang()
         if (savedLang != null) {
@@ -140,6 +130,17 @@ fun App() {
     val notificationUiState by notificationViewModel.uiState.collectAsState()
     val unreadCount = notificationUiState.unreadCount
 
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        com.dahee.blockbyblock.data.remote.ApiClient.setAuthFailureHandler { _ ->
+            isLoggedIn = false
+            userProfile = UserProfile()
+            notificationViewModel.reset()
+        }
+        onDispose {
+            com.dahee.blockbyblock.data.remote.ApiClient.setAuthFailureHandler(null)
+        }
+    }
+
     val ingredientUiState by ingredientViewModel.uiState.collectAsState()
     val blockUiState by blockViewModel.uiState.collectAsState()
 
@@ -147,9 +148,23 @@ fun App() {
     val hasAddedIngredient = ingredientUiState.registeredIngredients.isNotEmpty()
     val hasCreatedBlock = blockUiState.blocks.isNotEmpty()
 
+    fun fetchMainAppData(includeNotifications: Boolean = false) {
+        coroutineScope.launch {
+            PushNotificationManager.syncDeviceOrTimezone(deviceApiService, userApiService)
+            equipmentRepository.fetchEquipments()
+            ingredientRepository.fetchIngredients()
+            foodBlockRepository.fetchFoodBlocks()
+            mealRecordRepository.fetchWeeklyMeals(com.dahee.blockbyblock.core.utils.getCurrentDateIso())
+            mealRecordRepository.fetchMealPresets()
+            if (includeNotifications && TokenStorage.isAuthenticated && !TokenStorage.getAccessToken().isNullOrBlank()) {
+                notificationViewModel.fetchUnreadCount()
+            }
+        }
+    }
+
     // Auto-restore login session on startup / page refresh
     androidx.compose.runtime.LaunchedEffect(Unit) {
-        if (TokenStorage.isAuthenticated) {
+        if (TokenStorage.isAuthenticated && !TokenStorage.getAccessToken().isNullOrBlank()) {
             val meResult = userApiService.getMe()
             meResult.onSuccess { userRes ->
                 try {
@@ -176,19 +191,13 @@ fun App() {
                 isLoggedIn = true
                 if (!profile.onboardingCompleted) {
                     tutorialStep = TutorialStep.WELCOME_PROFILE
+                    fetchMainAppData(includeNotifications = false)
                 } else {
                     tutorialStep = TutorialStep.COMPLETED
                     currentTab = NavTab.MEAL_PLAN
+                    fetchMainAppData(includeNotifications = true)
                 }
-                coroutineScope.launch { equipmentRepository.fetchEquipments() }
-                coroutineScope.launch { ingredientRepository.fetchIngredients() }
-                coroutineScope.launch { foodBlockRepository.fetchFoodBlocks() }
-                coroutineScope.launch { mealRecordRepository.fetchWeeklyMeals(com.dahee.blockbyblock.core.utils.getCurrentDateIso()) }
-                coroutineScope.launch { mealRecordRepository.fetchMealPresets() }
-                coroutineScope.launch { com.dahee.blockbyblock.core.notification.PushNotificationManager.syncDeviceOrTimezone(deviceApiService, userApiService) }
-                coroutineScope.launch { notificationViewModel.fetchUnreadCount() }
             }.onFailure {
-
                 val refresh = TokenStorage.getRefreshToken()
                 if (!refresh.isNullOrBlank()) {
                     val refreshRes = authApiService.refreshToken(refresh)
@@ -219,28 +228,25 @@ fun App() {
                             isLoggedIn = true
                             if (!profile.onboardingCompleted) {
                                 tutorialStep = TutorialStep.WELCOME_PROFILE
+                                fetchMainAppData(includeNotifications = false)
                             } else {
                                 tutorialStep = TutorialStep.COMPLETED
                                 currentTab = NavTab.MEAL_PLAN
+                                fetchMainAppData(includeNotifications = true)
                             }
-                            coroutineScope.launch { equipmentRepository.fetchEquipments() }
-                            coroutineScope.launch { ingredientRepository.fetchIngredients() }
-                            coroutineScope.launch { foodBlockRepository.fetchFoodBlocks() }
-                            coroutineScope.launch { mealRecordRepository.fetchWeeklyMeals(com.dahee.blockbyblock.core.utils.getCurrentDateIso()) }
-                            coroutineScope.launch { mealRecordRepository.fetchMealPresets() }
-                            coroutineScope.launch { com.dahee.blockbyblock.core.notification.PushNotificationManager.syncDeviceOrTimezone(deviceApiService, userApiService) }
-                            coroutineScope.launch { notificationViewModel.fetchUnreadCount() }
                         }.onFailure {
-
-                            TokenStorage.clearTokens()
+                            com.dahee.blockbyblock.data.remote.ApiClient.clearAuthTokens()
+                            notificationViewModel.reset()
                             isLoggedIn = false
                         }
                     }.onFailure {
-                        TokenStorage.clearTokens()
+                        com.dahee.blockbyblock.data.remote.ApiClient.clearAuthTokens()
+                        notificationViewModel.reset()
                         isLoggedIn = false
                     }
                 } else {
-                    TokenStorage.clearTokens()
+                    com.dahee.blockbyblock.data.remote.ApiClient.clearAuthTokens()
+                    notificationViewModel.reset()
                     isLoggedIn = false
                 }
             }
@@ -262,6 +268,9 @@ fun App() {
         if (tutorialStep == TutorialStep.CONGRATULATIONS) {
             kotlinx.coroutines.delay(2800)
             tutorialStep = TutorialStep.COMPLETED
+            if (TokenStorage.isAuthenticated && !TokenStorage.getAccessToken().isNullOrBlank()) {
+                notificationViewModel.fetchUnreadCount()
+            }
         }
     }
 
@@ -374,21 +383,14 @@ fun App() {
                                         currentLanguage = com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(langStr)
                                     } catch (_: Throwable) {}
                                 }
-                                coroutineScope.launch {
-                                    PushNotificationManager.syncDeviceOrTimezone(deviceApiService, userApiService)
-                                    equipmentRepository.fetchEquipments()
-                                    ingredientRepository.fetchIngredients()
-                                    foodBlockRepository.fetchFoodBlocks()
-                                    mealRecordRepository.fetchWeeklyMeals(com.dahee.blockbyblock.core.utils.getCurrentDateIso())
-                                    mealRecordRepository.fetchMealPresets()
-                                    notificationViewModel.fetchUnreadCount()
-                                }
 
                                 if (!profile.onboardingCompleted) {
                                     tutorialStep = TutorialStep.WELCOME_PROFILE
+                                    fetchMainAppData(includeNotifications = false)
                                 } else {
                                     tutorialStep = TutorialStep.COMPLETED
                                     currentTab = NavTab.MEAL_PLAN
+                                    fetchMainAppData(includeNotifications = true)
                                 }
                             },
                             onSignUpSuccess = { profile ->
@@ -396,9 +398,7 @@ fun App() {
                                 hasCompletedOnboarding = false
                                 userProfile = profile
                                 tutorialStep = TutorialStep.WELCOME_PROFILE
-                                coroutineScope.launch {
-                                    PushNotificationManager.syncDeviceOrTimezone(deviceApiService, userApiService)
-                                }
+                                fetchMainAppData(includeNotifications = false)
                             }
                         )
                     }
@@ -468,6 +468,9 @@ fun App() {
                                     hasCompletedOnboarding = true
                                     tutorialStep = TutorialStep.COMPLETED
                                     isManagingEquipment = false
+                                    if (TokenStorage.isAuthenticated && !TokenStorage.getAccessToken().isNullOrBlank()) {
+                                        notificationViewModel.fetchUnreadCount()
+                                    }
                                 }
                             )
 
@@ -597,6 +600,7 @@ fun App() {
                                                     com.dahee.blockbyblock.core.notification.PushNotificationManager.onLogout(deviceApiService)
                                                     authApiService.logout()
                                                 }
+                                                notificationViewModel.reset()
                                                 isLoggedIn = false
                                             }
                                         )

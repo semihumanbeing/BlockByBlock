@@ -2,6 +2,7 @@ package com.dahee.blockbyblock.presentation.notification
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dahee.blockbyblock.data.remote.TokenStorage
 import com.dahee.blockbyblock.domain.model.AppNotification
 import com.dahee.blockbyblock.domain.repository.NotificationRepository
 import kotlinx.coroutines.CoroutineScope
@@ -26,7 +27,8 @@ data class NotificationUiState(
 
 class NotificationViewModel(
     private val repository: NotificationRepository,
-    private val customScope: CoroutineScope? = null
+    private val customScope: CoroutineScope? = null,
+    private val isAuthValid: () -> Boolean = { TokenStorage.isAuthenticated && !TokenStorage.getAccessToken().isNullOrBlank() }
 ) : ViewModel() {
 
     private val scope: CoroutineScope
@@ -38,14 +40,21 @@ class NotificationViewModel(
     init {
         scope.launch {
             repository.unreadCount.collect { count ->
-                _uiState.update { it.copy(unreadCount = count) }
+                if (isAuthValid()) {
+                    _uiState.update { it.copy(unreadCount = count) }
+                } else {
+                    _uiState.update { it.copy(unreadCount = 0L) }
+                }
             }
         }
-        fetchUnreadCount()
-        refresh(showLoading = true)
+        if (isAuthValid()) {
+            fetchUnreadCount()
+            refresh(showLoading = true)
+        }
     }
 
     fun fetchUnreadCount() {
+        if (!isAuthValid()) return
         scope.launch {
             repository.fetchUnreadCount()
         }
@@ -55,10 +64,16 @@ class NotificationViewModel(
     fun setFilter(unreadOnly: Boolean) {
         if (_uiState.value.unreadOnly == unreadOnly) return
         _uiState.update { it.copy(unreadOnly = unreadOnly) }
-        refresh(showLoading = true)
+        if (isAuthValid()) {
+            refresh(showLoading = true)
+        }
     }
 
     fun refresh(showLoading: Boolean = false) {
+        if (!isAuthValid()) {
+            _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
+            return
+        }
         scope.launch {
             _uiState.update {
                 it.copy(
@@ -94,6 +109,7 @@ class NotificationViewModel(
     }
 
     fun loadMore() {
+        if (!isAuthValid()) return
         val state = _uiState.value
         if (state.isLoading || state.isLoadingMore || !state.hasNext) return
         scope.launch {
@@ -119,7 +135,7 @@ class NotificationViewModel(
     }
 
     fun markAsRead(notification: AppNotification) {
-        if (notification.isRead) return
+        if (!isAuthValid() || notification.isRead) return
         _uiState.update { current ->
             val updated = current.notifications.map {
                 if (it.id == notification.id) it.copy(isRead = true) else it
@@ -136,6 +152,7 @@ class NotificationViewModel(
     }
 
     fun markAllAsRead() {
+        if (!isAuthValid()) return
         val hadUnread = _uiState.value.unreadCount > 0 || _uiState.value.notifications.any { !it.isRead }
         if (!hadUnread) return
         _uiState.update { current ->
@@ -154,6 +171,7 @@ class NotificationViewModel(
     }
 
     fun deleteNotification(notification: AppNotification) {
+        if (!isAuthValid()) return
         _uiState.update { current ->
             val updated = current.notifications.filter { it.id != notification.id }
             val countDelta = if (!notification.isRead) 1L else 0L
@@ -168,6 +186,7 @@ class NotificationViewModel(
     }
 
     fun deleteAllNotifications() {
+        if (!isAuthValid()) return
         _uiState.update { current ->
             current.copy(
                 notifications = emptyList(),
@@ -177,5 +196,9 @@ class NotificationViewModel(
         scope.launch {
             repository.deleteAllNotifications()
         }
+    }
+
+    fun reset() {
+        _uiState.value = NotificationUiState()
     }
 }

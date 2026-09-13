@@ -29,7 +29,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 
 object ApiClient {
-    private const val DEFAULT_SERVER_URL = "http://168.110.30.132:8000"
+    private const val DEFAULT_SERVER_URL = "https://api.blockbyblock-mealprep.com"
     private var customBaseUrl: String? = DEFAULT_SERVER_URL
 
     var baseUrl: String
@@ -62,6 +62,12 @@ object ApiClient {
         TokenStorage.forceLogout(reason)
     }
 
+    init {
+        TokenStorage.setTokenUpdateListener { _, _ ->
+            resetClient()
+        }
+    }
+
     private val refreshMutex = Mutex()
 
     // Independent lightweight HTTP client for token refresh to avoid recursive interceptor loops
@@ -71,7 +77,7 @@ object ApiClient {
         }
     }
 
-    val client: HttpClient = HttpClient {
+    private fun createHttpClient(): HttpClient = HttpClient {
         install(ContentNegotiation) {
             json(jsonConfig)
         }
@@ -142,7 +148,35 @@ object ApiClient {
 
         defaultRequest {
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            val token = TokenStorage.getAccessToken()
+            val urlString = url.toString()
+            val isAuthEndpoint = urlString.contains("/auth/login") ||
+                                 urlString.contains("/auth/signup") ||
+                                 urlString.contains("/auth/social-login")
+            if (!token.isNullOrBlank() && !isAuthEndpoint) {
+                header(HttpHeaders.Authorization, "Bearer $token")
+            }
         }
+    }
+
+    private var _client: HttpClient = createHttpClient()
+
+    val client: HttpClient
+        get() = _client
+
+    fun resetClient() {
+        try {
+            _client.close()
+        } catch (_: Throwable) {}
+        _client = createHttpClient()
+    }
+
+    fun updateAuthTokens(access: String, refresh: String) {
+        TokenStorage.setTokens(access, refresh)
+    }
+
+    fun clearAuthTokens() {
+        TokenStorage.clearTokens()
     }
 
     suspend fun parseError(response: HttpResponse): ApiError {

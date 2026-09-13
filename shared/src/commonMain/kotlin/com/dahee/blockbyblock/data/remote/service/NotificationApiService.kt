@@ -2,6 +2,7 @@ package com.dahee.blockbyblock.data.remote.service
 
 import com.dahee.blockbyblock.data.remote.ApiClient
 import com.dahee.blockbyblock.data.remote.ApiResponse
+import com.dahee.blockbyblock.data.remote.TokenStorage
 import com.dahee.blockbyblock.data.remote.dto.NotificationListResponse
 import com.dahee.blockbyblock.data.remote.dto.NotificationResponse
 import com.dahee.blockbyblock.data.remote.dto.UnreadCountResponse
@@ -20,6 +21,9 @@ class NotificationApiService {
         page: Int = 1,
         size: Int = 20
     ): Result<NotificationListResponse> = runCatching {
+        if (!TokenStorage.isAuthenticated || TokenStorage.getAccessToken().isNullOrBlank()) {
+            throw IllegalStateException("User is not authenticated. Skipping notifications API call.")
+        }
         val response: HttpResponse = ApiClient.client.get(ApiClient.endpoint("api/v1/notifications")) {
             parameter("unreadOnly", unreadOnly)
             parameter("page", page)
@@ -33,6 +37,9 @@ class NotificationApiService {
     }
 
     suspend fun getUnreadCount(): Result<UnreadCountResponse> = runCatching {
+        if (!TokenStorage.isAuthenticated || TokenStorage.getAccessToken().isNullOrBlank()) {
+            throw IllegalStateException("User is not authenticated. Skipping unread-count API call.")
+        }
         val response: HttpResponse = ApiClient.client.get(ApiClient.endpoint("api/v1/notifications/unread-count"))
         if (response.status.isSuccess()) {
             response.body<ApiResponse<UnreadCountResponse>>().data
@@ -42,6 +49,9 @@ class NotificationApiService {
     }
 
     suspend fun markAsRead(id: Long): Result<NotificationResponse> = runCatching {
+        if (!TokenStorage.isAuthenticated || TokenStorage.getAccessToken().isNullOrBlank()) {
+            throw IllegalStateException("User is not authenticated. Skipping markAsRead API call.")
+        }
         val response: HttpResponse = ApiClient.client.patch(ApiClient.endpoint("api/v1/notifications/$id/read"))
         if (response.status.isSuccess()) {
             response.body<ApiResponse<NotificationResponse>>().data
@@ -51,6 +61,9 @@ class NotificationApiService {
     }
 
     suspend fun markAllAsRead(): Result<Boolean> = runCatching {
+        if (!TokenStorage.isAuthenticated || TokenStorage.getAccessToken().isNullOrBlank()) {
+            throw IllegalStateException("User is not authenticated. Skipping markAllAsRead API call.")
+        }
         val response: HttpResponse = ApiClient.client.patch(ApiClient.endpoint("api/v1/notifications/read-all"))
         if (response.status.isSuccess()) {
             true
@@ -60,6 +73,9 @@ class NotificationApiService {
     }
 
     suspend fun deleteNotification(id: Long): Result<Boolean> = runCatching {
+        if (!TokenStorage.isAuthenticated || TokenStorage.getAccessToken().isNullOrBlank()) {
+            throw IllegalStateException("User is not authenticated. Skipping deleteNotification API call.")
+        }
         val response: HttpResponse = ApiClient.client.delete(ApiClient.endpoint("api/v1/notifications/$id"))
         if (response.status.isSuccess()) {
             true
@@ -69,6 +85,9 @@ class NotificationApiService {
     }
 
     suspend fun deleteAllNotifications(): Result<Boolean> = runCatching {
+        if (!TokenStorage.isAuthenticated || TokenStorage.getAccessToken().isNullOrBlank()) {
+            throw IllegalStateException("User is not authenticated. Skipping deleteAllNotifications API call.")
+        }
         val response: HttpResponse = ApiClient.client.delete(ApiClient.endpoint("api/v1/notifications"))
         if (response.status.isSuccess()) {
             true

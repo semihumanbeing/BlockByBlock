@@ -27,7 +27,7 @@ class AuthApiService {
         }
         if (response.status.isSuccess()) {
             val body = response.body<ApiResponse<LoginResponse>>()
-            TokenStorage.setTokens(body.data.accessToken, body.data.refreshToken)
+            ApiClient.updateAuthTokens(body.data.accessToken, body.data.refreshToken)
             TokenStorage.setUserInfo(body.data.user.id, body.data.user.lang)
             body.data
         } else {
@@ -41,7 +41,7 @@ class AuthApiService {
         }
         if (response.status.isSuccess()) {
             val body = response.body<ApiResponse<SignUpResponse>>()
-            TokenStorage.setTokens(body.data.accessToken, body.data.refreshToken)
+            ApiClient.updateAuthTokens(body.data.accessToken, body.data.refreshToken)
             TokenStorage.setUserInfo(body.data.userId, "KO")
             body.data
         } else {
@@ -55,7 +55,7 @@ class AuthApiService {
         }
         if (response.status.isSuccess()) {
             val body = response.body<ApiResponse<LoginResponse>>()
-            TokenStorage.setTokens(body.data.accessToken, body.data.refreshToken)
+            ApiClient.updateAuthTokens(body.data.accessToken, body.data.refreshToken)
             TokenStorage.setUserInfo(body.data.user.id, body.data.user.lang)
             body.data
         } else {
@@ -69,7 +69,7 @@ class AuthApiService {
         }
         if (response.status.isSuccess()) {
             val body = response.body<ApiResponse<TokenResponse>>()
-            TokenStorage.setTokens(body.data.accessToken, body.data.refreshToken)
+            ApiClient.updateAuthTokens(body.data.accessToken, body.data.refreshToken)
             body.data
         } else {
             throw parseError(response)
@@ -81,7 +81,7 @@ class AuthApiService {
         val response: HttpResponse = ApiClient.client.post(ApiClient.endpoint("api/v1/auth/logout")) {
             setBody(RefreshTokenRequest(refreshToken))
         }
-        TokenStorage.clearTokens()
+        ApiClient.clearAuthTokens()
         response.status.isSuccess()
     }
 

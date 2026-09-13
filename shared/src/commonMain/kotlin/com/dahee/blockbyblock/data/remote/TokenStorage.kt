@@ -43,6 +43,12 @@ object TokenStorage {
     fun getUserId(): String? = _userId.value
     fun getUserLang(): String? = _userLang.value
 
+    private var tokenUpdateListener: ((access: String?, refresh: String?) -> Unit)? = null
+
+    fun setTokenUpdateListener(listener: ((access: String?, refresh: String?) -> Unit)?) {
+        tokenUpdateListener = listener
+    }
+
     fun setTokens(access: String, refresh: String) {
         _accessToken.value = access
         _refreshToken.value = refresh
@@ -50,6 +56,7 @@ object TokenStorage {
             platform.setPersistentString(KEY_ACCESS_TOKEN, access)
             platform.setPersistentString(KEY_REFRESH_TOKEN, refresh)
         } catch (_: Throwable) {}
+        tokenUpdateListener?.invoke(access, refresh)
     }
 
     fun setUserInfo(id: String?, lang: String?) {
@@ -72,6 +79,7 @@ object TokenStorage {
             platform.setPersistentString(KEY_USER_ID, null)
             platform.setPersistentString(KEY_USER_LANG, null)
         } catch (_: Throwable) {}
+        tokenUpdateListener?.invoke(null, null)
     }
 
     private var authFailureHandler: ((reason: String?) -> Unit)? = null
