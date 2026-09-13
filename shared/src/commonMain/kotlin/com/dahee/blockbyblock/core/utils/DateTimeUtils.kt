@@ -2,7 +2,8 @@ package com.dahee.blockbyblock.core.utils
 
 import com.dahee.blockbyblock.core.i18n.AppLanguage
 import com.dahee.blockbyblock.core.i18n.AppStrings
-import kotlinx.datetime.Instant
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -65,12 +66,12 @@ fun parseIsoToEpochMillis(isoString: String): Long {
 /**
  * Returns current epoch milliseconds.
  */
-fun getCurrentEpochMillis(): Long = kotlin.time.Clock.System.now().toEpochMilliseconds()
+fun getCurrentEpochMillis(): Long = Clock.System.now().toEpochMilliseconds()
 
 /**
  * Returns current instant as [Instant].
  */
-fun getCurrentInstant(): Instant = Instant.fromEpochMilliseconds(getCurrentEpochMillis())
+fun getCurrentInstant(): Instant = Clock.System.now()
 
 /**
  * Returns the current date formatted as ISO "YYYY-MM-DD" in the user's local timezone.
@@ -201,17 +202,17 @@ fun formatRelativeTime(
 
     val eventLocal = instant.toLocalDateTime(timeZone)
     val nowLocal = nowInstant.toLocalDateTime(timeZone)
-    val daysDiff = (nowLocal.date.toEpochDays().toInt() - eventLocal.date.toEpochDays().toInt()).coerceAtLeast(0)
+    val daysDiff = (nowLocal.date.toEpochDays() - eventLocal.date.toEpochDays()).coerceAtLeast(0L)
     val diffHours = diffMinutes / 60L
 
-    if (daysDiff == 0) {
+    if (daysDiff == 0L) {
         return strings.notificationTimeHoursAgo(diffHours)
     }
-    if (daysDiff == 1) {
+    if (daysDiff == 1L) {
         return if (diffHours < 3L) strings.notificationTimeHoursAgo(diffHours) else strings.notificationTimeYesterday
     }
-    if (daysDiff < 7) {
-        return strings.notificationTimeDaysAgo(daysDiff.toLong())
+    if (daysDiff < 7L) {
+        return strings.notificationTimeDaysAgo(daysDiff)
     }
 
     val y = eventLocal.year

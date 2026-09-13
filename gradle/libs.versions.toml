@@ -16,7 +16,7 @@ kotlin-wrappers = "2026.8.4"
 material3 = "1.11.0-alpha07"
 ktor = "3.1.1"
 kotlinx-serialization = "1.8.0"
-kotlinx-datetime = "0.6.2"
+kotlinx-datetime = "0.7.1"
 androidx-credentials = "1.5.0"
 googleid = "1.1.1"
 

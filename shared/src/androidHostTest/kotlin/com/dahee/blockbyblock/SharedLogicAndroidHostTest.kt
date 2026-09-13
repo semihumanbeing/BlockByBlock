@@ -730,7 +730,7 @@ class SharedLogicAndroidHostTest {
 
         // Deterministic relative time with fixed nowInstant
         val seoulTz = kotlinx.datetime.TimeZone.of("Asia/Seoul")
-        val nowInstant = kotlinx.datetime.Instant.parse("2026-09-11T12:00:00Z") // 21:00 in Seoul
+        val nowInstant = kotlin.time.Instant.parse("2026-09-11T12:00:00Z") // 21:00 in Seoul
 
         // 1. Just now (< 1 min)
         assertEquals("방금 전", com.dahee.blockbyblock.core.utils.formatRelativeTime("2026-09-11T11:59:30Z", koStrings, nowInstant, seoulTz))

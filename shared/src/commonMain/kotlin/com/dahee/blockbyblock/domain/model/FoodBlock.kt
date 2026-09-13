@@ -2,7 +2,7 @@ package com.dahee.blockbyblock.domain.model
 
 import com.dahee.blockbyblock.core.utils.formatIsoToLocalDateString
 import com.dahee.blockbyblock.core.utils.formatIsoToLocalDateTimeString
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
