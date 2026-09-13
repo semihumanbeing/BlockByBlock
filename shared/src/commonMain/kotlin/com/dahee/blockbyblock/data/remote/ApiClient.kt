@@ -29,7 +29,8 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 
 object ApiClient {
-    private var customBaseUrl: String? = null
+    private const val DEFAULT_SERVER_URL = "http://168.110.30.132:8000"
+    private var customBaseUrl: String? = DEFAULT_SERVER_URL
 
     var baseUrl: String
         get() = customBaseUrl ?: getPlatform().defaultBaseUrl

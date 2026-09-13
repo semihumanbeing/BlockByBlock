@@ -8,7 +8,7 @@ class WasmPlatform: Platform {
     override val isWeb: Boolean = true
     override val defaultLanguage: AppLanguage
         get() = AppLanguage.KO
-    override val defaultBaseUrl: String = "http://localhost:8000"
+    override val defaultBaseUrl: String = "http://168.110.30.132:8000"
 
     override fun getPersistentString(key: String): String? {
         return try {

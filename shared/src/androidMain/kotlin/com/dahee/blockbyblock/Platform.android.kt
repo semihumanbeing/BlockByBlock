@@ -23,7 +23,7 @@ class AndroidPlatform : Platform {
         } else {
             AppLanguage.EN
         }
-    override val defaultBaseUrl: String = "http://10.0.2.2:8000"
+    override val defaultBaseUrl: String = "http://168.110.30.132:8000"
     override val deviceType: String? = "ANDROID"
 
     override fun getPersistentString(key: String): String? {

@@ -21,7 +21,7 @@ class IOSPlatform: Platform {
                 AppLanguage.EN
             }
         }
-    override val defaultBaseUrl: String = "http://localhost:8000"
+    override val defaultBaseUrl: String = "http://168.110.30.132:8000"
     override val deviceType: String? = "IOS"
 
     override fun getPersistentString(key: String): String? {

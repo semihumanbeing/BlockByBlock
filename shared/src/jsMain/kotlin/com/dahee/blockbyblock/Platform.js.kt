@@ -17,7 +17,7 @@ class JsPlatform: Platform {
             val lang = navigator.language.lowercase()
             return if (lang.startsWith("ko")) AppLanguage.KO else AppLanguage.EN
         }
-    override val defaultBaseUrl: String = "http://localhost:8000"
+    override val defaultBaseUrl: String = "http://168.110.30.132:8000"
 
     override fun getPersistentString(key: String): String? {
         return try {
