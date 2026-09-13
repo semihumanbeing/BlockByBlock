@@ -68,6 +68,13 @@ object TokenStorage {
         } catch (_: Throwable) {}
     }
 
+    fun setUserLang(lang: String?) {
+        _userLang.value = lang
+        try {
+            platform.setPersistentString(KEY_USER_LANG, lang)
+        } catch (_: Throwable) {}
+    }
+
     fun clearTokens() {
         _accessToken.value = null
         _refreshToken.value = null

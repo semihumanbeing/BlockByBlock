@@ -296,6 +296,12 @@ object EnStrings : AppStrings {
     override val authPasswordPolicyHint = "8+ chars, lowercase letters and numbers"
     override val authErrorPasswordPolicy = "Password must be at least 8 characters and include numbers and lowercase letters"
     override val authErrorPasswordMismatch = "Passwords do not match"
+    override val authErrorInvalidCredentials = "Invalid email or password"
+    override val authErrorEmailAlreadyExists = "This email is already registered"
+    override val authErrorDefaultLogin = "Login failed. Please try again"
+    override val authErrorDefaultSignUp = "Sign up failed. Please try again"
+    override val authErrorSocialLogin = "Social login failed. Please try again"
+    override val authErrorNetwork = "Please check your network connection"
 
     // Profile Edit & Avatars
     override val profileEditTitle = "Edit Profile"

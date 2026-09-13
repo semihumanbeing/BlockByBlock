@@ -277,6 +277,12 @@ interface AppStrings {
     val authPasswordPolicyHint: String
     val authErrorPasswordPolicy: String
     val authErrorPasswordMismatch: String
+    val authErrorInvalidCredentials: String
+    val authErrorEmailAlreadyExists: String
+    val authErrorDefaultLogin: String
+    val authErrorDefaultSignUp: String
+    val authErrorSocialLogin: String
+    val authErrorNetwork: String
 
     // Profile Edit & Avatars
     val profileEditTitle: String

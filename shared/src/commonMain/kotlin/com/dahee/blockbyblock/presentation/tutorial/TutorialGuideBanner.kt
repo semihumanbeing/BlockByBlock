@@ -24,7 +24,10 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,7 +54,9 @@ fun TutorialGuideBanner(
 ) {
     val strings = LocalStrings.current
 
-    val isVisible = currentStep != TutorialStep.WELCOME_PROFILE && currentStep != TutorialStep.COMPLETED
+    var isDismissed by remember { mutableStateOf(false) }
+
+    val isVisible = !isDismissed && currentStep != TutorialStep.WELCOME_PROFILE && currentStep != TutorialStep.COMPLETED
 
     AnimatedVisibility(
         visible = isVisible,
@@ -125,31 +130,34 @@ fun TutorialGuideBanner(
                         )
                     }
 
-                    if (!isCongratulations && currentStep != TutorialStep.EQUIPMENT_SETUP) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier = Modifier
-                                .pointerHoverIcon(PointerIcon.Hand)
-                                .clickable(
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    onClick = onSkip
-                                )
-                        ) {
-                            Text(
-                                text = strings.tutorialSkipBtn,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White.copy(alpha = 0.7f)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .pointerHoverIcon(PointerIcon.Hand)
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() },
+                                onClick = {
+                                    isDismissed = true
+                                    onSkip()
+                                }
                             )
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = strings.tutorialSkipBtn,
-                                tint = Color.White.copy(alpha = 0.7f),
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
+                            .padding(horizontal = 6.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = strings.tutorialSkipBtn,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = strings.tutorialSkipBtn,
+                            tint = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.size(15.dp)
+                        )
                     }
                 }
 

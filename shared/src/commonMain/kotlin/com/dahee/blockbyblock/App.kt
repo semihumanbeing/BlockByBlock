@@ -2,10 +2,13 @@ package com.dahee.blockbyblock
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -47,6 +50,7 @@ import com.dahee.blockbyblock.presentation.mealplan.MealPlanScreen
 import com.dahee.blockbyblock.presentation.mealplan.MealPlanViewModel
 import com.dahee.blockbyblock.presentation.me.MeScreen
 import com.dahee.blockbyblock.presentation.navigation.AppBottomNav
+import com.dahee.blockbyblock.presentation.navigation.AppSideNav
 import com.dahee.blockbyblock.presentation.navigation.NavTab
 import com.dahee.blockbyblock.presentation.tutorial.TutorialGuideBanner
 import com.dahee.blockbyblock.presentation.tutorial.TutorialStep
@@ -274,8 +278,9 @@ fun App() {
         }
     }
 
-    // Sync language with ingredientViewModel and mealPlanViewModel
+    // Sync language with equipmentViewModel, ingredientViewModel and mealPlanViewModel
     androidx.compose.runtime.LaunchedEffect(currentLanguage) {
+        equipmentViewModel.setLanguage(currentLanguage)
         ingredientViewModel.setLanguage(currentLanguage)
         mealPlanViewModel.setLanguage(currentLanguage)
     }
@@ -345,16 +350,19 @@ fun App() {
         }
 
         BlockByBlockTheme {
-            Box(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(AppColors.Background),
                 contentAlignment = Alignment.Center
             ) {
+                val isWideScreen = maxWidth >= 840.dp
+                var isSideNavExpanded by remember { mutableStateOf(false) }
+
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
-                        .widthIn(max = 768.dp)
+                        .widthIn(max = if (isLoggedIn && tutorialStep != TutorialStep.WELCOME_PROFILE && isWideScreen) 10000.dp else 768.dp)
                         .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
@@ -374,6 +382,14 @@ fun App() {
                     else if (!isLoggedIn) {
                         AuthScreen(
                             authApiService = authApiService,
+                            currentLanguage = currentLanguage,
+                            onLanguageChange = { newLang ->
+                                currentLanguage = newLang
+                                TokenStorage.setUserLang(newLang.name)
+                                equipmentViewModel.setLanguage(newLang)
+                                ingredientViewModel.setLanguage(newLang)
+                                mealPlanViewModel.setLanguage(newLang)
+                            },
                             onLoginSuccess = { profile ->
                                 isLoggedIn = true
                                 userProfile = profile
@@ -416,7 +432,8 @@ fun App() {
                                     userApiService.updateProfile(
                                         UpdateProfileRequest(
                                             nickname = name,
-                                            avatarType = userProfile.avatarType.name
+                                            avatarType = userProfile.avatarType.name,
+                                            lang = currentLanguage.name
                                         )
                                     )
                                     userApiService.updateOnboarding(
@@ -428,14 +445,14 @@ fun App() {
                     }
                     // 3. Main Authenticated App Flow
                     else {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(AppColors.Background)
-                                .safeDrawingPadding()
-                        ) {
-                            // Top Interactive Tutorial Guide Banner (Active during tutorial)
-                            TutorialGuideBanner(
+                        val renderMainScreens: @Composable () -> Unit = {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(AppColors.Background)
+                            ) {
+                                // Top Interactive Tutorial Guide Banner (Active during tutorial)
+                                TutorialGuideBanner(
                                 currentStep = tutorialStep,
                                 hasAddedIngredient = hasAddedIngredient,
                                 hasCreatedBlock = hasCreatedBlock,
@@ -608,17 +625,72 @@ fun App() {
                                 }
                             }
 
-                            if (!isViewingNotifications && !(isManagingEquipment && tutorialStep == TutorialStep.EQUIPMENT_SETUP)) {
-                                AppBottomNav(
+                            }
+                        }
+
+                        if (isWideScreen) {
+                            Row(modifier = Modifier.fillMaxSize()) {
+                                AppSideNav(
                                     currentTab = currentTab,
                                     onTabSelected = {
                                         currentTab = it
                                         isManagingEquipment = false
                                         isViewingNotifications = false
-                                    }
+                                    },
+                                    onLogoClick = {
+                                        currentTab = NavTab.MEAL_PLAN
+                                        isManagingEquipment = false
+                                        isViewingNotifications = false
+                                        blockViewModel.onCloseCreateScreen()
+                                    },
+                                    isExpanded = isSideNavExpanded,
+                                    onToggleExpand = { isSideNavExpanded = !isSideNavExpanded },
+                                    userProfile = userProfile
                                 )
-                            }
 
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .safeDrawingPadding(),
+                                    contentAlignment = Alignment.TopCenter
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .widthIn(max = 960.dp)
+                                            .fillMaxWidth()
+                                    ) {
+                                        renderMainScreens()
+                                    }
+                                }
+                            }
+                        } else {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(AppColors.Background)
+                                    .safeDrawingPadding()
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth()
+                                ) {
+                                    renderMainScreens()
+                                }
+
+                                if (!isViewingNotifications && !(isManagingEquipment && tutorialStep == TutorialStep.EQUIPMENT_SETUP)) {
+                                    AppBottomNav(
+                                        currentTab = currentTab,
+                                        onTabSelected = {
+                                            currentTab = it
+                                            isManagingEquipment = false
+                                            isViewingNotifications = false
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }

@@ -296,6 +296,12 @@ object KoStrings : AppStrings {
     override val authPasswordPolicyHint = "8자 이상, 영문 소문자와 숫자 포함"
     override val authErrorPasswordPolicy = "비밀번호는 숫자와 소문자를 포함하여 8자 이상이어야 합니다"
     override val authErrorPasswordMismatch = "입력된 비밀번호가 다릅니다"
+    override val authErrorInvalidCredentials = "이메일 또는 비밀번호가 올바르지 않습니다"
+    override val authErrorEmailAlreadyExists = "이미 등록된 이메일 계정입니다"
+    override val authErrorDefaultLogin = "로그인에 실패했습니다. 다시 시도해주세요"
+    override val authErrorDefaultSignUp = "회원가입에 실패했습니다. 다시 시도해주세요"
+    override val authErrorSocialLogin = "소셜 로그인에 실패했습니다. 다시 시도해주세요"
+    override val authErrorNetwork = "네트워크 연결 상태를 확인해주세요"
 
     // Profile Edit & Avatars
     override val profileEditTitle = "내 정보 수정"

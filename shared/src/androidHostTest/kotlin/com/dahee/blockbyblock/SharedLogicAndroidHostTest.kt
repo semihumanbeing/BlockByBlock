@@ -919,4 +919,86 @@ class SharedLogicAndroidHostTest {
         }
     }
 
+    @Test
+    fun testAuthErrorFormatting() {
+        // 1. Invalid email or password exception mapping to Korean
+        val invalidErr = Exception("Invalid email or password")
+        val koInvalidResult = com.dahee.blockbyblock.presentation.auth.formatAuthError(
+            invalidErr,
+            isLogin = true,
+            com.dahee.blockbyblock.core.i18n.KoStrings
+        )
+        assertEquals("이메일 또는 비밀번호가 올바르지 않습니다", koInvalidResult)
+
+        // 2. ApiError with 401 status code
+        val api401 = com.dahee.blockbyblock.data.remote.error.ApiError(
+            message = "Bad credentials",
+            code = com.dahee.blockbyblock.data.remote.error.ErrorCode.AUTHENTICATION_FAILED,
+            status = 401
+        )
+        val ko401Result = com.dahee.blockbyblock.presentation.auth.formatAuthError(
+            api401,
+            isLogin = true,
+            com.dahee.blockbyblock.core.i18n.KoStrings
+        )
+        assertEquals("이메일 또는 비밀번호가 올바르지 않습니다", ko401Result)
+
+        // 3. ApiError with 409 status code (Already exists)
+        val api409 = com.dahee.blockbyblock.data.remote.error.ApiError(
+            message = "Email already registered",
+            code = com.dahee.blockbyblock.data.remote.error.ErrorCode.EMAIL_ALREADY_EXISTS,
+            status = 409
+        )
+        val ko409Result = com.dahee.blockbyblock.presentation.auth.formatAuthError(
+            api409,
+            isLogin = false,
+            com.dahee.blockbyblock.core.i18n.KoStrings
+        )
+        assertEquals("이미 등록된 이메일 계정입니다", ko409Result)
+
+        // 4. English locale mapping
+        val enInvalidResult = com.dahee.blockbyblock.presentation.auth.formatAuthError(
+            invalidErr,
+            isLogin = true,
+            com.dahee.blockbyblock.core.i18n.EnStrings
+        )
+        assertEquals("Invalid email or password", enInvalidResult)
+
+        // 5. Network error mapping
+        val netErr = com.dahee.blockbyblock.data.remote.error.ApiError(
+            message = "Failed to connect to host",
+            code = com.dahee.blockbyblock.data.remote.error.ErrorCode.NETWORK_ERROR
+        )
+        val koNetResult = com.dahee.blockbyblock.presentation.auth.formatAuthError(
+            netErr,
+            isLogin = true,
+            com.dahee.blockbyblock.core.i18n.KoStrings
+        )
+        assertEquals("네트워크 연결 상태를 확인해주세요", koNetResult)
+
+        // 6. Default fallback
+        val unknownErr = Exception("Internal unknown error")
+        val koDefaultLogin = com.dahee.blockbyblock.presentation.auth.formatAuthError(
+            unknownErr,
+            isLogin = true,
+            com.dahee.blockbyblock.core.i18n.KoStrings
+        )
+        assertEquals("로그인에 실패했습니다. 다시 시도해주세요", koDefaultLogin)
+
+        val koDefaultSignUp = com.dahee.blockbyblock.presentation.auth.formatAuthError(
+            unknownErr,
+            isLogin = false,
+            com.dahee.blockbyblock.core.i18n.KoStrings
+        )
+        assertEquals("회원가입에 실패했습니다. 다시 시도해주세요", koDefaultSignUp)
+    }
+
+    @Test
+    fun testTokenStorageUserLang() {
+        com.dahee.blockbyblock.data.remote.TokenStorage.setUserLang("EN")
+        assertEquals("EN", com.dahee.blockbyblock.data.remote.TokenStorage.getUserLang())
+        com.dahee.blockbyblock.data.remote.TokenStorage.setUserLang("KO")
+        assertEquals("KO", com.dahee.blockbyblock.data.remote.TokenStorage.getUserLang())
+    }
+
 }

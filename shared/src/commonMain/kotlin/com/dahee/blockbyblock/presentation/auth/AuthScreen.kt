@@ -1,5 +1,7 @@
 package com.dahee.blockbyblock.presentation.auth
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,6 +37,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,7 +70,11 @@ import blockbyblock.shared.generated.resources.food_block_3d_1x4_green
 import blockbyblock.shared.generated.resources.food_block_3d_2x2_yellow
 import blockbyblock.shared.generated.resources.food_block_3d_2x4_orange
 import blockbyblock.shared.generated.resources.food_block_3d_3x4_red
+import com.dahee.blockbyblock.core.i18n.AppLanguage
+import com.dahee.blockbyblock.core.i18n.AppStrings
 import com.dahee.blockbyblock.core.i18n.LocalStrings
+import com.dahee.blockbyblock.data.remote.error.ApiError
+import com.dahee.blockbyblock.data.remote.error.ErrorCode
 import com.dahee.blockbyblock.core.theme.AppColors
 import com.dahee.blockbyblock.core.ui.AppButton
 import com.dahee.blockbyblock.core.ui.AppCard
@@ -95,6 +102,8 @@ fun AuthScreen(
     onSignUpSuccess: (user: UserProfile) -> Unit,
     authApiService: AuthApiService = remember { AuthApiService() },
     googleAuthProvider: GoogleAuthProvider = rememberGoogleAuthProvider(),
+    currentLanguage: AppLanguage = AppLanguage.KO,
+    onLanguageChange: (AppLanguage) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var mode by remember { mutableStateOf(AuthMode.LOGIN) }
@@ -104,6 +113,10 @@ fun AuthScreen(
 
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(mode) {
+        errorMessage = null
+    }
 
     // Form inputs
     var emailInput by remember { mutableStateOf("") }
@@ -165,13 +178,7 @@ fun AuthScreen(
                             )
                         )
                     }.onFailure { err ->
-                        if (err is com.dahee.blockbyblock.data.remote.error.ApiError && err.hasFieldErrors()) {
-                            val emailErr = err.getFieldErrorMessage("email")
-                            val pwErr = err.getFieldErrorMessage("password")
-                            errorMessage = emailErr ?: pwErr ?: err.message
-                        } else {
-                            errorMessage = err.message ?: "Login failed"
-                        }
+                        errorMessage = formatAuthError(err, isLogin = true, strings)
                     }
                 } else {
                     val nickname = emailInput.substringBefore("@")
@@ -188,14 +195,7 @@ fun AuthScreen(
                             )
                         )
                     }.onFailure { err ->
-                        if (err is com.dahee.blockbyblock.data.remote.error.ApiError && err.hasFieldErrors()) {
-                            val emailErr = err.getFieldErrorMessage("email")
-                            val pwErr = err.getFieldErrorMessage("password")
-                            val nickErr = err.getFieldErrorMessage("nickname")
-                            errorMessage = emailErr ?: pwErr ?: nickErr ?: err.message
-                        } else {
-                            errorMessage = err.message ?: "Sign up failed"
-                        }
+                        errorMessage = formatAuthError(err, isLogin = false, strings)
                     }
                 }
             }
@@ -216,6 +216,19 @@ fun AuthScreen(
             },
         contentAlignment = Alignment.Center
     ) {
+        // Top right language toggle
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 16.dp, end = 20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            LanguageToggleButton(
+                currentLanguage = currentLanguage,
+                onLanguageChange = onLanguageChange
+            )
+        }
+
         // Center Content Container
         Column(
             modifier = Modifier
@@ -351,7 +364,13 @@ fun AuthScreen(
                                 }
                                 is GoogleAuthResult.Failure -> {
                                     isLoading = false
-                                    errorMessage = authResult.message
+                                    errorMessage = if (authResult.message.contains("network", ignoreCase = true) ||
+                                        authResult.message.contains("connect", ignoreCase = true)
+                                    ) {
+                                        strings.authErrorNetwork
+                                    } else {
+                                        strings.authErrorSocialLogin
+                                    }
                                 }
                                 is GoogleAuthResult.Success -> {
                                     val res = authApiService.socialLogin(
@@ -376,7 +395,11 @@ fun AuthScreen(
                                         )
                                         if (mode == AuthMode.LOGIN) onLoginSuccess(profile) else onSignUpSuccess(profile)
                                     }.onFailure { err ->
-                                        errorMessage = err.message ?: "Social login failed"
+                                        errorMessage = if (err is ApiError && (err.code == ErrorCode.NETWORK_ERROR || err.code == ErrorCode.TIMEOUT_ERROR)) {
+                                            strings.authErrorNetwork
+                                        } else {
+                                            strings.authErrorSocialLogin
+                                        }
                                     }
                                 }
                             }
@@ -445,7 +468,10 @@ fun AuthScreen(
                         Spacer(modifier = Modifier.height(6.dp))
                         AppTextField(
                             value = emailInput,
-                            onValueChange = { emailInput = it },
+                            onValueChange = {
+                                emailInput = it
+                                if (errorMessage != null) errorMessage = null
+                            },
                             placeholder = strings.authEmailPlaceholder,
                             focusRequester = emailFocusRequester,
                             inputModifier = Modifier.onPreviewKeyEvent { keyEvent ->
@@ -493,7 +519,10 @@ fun AuthScreen(
                         Box(contentAlignment = Alignment.CenterEnd) {
                             AppTextField(
                                 value = passwordInput,
-                                onValueChange = { passwordInput = it },
+                                onValueChange = {
+                                    passwordInput = it
+                                    if (errorMessage != null) errorMessage = null
+                                },
                                 placeholder = strings.authPasswordPlaceholder,
                                 focusRequester = passwordFocusRequester,
                                 inputModifier = Modifier.onPreviewKeyEvent { keyEvent ->
@@ -598,7 +627,10 @@ fun AuthScreen(
                             Box(contentAlignment = Alignment.CenterEnd) {
                                 AppTextField(
                                     value = passwordConfirmInput,
-                                    onValueChange = { passwordConfirmInput = it },
+                                    onValueChange = {
+                                        passwordConfirmInput = it
+                                        if (errorMessage != null) errorMessage = null
+                                    },
                                     placeholder = strings.authPasswordConfirmPlaceholder,
                                     focusRequester = passwordConfirmFocusRequester,
                                     inputModifier = Modifier.onPreviewKeyEvent { keyEvent ->
@@ -891,6 +923,125 @@ private fun GoogleSocialButton(
                 fontWeight = FontWeight.Bold,
                 color = AppColors.TextPrimary
             )
+        }
+    }
+}
+
+internal fun formatAuthError(
+    err: Throwable,
+    isLogin: Boolean,
+    strings: AppStrings
+): String {
+    val msg = err.message ?: ""
+    val lower = msg.lowercase()
+
+    if (err is ApiError) {
+        if (err.hasFieldErrors()) {
+            val emailErr = err.getFieldErrorMessage("email")
+            val pwErr = err.getFieldErrorMessage("password")
+            val nickErr = err.getFieldErrorMessage("nickname")
+            val rawField = emailErr ?: pwErr ?: nickErr
+            if (rawField != null) {
+                val rawLower = rawField.lowercase()
+                if (rawLower.contains("already") || rawLower.contains("exist")) return strings.authErrorEmailAlreadyExists
+                if (rawLower.contains("invalid") || rawLower.contains("format")) return strings.authErrorInvalidEmail
+                return rawField
+            }
+        }
+        if (err.status == 401 || err.code == ErrorCode.AUTHENTICATION_FAILED ||
+            lower.contains("invalid email or password") || lower.contains("bad credential") || lower.contains("unauthorized")
+        ) {
+            return strings.authErrorInvalidCredentials
+        }
+        if (err.status == 409 || err.code == ErrorCode.EMAIL_ALREADY_EXISTS ||
+            lower.contains("already exist") || lower.contains("duplicate")
+        ) {
+            return strings.authErrorEmailAlreadyExists
+        }
+        if (err.code == ErrorCode.NETWORK_ERROR ||
+            err.code == ErrorCode.TIMEOUT_ERROR ||
+            lower.contains("connect") || lower.contains("network") || lower.contains("timeout")
+        ) {
+            return strings.authErrorNetwork
+        }
+    }
+
+    if (lower.contains("invalid email or password") || lower.contains("bad credential") || lower.contains("incorrect password") || lower.contains("user not found")) {
+        return strings.authErrorInvalidCredentials
+    }
+    if (lower.contains("already exist") || lower.contains("duplicate") || lower.contains("already registered")) {
+        return strings.authErrorEmailAlreadyExists
+    }
+    if (lower.contains("network") || lower.contains("connect") || lower.contains("timeout")) {
+        return strings.authErrorNetwork
+    }
+
+    return if (isLogin) strings.authErrorDefaultLogin else strings.authErrorDefaultSignUp
+}
+
+@Composable
+fun LanguageToggleButton(
+    currentLanguage: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isKorean = currentLanguage == AppLanguage.KO
+    val indicatorOffset by animateDpAsState(
+        targetValue = if (isKorean) 0.dp else 54.dp,
+        animationSpec = tween(durationMillis = 200)
+    )
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(AppColors.Surface)
+            .border(1.dp, AppColors.Border, RoundedCornerShape(20.dp))
+            .pointerHoverIcon(PointerIcon.Hand)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = { onLanguageChange(currentLanguage.next()) }
+            )
+            .padding(3.dp)
+    ) {
+        // Sliding indicator pill
+        Box(
+            modifier = Modifier
+                .offset(x = indicatorOffset)
+                .width(54.dp)
+                .height(30.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(AppColors.Primary)
+        )
+
+        // Labels overlay
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .width(54.dp)
+                    .height(30.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "한국어",
+                    fontSize = 12.sp,
+                    fontWeight = if (isKorean) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isKorean) Color.White else AppColors.TextSecondary
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .width(54.dp)
+                    .height(30.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "EN",
+                    fontSize = 12.sp,
+                    fontWeight = if (!isKorean) FontWeight.Bold else FontWeight.Medium,
+                    color = if (!isKorean) Color.White else AppColors.TextSecondary
+                )
+            }
         }
     }
 }

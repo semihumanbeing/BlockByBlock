@@ -42,7 +42,7 @@ class AuthApiService {
         if (response.status.isSuccess()) {
             val body = response.body<ApiResponse<SignUpResponse>>()
             ApiClient.updateAuthTokens(body.data.accessToken, body.data.refreshToken)
-            TokenStorage.setUserInfo(body.data.userId, "KO")
+            TokenStorage.setUserInfo(body.data.userId, TokenStorage.getUserLang() ?: "KO")
             body.data
         } else {
             throw parseError(response)
