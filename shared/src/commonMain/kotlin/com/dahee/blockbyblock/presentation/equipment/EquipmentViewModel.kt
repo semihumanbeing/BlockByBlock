@@ -34,7 +34,7 @@ class EquipmentViewModel(
         currentLanguage = language
     }
 
-    private val _screenMode = MutableStateFlow(EquipmentScreenMode.LIST)
+    private val _screenMode = MutableStateFlow(EquipmentScreenMode.ONBOARDING)
     private val _moldDrafts = MutableStateFlow(EquipmentUiState.defaultMoldDrafts)
     private val _selectedCookingTools = MutableStateFlow<Set<CookingToolType>>(emptySet())
     private val _editingMold = MutableStateFlow<Equipment?>(null)
@@ -47,6 +47,11 @@ class EquipmentViewModel(
             repository.fetchEquipments()
             val currentEquipments = repository.getEquipments().first()
             populateDraftsFromEquipments(currentEquipments)
+            if (currentEquipments.isNotEmpty()) {
+                _screenMode.value = EquipmentScreenMode.LIST
+            } else {
+                _screenMode.value = EquipmentScreenMode.ONBOARDING
+            }
         }
     }
 
@@ -68,10 +73,10 @@ class EquipmentViewModel(
         val unit = params[5] as MoldCapacityUnit
         val error = params[6] as String?
 
-        val effectiveMode = if (equipments.isNotEmpty() && currentMode == EquipmentScreenMode.ONBOARDING) {
-            EquipmentScreenMode.LIST
-        } else {
-            currentMode
+        val effectiveMode = when {
+            equipments.isEmpty() && currentMode != EquipmentScreenMode.SETUP -> EquipmentScreenMode.ONBOARDING
+            equipments.isNotEmpty() && currentMode == EquipmentScreenMode.ONBOARDING -> EquipmentScreenMode.LIST
+            else -> currentMode
         }
 
         EquipmentUiState(
@@ -125,14 +130,13 @@ class EquipmentViewModel(
         }
     }
 
-    // Open equipment list screen
+    // Open equipment list screen (or onboarding if no equipment registered yet)
     fun onOpenListScreen() {
         _errorMessage.value = null
-        _screenMode.value = EquipmentScreenMode.LIST
         viewModelScope.launch {
             val currentEquipments = repository.getEquipments().first()
             populateDraftsFromEquipments(currentEquipments)
-            _screenMode.value = EquipmentScreenMode.LIST
+            _screenMode.value = if (currentEquipments.isEmpty()) EquipmentScreenMode.ONBOARDING else EquipmentScreenMode.LIST
         }
     }
 

@@ -70,7 +70,7 @@ fun EquipmentScreen(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                             onClick = {
-                                if (uiState.screenMode == EquipmentScreenMode.SETUP && uiState.allEquipments.isNotEmpty()) {
+                                if (uiState.screenMode == EquipmentScreenMode.SETUP) {
                                     viewModel.onCancelSetup()
                                 } else {
                                     onNavigateBack()

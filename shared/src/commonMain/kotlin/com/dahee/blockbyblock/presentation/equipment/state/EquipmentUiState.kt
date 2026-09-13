@@ -27,7 +27,7 @@ data class MoldDraftConfig(
 }
 
 data class EquipmentUiState(
-    val screenMode: EquipmentScreenMode = EquipmentScreenMode.SETUP,
+    val screenMode: EquipmentScreenMode = EquipmentScreenMode.ONBOARDING,
     val allEquipments: List<Equipment> = emptyList(),
     val moldDrafts: List<MoldDraftConfig> = defaultMoldDrafts,
     val capacityUnit: MoldCapacityUnit = MoldCapacityUnit.ML,
