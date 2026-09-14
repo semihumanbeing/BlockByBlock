@@ -135,7 +135,10 @@ object ApiClient {
                 }
                 sendWithoutRequest { request ->
                     val urlStr = request.url.toString()
-                    !urlStr.contains("/auth/login") && !urlStr.contains("/auth/signup") && !urlStr.contains("/auth/social-login")
+                    !urlStr.contains("/auth/login") &&
+                    !urlStr.contains("/auth/signup") &&
+                    !urlStr.contains("/auth/social-login") &&
+                    !urlStr.contains("/health")
                 }
             }
         }
@@ -146,7 +149,8 @@ object ApiClient {
             val urlString = url.toString()
             val isAuthEndpoint = urlString.contains("/auth/login") ||
                                  urlString.contains("/auth/signup") ||
-                                 urlString.contains("/auth/social-login")
+                                 urlString.contains("/auth/social-login") ||
+                                 urlString.contains("/health")
             if (!token.isNullOrBlank() && !isAuthEndpoint) {
                 header(HttpHeaders.Authorization, "Bearer $token")
             }
@@ -177,7 +181,9 @@ object ApiClient {
         val text = response.bodyAsText()
         val error = ApiError.fromHttpResponse(response.status.value, text)
         if (response.status.value == 429) {
-            showToast("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.")
+            if (error.code != ErrorCode.ACCOUNT_LOCKED && !error.isAccountLocked()) {
+                showToast("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.")
+            }
         } else if (response.status.value == 403) {
             showToast("접근 권한이 없습니다.")
         } else if (response.status.value >= 500) {

@@ -283,6 +283,7 @@ interface AppStrings {
     val authErrorDefaultSignUp: String
     val authErrorSocialLogin: String
     val authErrorNetwork: String
+    val authErrorAccountLocked: String
 
     // Profile Edit & Avatars
     val profileEditTitle: String

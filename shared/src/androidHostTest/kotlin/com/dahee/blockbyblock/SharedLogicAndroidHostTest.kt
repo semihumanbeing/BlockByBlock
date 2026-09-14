@@ -1001,4 +1001,53 @@ class SharedLogicAndroidHostTest {
         assertEquals("KO", com.dahee.blockbyblock.data.remote.TokenStorage.getUserLang())
     }
 
+    @Test
+    fun testAccountLockedErrorFormatting() {
+        val lockedApiError = com.dahee.blockbyblock.data.remote.error.ApiError(
+            message = "Account is locked due to too many failed attempts",
+            code = com.dahee.blockbyblock.data.remote.error.ErrorCode.ACCOUNT_LOCKED,
+            status = 429
+        )
+
+        assertTrue(lockedApiError.isAccountLocked())
+        assertTrue(lockedApiError.isTooManyRequests())
+
+        val koLockedMsg = com.dahee.blockbyblock.presentation.auth.formatAuthError(
+            lockedApiError,
+            isLogin = true,
+            com.dahee.blockbyblock.core.i18n.KoStrings
+        )
+        assertEquals("비밀번호를 5회 이상 잘못 입력하여 계정이 일시 잠겼습니다. 잠시 후 다시 시도해주세요.", koLockedMsg)
+
+        val enLockedMsg = com.dahee.blockbyblock.presentation.auth.formatAuthError(
+            lockedApiError,
+            isLogin = true,
+            com.dahee.blockbyblock.core.i18n.EnStrings
+        )
+        assertEquals("Your account has been temporarily locked after 5 failed password attempts. Please try again later.", enLockedMsg)
+
+        // From raw JSON response
+        val rawJson = """{"code":"ACCOUNT_LOCKED","message":"Too many failed attempts"}"""
+        val parsed = com.dahee.blockbyblock.data.remote.error.ApiError.fromHttpResponse(429, rawJson)
+        assertTrue(parsed.isAccountLocked())
+        assertEquals(
+            "비밀번호를 5회 이상 잘못 입력하여 계정이 일시 잠겼습니다. 잠시 후 다시 시도해주세요.",
+            com.dahee.blockbyblock.presentation.auth.formatAuthError(parsed, isLogin = true, com.dahee.blockbyblock.core.i18n.KoStrings)
+        )
+    }
+
+    @Test
+    fun testHealthCheckDtoSerialization() {
+        val json1 = """{"code":"SUCCESS","data":{"status":"UP","database":"UP"}}"""
+        val resp1 = com.dahee.blockbyblock.data.remote.ApiClient.jsonConfig.decodeFromString<com.dahee.blockbyblock.data.remote.ApiResponse<com.dahee.blockbyblock.data.remote.dto.HealthStatusData>>(json1)
+        assertEquals("UP", resp1.data.status)
+        assertEquals("UP", resp1.data.database)
+
+        val json2 = """{"data":{"status":"UP","timestamp":"2026-09-14T04:05:47.352700570Z","database":"UP"}}"""
+        val resp2 = com.dahee.blockbyblock.data.remote.ApiClient.jsonConfig.decodeFromString<com.dahee.blockbyblock.data.remote.dto.HealthCheckResponse>(json2)
+        assertEquals("UP", resp2.data.status)
+        assertEquals("UP", resp2.data.database)
+        assertEquals("2026-09-14T04:05:47.352700570Z", resp2.data.timestamp)
+    }
+
 }

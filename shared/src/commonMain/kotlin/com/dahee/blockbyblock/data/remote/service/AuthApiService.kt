@@ -85,6 +85,9 @@ class AuthApiService {
         response.status.isSuccess()
     }
 
+    suspend fun checkHealth(): Result<com.dahee.blockbyblock.data.remote.dto.HealthStatusData> =
+        HealthApiService().checkHealth()
+
     private suspend fun parseError(response: HttpResponse): com.dahee.blockbyblock.data.remote.error.ApiError {
         return ApiClient.parseError(response)
     }

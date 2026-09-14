@@ -302,6 +302,7 @@ object KoStrings : AppStrings {
     override val authErrorDefaultSignUp = "회원가입에 실패했습니다. 다시 시도해주세요"
     override val authErrorSocialLogin = "소셜 로그인에 실패했습니다. 다시 시도해주세요"
     override val authErrorNetwork = "네트워크 연결 상태를 확인해주세요"
+    override val authErrorAccountLocked = "비밀번호를 5회 이상 잘못 입력하여 계정이 일시 잠겼습니다. 잠시 후 다시 시도해주세요."
 
     // Profile Edit & Avatars
     override val profileEditTitle = "내 정보 수정"

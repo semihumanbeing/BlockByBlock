@@ -50,6 +50,9 @@ class ApiError(
     fun isTooManyRequests(): Boolean =
         status == 429 || code == ErrorCode.TOO_MANY_REQUESTS
 
+    fun isAccountLocked(): Boolean =
+        code == ErrorCode.ACCOUNT_LOCKED || (status == 429 && code.contains("ACCOUNT_LOCKED", ignoreCase = true))
+
     fun extractFieldErrorMap(): Map<String, String> {
         val map = mutableMapOf<String, String>()
         errors?.forEach { detail ->

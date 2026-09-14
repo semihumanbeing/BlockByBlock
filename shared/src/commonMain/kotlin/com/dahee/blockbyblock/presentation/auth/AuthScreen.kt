@@ -936,6 +936,12 @@ internal fun formatAuthError(
     val lower = msg.lowercase()
 
     if (err is ApiError) {
+        if (err.isAccountLocked() || err.code == ErrorCode.ACCOUNT_LOCKED ||
+            (err.status == 429 && (lower.contains("account_locked") || lower.contains("locked") || err.code.contains("ACCOUNT_LOCKED", ignoreCase = true))) ||
+            lower.contains("account_locked") || lower.contains("account is locked") || lower.contains("계정이 일시 잠겼습니다") || lower.contains("잠겼습니다")
+        ) {
+            return strings.authErrorAccountLocked
+        }
         if (err.hasFieldErrors()) {
             val emailErr = err.getFieldErrorMessage("email")
             val pwErr = err.getFieldErrorMessage("password")
@@ -966,6 +972,9 @@ internal fun formatAuthError(
         }
     }
 
+    if (lower.contains("account_locked") || lower.contains("account locked") || lower.contains("계정이 일시 잠겼습니다") || lower.contains("잠겼습니다")) {
+        return strings.authErrorAccountLocked
+    }
     if (lower.contains("invalid email or password") || lower.contains("bad credential") || lower.contains("incorrect password") || lower.contains("user not found")) {
         return strings.authErrorInvalidCredentials
     }

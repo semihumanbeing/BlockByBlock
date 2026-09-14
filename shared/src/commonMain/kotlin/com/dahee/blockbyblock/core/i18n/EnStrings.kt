@@ -302,6 +302,7 @@ object EnStrings : AppStrings {
     override val authErrorDefaultSignUp = "Sign up failed. Please try again"
     override val authErrorSocialLogin = "Social login failed. Please try again"
     override val authErrorNetwork = "Please check your network connection"
+    override val authErrorAccountLocked = "Your account has been temporarily locked after 5 failed password attempts. Please try again later."
 
     // Profile Edit & Avatars
     override val profileEditTitle = "Edit Profile"
