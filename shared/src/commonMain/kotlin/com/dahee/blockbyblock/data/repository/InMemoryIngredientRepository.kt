@@ -148,4 +148,30 @@ class InMemoryIngredientRepository : IngredientRepository {
         val results = com.dahee.blockbyblock.data.datasource.MasterIngredientCatalog.search(query ?: "", category, lang)
         return Result.success(results)
     }
+
+    override suspend fun fetchCatalogIngredientsPaged(
+        query: String?,
+        category: IngredientCategory?,
+        lang: String,
+        page: Int,
+        size: Int
+    ): Result<com.dahee.blockbyblock.domain.model.PageResult<com.dahee.blockbyblock.domain.model.CatalogIngredient>> {
+        val results = com.dahee.blockbyblock.data.datasource.MasterIngredientCatalog.search(query ?: "", category, lang)
+        val totalElements = results.size
+        val totalPages = if (totalElements == 0) 0 else ((totalElements - 1) / size) + 1
+        val startIndex = ((page - 1) * size).coerceIn(0, totalElements)
+        val endIndex = (startIndex + size).coerceAtMost(totalElements)
+        val pagedItems = if (startIndex < totalElements) results.subList(startIndex, endIndex) else emptyList()
+        return Result.success(
+            com.dahee.blockbyblock.domain.model.PageResult(
+                items = pagedItems,
+                page = page,
+                size = size,
+                totalElements = totalElements.toLong(),
+                totalPages = totalPages,
+                hasNext = page < totalPages,
+                hasPrevious = page > 1
+            )
+        )
+    }
 }

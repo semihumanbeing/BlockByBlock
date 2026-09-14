@@ -118,6 +118,9 @@ fun InventoryScreen(
             onRemoveIngredient = { id ->
                 viewModel.onDeleteIngredient(id)
             },
+            isLoadingNextPage = uiState.isCatalogLoadingNextPage,
+            hasNextPage = uiState.catalogHasNextPage,
+            onLoadNextPage = { viewModel.loadNextCatalogPage() },
             currentPage = uiState.catalogCurrentPage,
             totalPages = uiState.catalogTotalPages,
             onPageChange = { viewModel.onCatalogPageChange(it) },

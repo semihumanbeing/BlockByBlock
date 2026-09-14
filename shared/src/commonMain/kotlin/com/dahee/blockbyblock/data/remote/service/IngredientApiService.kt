@@ -3,6 +3,7 @@ package com.dahee.blockbyblock.data.remote.service
 import com.dahee.blockbyblock.data.remote.ApiClient
 import com.dahee.blockbyblock.data.remote.ApiResponse
 import com.dahee.blockbyblock.data.remote.dto.CatalogIngredientResponse
+import com.dahee.blockbyblock.data.remote.dto.CatalogPageResponse
 import com.dahee.blockbyblock.data.remote.dto.CreateIngredientRequest
 import com.dahee.blockbyblock.data.remote.dto.IngredientListResponse
 import com.dahee.blockbyblock.data.remote.dto.IngredientResponse
@@ -16,6 +17,7 @@ import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 
 class IngredientApiService {
@@ -23,8 +25,10 @@ class IngredientApiService {
     suspend fun getCatalogIngredients(
         query: String? = null,
         category: String? = null,
-        lang: String? = "KO"
-    ): Result<List<CatalogIngredientResponse>> = runCatching {
+        lang: String? = "KO",
+        page: Int = 1,
+        size: Int = 20
+    ): Result<CatalogPageResponse> = runCatching {
         val response: HttpResponse = ApiClient.client.get(ApiClient.endpoint("api/v1/catalog/ingredients")) {
             if (!query.isNullOrBlank()) {
                 parameter("query", query)
@@ -35,9 +39,34 @@ class IngredientApiService {
             if (!lang.isNullOrBlank()) {
                 parameter("lang", lang)
             }
+            parameter("page", page)
+            parameter("size", size)
         }
         if (response.status.isSuccess()) {
-            response.body<ApiResponse<List<CatalogIngredientResponse>>>().data
+            val rawText = response.bodyAsText()
+            val jsonElement = ApiClient.jsonConfig.parseToJsonElement(rawText)
+            val dataElement = (jsonElement as? kotlinx.serialization.json.JsonObject)?.get("data")
+            when (dataElement) {
+                is kotlinx.serialization.json.JsonObject -> {
+                    ApiClient.jsonConfig.decodeFromJsonElement(CatalogPageResponse.serializer(), dataElement)
+                }
+                is kotlinx.serialization.json.JsonArray -> {
+                    val list = ApiClient.jsonConfig.decodeFromJsonElement(
+                        kotlinx.serialization.builtins.ListSerializer(CatalogIngredientResponse.serializer()),
+                        dataElement
+                    )
+                    CatalogPageResponse(
+                        items = list,
+                        page = 1,
+                        size = list.size.coerceAtLeast(1),
+                        totalElements = list.size.toLong(),
+                        totalPages = 1,
+                        hasNext = false,
+                        hasPrevious = false
+                    )
+                }
+                else -> CatalogPageResponse()
+            }
         } else {
             throw parseError(response)
         }

@@ -76,6 +76,7 @@ interface AppStrings {
     val editMoldDialogTitle: String
     val editMoldDialogDeleteBtn: String
     val editMoldDialogSaveBtn: String
+    val resetMoldShape: String
 
     // ME Screen
     val meTitle: String

@@ -31,4 +31,13 @@ interface IngredientRepository {
         category: IngredientCategory? = null,
         lang: String = "KO"
     ): Result<List<com.dahee.blockbyblock.domain.model.CatalogIngredient>> = Result.success(emptyList())
+
+    suspend fun fetchCatalogIngredientsPaged(
+        query: String? = null,
+        category: IngredientCategory? = null,
+        lang: String = "KO",
+        page: Int = 1,
+        size: Int = 20
+    ): Result<com.dahee.blockbyblock.domain.model.PageResult<com.dahee.blockbyblock.domain.model.CatalogIngredient>> =
+        Result.success(com.dahee.blockbyblock.domain.model.PageResult())
 }

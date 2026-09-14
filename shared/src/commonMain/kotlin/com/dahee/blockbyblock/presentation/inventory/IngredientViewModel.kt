@@ -179,8 +179,7 @@ class IngredientViewModel(
     ) {
         val totalPages = if (allResults.isEmpty()) 1 else ((allResults.size - 1) / CATALOG_PAGE_SIZE) + 1
         val safePage = targetPage.coerceIn(1, totalPages)
-        val startIndex = (safePage - 1) * CATALOG_PAGE_SIZE
-        val pagedItems = allResults.drop(startIndex).take(CATALOG_PAGE_SIZE)
+        val pagedItems = allResults.take(safePage * CATALOG_PAGE_SIZE)
 
         _uiState.update { current ->
             current.copy(
@@ -190,8 +189,70 @@ class IngredientViewModel(
                 catalogPagedResults = pagedItems,
                 catalogCurrentPage = safePage,
                 catalogPageSize = CATALOG_PAGE_SIZE,
-                catalogTotalPages = totalPages
+                catalogTotalPages = totalPages,
+                catalogHasNextPage = safePage < totalPages,
+                isCatalogLoadingNextPage = false,
+                isCatalogInitialLoading = false
             )
+        }
+    }
+
+    fun loadNextCatalogPage() {
+        val current = _uiState.value
+        if (current.isCatalogLoadingNextPage || !current.catalogHasNextPage) return
+
+        val nextPage = current.catalogCurrentPage + 1
+        _uiState.update { it.copy(isCatalogLoadingNextPage = true) }
+
+        val query = current.catalogSearchQuery
+        val category = current.catalogCategoryFilter
+        val langCode = currentLanguage.name
+
+        scope.launch {
+            val result = repository.fetchCatalogIngredientsPaged(
+                query = query.trim().ifBlank { null },
+                category = category,
+                lang = langCode,
+                page = nextPage,
+                size = CATALOG_PAGE_SIZE
+            )
+            result.onSuccess { pageResult ->
+                if (_uiState.value.catalogSearchQuery == query && _uiState.value.catalogCategoryFilter == category) {
+                    val existingIds = _uiState.value.catalogPagedResults.map { it.id }.toSet()
+                    val newItems = pageResult.items.filterNot { it.id in existingIds }
+                    val accumulated = _uiState.value.catalogPagedResults + newItems
+                    _uiState.update { state ->
+                        state.copy(
+                            catalogPagedResults = accumulated,
+                            catalogResults = state.catalogResults + newItems,
+                            catalogCurrentPage = pageResult.page,
+                            catalogTotalPages = pageResult.totalPages,
+                            catalogHasNextPage = pageResult.hasNext,
+                            isCatalogLoadingNextPage = false
+                        )
+                    }
+                }
+            }.onFailure {
+                val fallback = MasterIngredientCatalog.search(query.trim(), category, langCode)
+                val totalPages = if (fallback.isEmpty()) 1 else ((fallback.size - 1) / CATALOG_PAGE_SIZE) + 1
+                val startIndex = ((nextPage - 1) * CATALOG_PAGE_SIZE).coerceIn(0, fallback.size)
+                val nextItems = fallback.drop(startIndex).take(CATALOG_PAGE_SIZE)
+                if (_uiState.value.catalogSearchQuery == query && _uiState.value.catalogCategoryFilter == category) {
+                    val existingIds = _uiState.value.catalogPagedResults.map { it.id }.toSet()
+                    val newItems = nextItems.filterNot { it.id in existingIds }
+                    val accumulated = _uiState.value.catalogPagedResults + newItems
+                    _uiState.update { state ->
+                        state.copy(
+                            catalogPagedResults = accumulated,
+                            catalogResults = state.catalogResults + newItems,
+                            catalogCurrentPage = nextPage,
+                            catalogTotalPages = totalPages,
+                            catalogHasNextPage = nextPage < totalPages,
+                            isCatalogLoadingNextPage = false
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -199,10 +260,9 @@ class IngredientViewModel(
         val totalPages = _uiState.value.catalogTotalPages.coerceAtLeast(1)
         val clamped = targetPage.coerceIn(1, totalPages)
         if (clamped == _uiState.value.catalogCurrentPage) return
-        updateCatalogResultsState(
-            allResults = _uiState.value.catalogResults,
-            targetPage = clamped
-        )
+        if (clamped > _uiState.value.catalogCurrentPage) {
+            loadNextCatalogPage()
+        }
     }
 
     fun onOpenSearchCatalogDialog() {
@@ -216,15 +276,25 @@ class IngredientViewModel(
         } else {
             MasterIngredientCatalog.items
         }
+        val totalPages = if (initialItems.isEmpty()) 1 else ((initialItems.size - 1) / CATALOG_PAGE_SIZE) + 1
         _uiState.update {
             it.copy(
                 isSearchCatalogDialogOpen = true,
-                catalogTargetStatus = initialStatus
+                catalogTargetStatus = initialStatus,
+                catalogSearchQuery = "",
+                catalogCategoryFilter = null,
+                catalogResults = initialItems,
+                catalogPagedResults = initialItems.take(CATALOG_PAGE_SIZE),
+                catalogCurrentPage = 1,
+                catalogPageSize = CATALOG_PAGE_SIZE,
+                catalogTotalPages = totalPages,
+                catalogHasNextPage = initialItems.size > CATALOG_PAGE_SIZE,
+                isCatalogLoadingNextPage = false,
+                isCatalogInitialLoading = false
             )
         }
         val cacheKey = CatalogCacheKey(query = "", category = null, lang = currentLanguage.name)
         catalogCache[cacheKey] = initialItems
-        updateCatalogResultsState(allResults = initialItems, targetPage = 1, query = "", category = null)
         searchCatalog("", null)
     }
 
@@ -276,15 +346,31 @@ class IngredientViewModel(
             if (trimmedQuery.isNotBlank()) {
                 delay(300) // 300ms debounce to prevent burst requests while typing
             }
-            val result = repository.fetchCatalogIngredients(
+            _uiState.update { it.copy(isCatalogInitialLoading = true) }
+            val result = repository.fetchCatalogIngredientsPaged(
                 query = trimmedQuery.ifBlank { null },
                 category = category,
-                lang = langCode
+                lang = langCode,
+                page = 1,
+                size = CATALOG_PAGE_SIZE
             )
-            result.onSuccess { items ->
-                catalogCache[cacheKey] = items
+            result.onSuccess { pageResult ->
+                catalogCache[cacheKey] = pageResult.items
                 if (_uiState.value.catalogSearchQuery == query && _uiState.value.catalogCategoryFilter == category) {
-                    updateCatalogResultsState(allResults = items, targetPage = 1, query = query, category = category)
+                    _uiState.update { current ->
+                        current.copy(
+                            catalogSearchQuery = query,
+                            catalogCategoryFilter = category,
+                            catalogResults = pageResult.items,
+                            catalogPagedResults = pageResult.items,
+                            catalogCurrentPage = pageResult.page,
+                            catalogPageSize = pageResult.size,
+                            catalogTotalPages = pageResult.totalPages,
+                            catalogHasNextPage = pageResult.hasNext,
+                            isCatalogInitialLoading = false,
+                            isCatalogLoadingNextPage = false
+                        )
+                    }
                 }
             }.onFailure {
                 val fallback = MasterIngredientCatalog.search(trimmedQuery, category, langCode)
@@ -464,7 +550,7 @@ class IngredientViewModel(
     }
 
     companion object {
-        const val CATALOG_PAGE_SIZE = 8
+        const val CATALOG_PAGE_SIZE = 20
         private const val PAGE_SIZE = 12
     }
 

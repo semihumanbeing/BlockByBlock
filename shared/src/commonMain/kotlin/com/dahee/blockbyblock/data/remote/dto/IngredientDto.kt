@@ -10,6 +10,17 @@ data class CatalogIngredientResponse(
 )
 
 @Serializable
+data class CatalogPageResponse(
+    val items: List<CatalogIngredientResponse> = emptyList(),
+    val page: Int = 1,
+    val size: Int = 20,
+    val totalElements: Long = 0L,
+    val totalPages: Int = 0,
+    val hasNext: Boolean = false,
+    val hasPrevious: Boolean = false
+)
+
+@Serializable
 data class IngredientCountsResponse(
     val stock: Int = 0,
     val outOfStock: Int = 0,

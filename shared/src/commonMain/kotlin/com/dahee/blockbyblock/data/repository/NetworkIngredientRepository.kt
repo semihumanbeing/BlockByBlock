@@ -5,9 +5,11 @@ import com.dahee.blockbyblock.data.remote.dto.CreateIngredientRequest
 import com.dahee.blockbyblock.data.remote.dto.IngredientResponse
 import com.dahee.blockbyblock.data.remote.dto.UpdateIngredientRequest
 import com.dahee.blockbyblock.data.remote.service.IngredientApiService
+import com.dahee.blockbyblock.domain.model.CatalogIngredient
 import com.dahee.blockbyblock.domain.model.Ingredient
 import com.dahee.blockbyblock.domain.model.IngredientCategory
 import com.dahee.blockbyblock.domain.model.IngredientStatus
+import com.dahee.blockbyblock.domain.model.PageResult
 import com.dahee.blockbyblock.domain.repository.IngredientRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -172,20 +174,45 @@ class NetworkIngredientRepository(
         query: String?,
         category: IngredientCategory?,
         lang: String
-    ): Result<List<com.dahee.blockbyblock.domain.model.CatalogIngredient>> {
-        return apiService.getCatalogIngredients(query = query, category = category?.name, lang = lang).map { list ->
-            list.map { item ->
+    ): Result<List<CatalogIngredient>> {
+        return fetchCatalogIngredientsPaged(query, category, lang, page = 1, size = 100).map { it.items }
+    }
+
+    override suspend fun fetchCatalogIngredientsPaged(
+        query: String?,
+        category: IngredientCategory?,
+        lang: String,
+        page: Int,
+        size: Int
+    ): Result<PageResult<CatalogIngredient>> {
+        return apiService.getCatalogIngredients(
+            query = query,
+            category = category?.name,
+            lang = lang,
+            page = page,
+            size = size
+        ).map { pageRes ->
+            val mappedItems = pageRes.items.map { item ->
                 val cat = try {
                     IngredientCategory.valueOf(item.category)
                 } catch (_: Exception) {
                     IngredientCategory.OTHER
                 }
-                com.dahee.blockbyblock.domain.model.CatalogIngredient(
+                CatalogIngredient(
                     id = item.id.toString(),
                     name = item.name,
                     category = cat
                 )
             }
+            PageResult(
+                items = mappedItems,
+                page = pageRes.page,
+                size = pageRes.size,
+                totalElements = pageRes.totalElements,
+                totalPages = pageRes.totalPages,
+                hasNext = pageRes.hasNext,
+                hasPrevious = pageRes.hasPrevious
+            )
         }
     }
 

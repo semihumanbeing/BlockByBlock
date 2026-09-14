@@ -163,19 +163,45 @@ class SharedLogicAndroidHostTest {
         assertTrue(state1.catalogTotalPages > 1, "Catalog should have multiple pages")
         val page1FirstItem = state1.catalogPagedResults.first().id
 
-        // 2. Navigate to page 2
+        // 2. Navigate to page 2 (appends page 2 items)
         viewModel.onCatalogPageChange(2)
         val state2 = viewModel.uiState.value
         assertEquals(2, state2.catalogCurrentPage)
-        assertEquals(com.dahee.blockbyblock.presentation.inventory.IngredientViewModel.CATALOG_PAGE_SIZE, state2.catalogPagedResults.size)
-        val page2FirstItem = state2.catalogPagedResults.first().id
-        assertTrue(page1FirstItem != page2FirstItem, "Page 2 should have different items from Page 1")
+        assertEquals(com.dahee.blockbyblock.presentation.inventory.IngredientViewModel.CATALOG_PAGE_SIZE * 2, state2.catalogPagedResults.size)
+        val page2Item = state2.catalogPagedResults[com.dahee.blockbyblock.presentation.inventory.IngredientViewModel.CATALOG_PAGE_SIZE].id
+        assertTrue(page1FirstItem != page2Item, "Page 2 should have different items from Page 1")
 
         // 3. Search resets catalog to page 1
         viewModel.onCatalogSearchQueryChange("당근")
         viewModel.catalogSearchJob?.join()
         val stateSearch = viewModel.uiState.value
         assertEquals(1, stateSearch.catalogCurrentPage)
+
+        testJob.cancel()
+    }
+
+    @Test
+    fun testCatalogSearchInfiniteScroll() = kotlinx.coroutines.runBlocking {
+        val testJob = kotlinx.coroutines.Job()
+        val testScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined + testJob)
+
+        val repo = com.dahee.blockbyblock.data.repository.InMemoryIngredientRepository()
+        val viewModel = com.dahee.blockbyblock.presentation.inventory.IngredientViewModel(
+            repository = repo,
+            scope = testScope
+        )
+
+        viewModel.onOpenSearchCatalogDialog()
+        val initial = viewModel.uiState.value
+        assertEquals(1, initial.catalogCurrentPage)
+        assertEquals(com.dahee.blockbyblock.presentation.inventory.IngredientViewModel.CATALOG_PAGE_SIZE, initial.catalogPagedResults.size)
+        assertTrue(initial.catalogHasNextPage)
+
+        // Trigger infinite scroll next page load
+        viewModel.loadNextCatalogPage()
+        val afterLoadMore = viewModel.uiState.value
+        assertEquals(2, afterLoadMore.catalogCurrentPage)
+        assertEquals(com.dahee.blockbyblock.presentation.inventory.IngredientViewModel.CATALOG_PAGE_SIZE * 2, afterLoadMore.catalogPagedResults.size)
 
         testJob.cancel()
     }
@@ -1245,6 +1271,43 @@ class SharedLogicAndroidHostTest {
             ),
             lunchBeefStatuses
         )
+    }
+
+    @Test
+    fun testPresetMoldShapeDefaultAndRestore() {
+        // 1. Verify defaultCellCount for all presets
+        assertEquals(2, com.dahee.blockbyblock.domain.model.MoldGridPreset.ML_500.defaultCellCount)
+        assertEquals(4, com.dahee.blockbyblock.domain.model.MoldGridPreset.ML_250.defaultCellCount)
+        assertEquals(6, com.dahee.blockbyblock.domain.model.MoldGridPreset.ML_125.defaultCellCount)
+        assertEquals(16, com.dahee.blockbyblock.domain.model.MoldGridPreset.ML_30.defaultCellCount)
+        assertEquals(6, com.dahee.blockbyblock.domain.model.MoldGridPreset.CUSTOM.defaultCellCount)
+
+        // 2. Verify EquipmentUiState defaults use preset defaultCellCount
+        val defaults = com.dahee.blockbyblock.presentation.equipment.state.EquipmentUiState.defaultMoldDrafts
+        val ml500 = defaults.first { it.preset == com.dahee.blockbyblock.domain.model.MoldGridPreset.ML_500 }
+        val ml250 = defaults.first { it.preset == com.dahee.blockbyblock.domain.model.MoldGridPreset.ML_250 }
+        val ml125 = defaults.first { it.preset == com.dahee.blockbyblock.domain.model.MoldGridPreset.ML_125 }
+        val ml30 = defaults.first { it.preset == com.dahee.blockbyblock.domain.model.MoldGridPreset.ML_30 }
+
+        assertEquals(2, ml500.cellCount)
+        assertEquals(4, ml250.cellCount)
+        assertEquals(6, ml125.cellCount)
+        assertEquals(16, ml30.cellCount)
+
+        // 3. Simulate modifying cellCount away from preset default and restoring
+        var modifiedDraft = ml500.copy(cellCount = 4) // changed to 4구
+        assertTrue(modifiedDraft.cellCount != modifiedDraft.preset.defaultCellCount)
+
+        // Restore shape back to factory default
+        val restoredDraft = modifiedDraft.copy(cellCount = modifiedDraft.preset.defaultCellCount)
+        assertEquals(2, restoredDraft.cellCount)
+        assertEquals(restoredDraft.preset.defaultCellCount, restoredDraft.cellCount)
+
+        // 4. Verify i18n string parity
+        val ko = com.dahee.blockbyblock.core.i18n.KoStrings
+        val en = com.dahee.blockbyblock.core.i18n.EnStrings
+        assertEquals("원래 모양", ko.resetMoldShape)
+        assertEquals("Reset Shape", en.resetMoldShape)
     }
 
 }

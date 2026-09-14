@@ -154,10 +154,10 @@ class EquipmentViewModel(
     private fun populateDraftsFromEquipments(currentEquipments: List<Equipment>) {
         // 1. Standard presets
         val standardDrafts = listOf(
-            Triple(MoldGridPreset.ML_500, "#BAE6FD", 2),
-            Triple(MoldGridPreset.ML_250, "#A7F3D0", 4),
-            Triple(MoldGridPreset.ML_125, "#FECDD3", 6),
-            Triple(MoldGridPreset.ML_30, "#FEF08A", 16)
+            Triple(MoldGridPreset.ML_500, "#BAE6FD", MoldGridPreset.ML_500.defaultCellCount),
+            Triple(MoldGridPreset.ML_250, "#A7F3D0", MoldGridPreset.ML_250.defaultCellCount),
+            Triple(MoldGridPreset.ML_125, "#FECDD3", MoldGridPreset.ML_125.defaultCellCount),
+            Triple(MoldGridPreset.ML_30, "#FEF08A", MoldGridPreset.ML_30.defaultCellCount)
         ).map { (preset, defaultColor, defaultCells) ->
             val existing = currentEquipments.find { it.category == EquipmentCategory.MOLD && it.moldPreset == preset }
             if (existing != null) {

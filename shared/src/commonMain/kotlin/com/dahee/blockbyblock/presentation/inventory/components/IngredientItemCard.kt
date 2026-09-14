@@ -76,7 +76,7 @@ fun IngredientItemCard(
     val checkboxBorder by animateColorAsState(
         targetValue = when {
             isInStock -> AppColors.PrimaryDark
-            isConsumed -> AppColors.Border
+            isConsumed -> AppColors.BorderFocus
             else -> Color(0xFFEA580C).copy(alpha = 0.7f)
         },
         animationSpec = tween(200)
@@ -134,11 +134,11 @@ fun IngredientItemCard(
                             tint = Color.White,
                             modifier = Modifier.size(18.dp)
                         )
-                    } else if (isConsumed) {
+                    } else if (isCart) {
                         Icon(
                             imageVector = Icons.Default.ShoppingCart,
-                            contentDescription = strings.moveToCartBtn,
-                            tint = Color(0xFFEA580C).copy(alpha = 0.75f),
+                            contentDescription = strings.inventoryTabShoppingCart,
+                            tint = Color(0xFFEA580C),
                             modifier = Modifier.size(15.dp)
                         )
                     }

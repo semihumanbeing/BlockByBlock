@@ -88,6 +88,7 @@ object EnStrings : AppStrings {
     override val editMoldDialogTitle = "Edit Mold"
     override val editMoldDialogDeleteBtn = "Delete"
     override val editMoldDialogSaveBtn = "Save Changes"
+    override val resetMoldShape = "Reset Shape"
 
     // ME Screen
     override val meTitle = "My Info"

@@ -88,6 +88,7 @@ object KoStrings : AppStrings {
     override val editMoldDialogTitle = "몰드 수정"
     override val editMoldDialogDeleteBtn = "삭제"
     override val editMoldDialogSaveBtn = "수정 완료"
+    override val resetMoldShape = "원래 모양"
 
     // ME Screen
     override val meTitle = "내 정보"

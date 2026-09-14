@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -173,6 +174,36 @@ fun SingleMoldEditDialog(
                                     color = AppColors.TextPrimary,
                                     textAlign = TextAlign.Center
                                 )
+
+                                if (preset != MoldGridPreset.CUSTOM && cellCount != preset.defaultCellCount) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(AppColors.Primary.copy(alpha = 0.10f))
+                                            .border(0.8.dp, AppColors.Primary.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                                            .clickable { cellCount = preset.defaultCellCount }
+                                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                                            .pointerHoverIcon(PointerIcon.Hand)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Refresh,
+                                            contentDescription = strings.resetMoldShape,
+                                            tint = AppColors.Primary,
+                                            modifier = Modifier.size(11.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(2.dp))
+                                        Text(
+                                            text = strings.resetMoldShape,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AppColors.Primary,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
                             }
 
                             Spacer(modifier = Modifier.width(8.dp))
@@ -270,32 +301,63 @@ fun SingleMoldEditDialog(
                     }
                 }
 
-                // 1. Slot count selection (Right-aligned: preset chips + CustomSlotChip)
+                // 1. Slot count selection (Row: [↺ 원래 모양] on left when modified, preset chips + CustomSlotChip on right)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    presetChips.forEach { count ->
-                        AppChip(
-                            text = strings.slotCount(count),
-                            selected = cellCount == count,
-                            onClick = { cellCount = count },
-                            horizontalPadding = 7.dp,
-                            verticalPadding = 4.dp,
-                            fontSize = 12.sp
-                        )
-                        Spacer(modifier = Modifier.width(3.dp))
+                    if (preset != MoldGridPreset.CUSTOM && cellCount != preset.defaultCellCount) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(AppColors.Primary.copy(alpha = 0.08f))
+                                .border(0.8.dp, AppColors.Primary.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                                .clickable { cellCount = preset.defaultCellCount }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .pointerHoverIcon(PointerIcon.Hand)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = strings.resetMoldShape,
+                                tint = AppColors.Primary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = strings.resetMoldShape,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = AppColors.Primary
+                            )
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.width(1.dp))
                     }
 
-                    CustomSlotChip(
-                        currentCellCount = cellCount,
-                        presetList = presetChips,
-                        onCellCountChange = { cellCount = it },
-                        minCellCount = minCellCount,
-                        horizontalPadding = 7.dp,
-                        verticalPadding = 4.dp
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        presetChips.forEach { count ->
+                            AppChip(
+                                text = strings.slotCount(count),
+                                selected = cellCount == count,
+                                onClick = { cellCount = count },
+                                horizontalPadding = 7.dp,
+                                verticalPadding = 4.dp,
+                                fontSize = 12.sp
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                        }
+
+                        CustomSlotChip(
+                            currentCellCount = cellCount,
+                            presetList = presetChips,
+                            onCellCountChange = { cellCount = it },
+                            minCellCount = minCellCount,
+                            horizontalPadding = 7.dp,
+                            verticalPadding = 4.dp
+                        )
+                    }
                 }
 
                 // 2. Mold color palette (Right-aligned dots without label)

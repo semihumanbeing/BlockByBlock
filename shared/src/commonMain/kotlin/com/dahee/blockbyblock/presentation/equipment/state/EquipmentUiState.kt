@@ -43,10 +43,10 @@ data class EquipmentUiState(
 
     companion object {
         val defaultMoldDrafts = listOf(
-            MoldDraftConfig(id = "draft_ML_500", preset = MoldGridPreset.ML_500, isSelected = true, capacityMl = 500, cellCount = 2, quantity = 1, moldColorHex = "#BAE6FD"),
-            MoldDraftConfig(id = "draft_ML_250", preset = MoldGridPreset.ML_250, isSelected = false, capacityMl = 250, cellCount = 4, quantity = 1, moldColorHex = "#A7F3D0"),
-            MoldDraftConfig(id = "draft_ML_125", preset = MoldGridPreset.ML_125, isSelected = false, capacityMl = 125, cellCount = 6, quantity = 1, moldColorHex = "#FECDD3"),
-            MoldDraftConfig(id = "draft_ML_30", preset = MoldGridPreset.ML_30, isSelected = false, capacityMl = 30, cellCount = 16, quantity = 1, moldColorHex = "#FEF08A"),
+            MoldDraftConfig(id = "draft_ML_500", preset = MoldGridPreset.ML_500, isSelected = true, capacityMl = 500, cellCount = MoldGridPreset.ML_500.defaultCellCount, quantity = 1, moldColorHex = "#BAE6FD"),
+            MoldDraftConfig(id = "draft_ML_250", preset = MoldGridPreset.ML_250, isSelected = false, capacityMl = 250, cellCount = MoldGridPreset.ML_250.defaultCellCount, quantity = 1, moldColorHex = "#A7F3D0"),
+            MoldDraftConfig(id = "draft_ML_125", preset = MoldGridPreset.ML_125, isSelected = false, capacityMl = 125, cellCount = MoldGridPreset.ML_125.defaultCellCount, quantity = 1, moldColorHex = "#FECDD3"),
+            MoldDraftConfig(id = "draft_ML_30", preset = MoldGridPreset.ML_30, isSelected = false, capacityMl = 30, cellCount = MoldGridPreset.ML_30.defaultCellCount, quantity = 1, moldColorHex = "#FEF08A"),
             MoldDraftConfig(id = "draft_CUSTOM_1", preset = MoldGridPreset.CUSTOM, isSelected = false, capacityMl = 200, cellCount = 6, quantity = 1, moldColorHex = "#E9D5FF")
         )
     }

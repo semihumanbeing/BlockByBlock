@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -26,9 +27,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -65,6 +69,9 @@ fun IngredientSearchAddDialog(
     onAddFromCatalog: (CatalogIngredient, IngredientStatus) -> Unit,
     onAddCustomIngredient: (String, IngredientStatus) -> Unit,
     onRemoveIngredient: (String) -> Unit = {},
+    isLoadingNextPage: Boolean = false,
+    hasNextPage: Boolean = false,
+    onLoadNextPage: () -> Unit = {},
     currentPage: Int = 1,
     totalPages: Int = 1,
     onPageChange: (Int) -> Unit = {},
@@ -72,6 +79,25 @@ fun IngredientSearchAddDialog(
 ) {
     val strings = LocalStrings.current
     val focusManager = LocalFocusManager.current
+    val listState = rememberLazyListState()
+
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val total = listState.layoutInfo.totalItemsCount
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            total > 0 && lastVisible >= total - 3
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore && hasNextPage && !isLoadingNextPage) {
+            onLoadNextPage()
+        }
+    }
+
+    LaunchedEffect(searchQuery, selectedCategory) {
+        listState.scrollToItem(0)
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Box(
@@ -167,13 +193,14 @@ fun IngredientSearchAddDialog(
 
                 // 4. Catalog Search Results or Custom Add Option
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Option to add custom ingredient if search query is entered (shown on page 1)
-                    if (searchQuery.isNotBlank() && currentPage == 1) {
+                    // Option to add custom ingredient if search query is entered
+                    if (searchQuery.isNotBlank()) {
                         val trimmedQuery = searchQuery.trim()
                         val alreadyRegistered = registeredIngredients.find {
                             it.name.trim().equals(trimmedQuery, ignoreCase = true)
@@ -387,15 +414,23 @@ fun IngredientSearchAddDialog(
                             )
                         }
                     }
-                }
 
-                // 5. Catalog Pagination Controls
-                if (totalPages > 1) {
-                    CatalogPaginationControls(
-                        currentPage = currentPage,
-                        totalPages = totalPages,
-                        onPageChange = onPageChange
-                    )
+                    if (isLoadingNextPage) {
+                        item(key = "catalog_loading_indicator") {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = AppColors.Primary,
+                                    strokeWidth = 2.dp
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

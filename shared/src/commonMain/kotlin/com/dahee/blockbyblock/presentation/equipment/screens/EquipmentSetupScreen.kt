@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -433,6 +434,36 @@ private fun MoldSetupRow(
                             maxLines = 1,
                             softWrap = false
                         )
+
+                        if (draft.isSelected && draft.preset != MoldGridPreset.CUSTOM && draft.cellCount != draft.preset.defaultCellCount) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(AppColors.Primary.copy(alpha = 0.10f))
+                                    .border(0.8.dp, AppColors.Primary.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                                    .clickable { onCellCountChange(draft.preset.defaultCellCount) }
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    .pointerHoverIcon(PointerIcon.Hand)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = strings.resetMoldShape,
+                                    tint = AppColors.Primary,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = strings.resetMoldShape,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColors.Primary,
+                                    maxLines = 1
+                                )
+                            }
+                        }
                     }
 
                     if (draft.isSelected) {
@@ -562,12 +593,40 @@ private fun MoldSetupRow(
                             )
                         }
 
-                        // 3. Slot count selector (Right-aligned single row: Presets + CustomSlotChip)
+                        // 3. Slot count selector (Right-aligned single row: Presets + CustomSlotChip, with restore button when modified)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            if (draft.preset != MoldGridPreset.CUSTOM && draft.cellCount != draft.preset.defaultCellCount) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(AppColors.Primary.copy(alpha = 0.08f))
+                                        .border(0.8.dp, AppColors.Primary.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                                        .clickable { onCellCountChange(draft.preset.defaultCellCount) }
+                                        .padding(horizontal = 5.dp, vertical = 3.dp)
+                                        .pointerHoverIcon(PointerIcon.Hand)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = strings.resetMoldShape,
+                                        tint = AppColors.Primary,
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text(
+                                        text = strings.resetMoldShape,
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = AppColors.Primary
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(3.dp))
+                            }
+
                             presetChips.forEach { count ->
                                 AppChip(
                                     text = strings.slotCount(count),
