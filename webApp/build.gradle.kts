@@ -7,11 +7,6 @@ plugins {
 }
 
 kotlin {
-    js {
-        browser()
-        binaries.executable()
-    }
-
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
@@ -26,4 +21,23 @@ kotlin {
             implementation(libs.kotlinx.datetime)
         }
     }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.targets.wasm.binaryen.BinaryenExec>().configureEach {
+    binaryenArguments.set(listOf(
+        "--enable-gc",
+        "--enable-reference-types",
+        "--enable-exception-handling",
+        "--enable-bulk-memory",
+        "--enable-nontrapping-float-to-int",
+        "--no-inline=kotlin.wasm.internal.throwValue",
+        "--no-inline=kotlin.wasm.internal.getKotlinException",
+        "--no-inline=kotlin.wasm.internal.jsToKotlinStringAdapter",
+        "--inline-functions-with-loops",
+        "--traps-never-happen",
+        "--fast-math",
+        "--closed-world",
+        "--type-ssa",
+        "-O2"
+    ))
 }
