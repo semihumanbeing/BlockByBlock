@@ -9,6 +9,10 @@ permissions:
   contents: write
   checks: write
 
+env:
+  GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+  GOOGLE_IOS_CLIENT_ID: ${{ secrets.GOOGLE_IOS_CLIENT_ID }}
+
 jobs:
   # 1. 웹 배포 (테스트 + Wasm 빌드 + Firebase Hosting 배포 단일 파이프라인)
   deploy-web:

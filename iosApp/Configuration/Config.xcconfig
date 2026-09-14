@@ -1,3 +1,5 @@
+#include? "Generated.xcconfig"
+
 TEAM_ID=
 
 PRODUCT_NAME=BlockByBlock

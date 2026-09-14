@@ -1,0 +1,10 @@
+## Local Configuration Template
+# Copy this file to local.properties and fill in your values.
+# local.properties is ignored by Git and should never be committed.
+
+# Location of the Android SDK
+sdk.dir=/path/to/Android/sdk
+
+# Google OAuth Client IDs (can also be provided via environment variables)
+GOOGLE_WEB_CLIENT_ID=your_web_client_id.apps.googleusercontent.com
+GOOGLE_IOS_CLIENT_ID=your_ios_client_id.apps.googleusercontent.com
