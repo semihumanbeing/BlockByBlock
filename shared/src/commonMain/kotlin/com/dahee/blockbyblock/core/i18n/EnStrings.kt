@@ -302,7 +302,24 @@ object EnStrings : AppStrings {
     override val authErrorDefaultSignUp = "Sign up failed. Please try again"
     override val authErrorSocialLogin = "Social login failed. Please try again"
     override val authErrorNetwork = "Please check your network connection"
-    override val authErrorAccountLocked = "Your account has been temporarily locked after 5 failed password attempts. Please try again later."
+    override val authErrorAccountLocked = "Your account has been temporarily locked after 5 failed password attempts. Please try again in 10 minutes."
+
+    // System & Network Errors
+    override val errorTooManyRequests = "Too many requests. Please try again later."
+    override val errorForbidden = "Access denied."
+    override val errorInternalServer = "A temporary server error occurred."
+    override val errorTimeout = "Server response timed out."
+    override val errorNetwork = "Please check your network connection."
+
+    // Server Health & Maintenance
+    override val serverMaintenanceTitle = "Server Maintenance"
+    override val serverMaintenanceDesc = "System maintenance is currently in progress for better service. Please try again in a few moments."
+    override val serverStatusLabel = "Server Status"
+    override val databaseStatusLabel = "Database Status"
+    override val statusOperational = "Operational"
+    override val statusMaintenance = "Maintenance"
+    override val serverRetryBtn = "Retry"
+    override val serverCheckingTitle = "Checking server connection..."
 
     // Profile Edit & Avatars
     override val profileEditTitle = "Edit Profile"

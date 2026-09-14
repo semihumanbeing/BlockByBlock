@@ -285,6 +285,23 @@ interface AppStrings {
     val authErrorNetwork: String
     val authErrorAccountLocked: String
 
+    // System & Network Errors
+    val errorTooManyRequests: String
+    val errorForbidden: String
+    val errorInternalServer: String
+    val errorTimeout: String
+    val errorNetwork: String
+
+    // Server Health & Maintenance
+    val serverMaintenanceTitle: String
+    val serverMaintenanceDesc: String
+    val serverStatusLabel: String
+    val databaseStatusLabel: String
+    val statusOperational: String
+    val statusMaintenance: String
+    val serverRetryBtn: String
+    val serverCheckingTitle: String
+
     // Profile Edit & Avatars
     val profileEditTitle: String
     val profileAvatarSectionTitle: String

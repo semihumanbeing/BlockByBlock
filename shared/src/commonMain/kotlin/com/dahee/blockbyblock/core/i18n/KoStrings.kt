@@ -302,7 +302,24 @@ object KoStrings : AppStrings {
     override val authErrorDefaultSignUp = "회원가입에 실패했습니다. 다시 시도해주세요"
     override val authErrorSocialLogin = "소셜 로그인에 실패했습니다. 다시 시도해주세요"
     override val authErrorNetwork = "네트워크 연결 상태를 확인해주세요"
-    override val authErrorAccountLocked = "비밀번호를 5회 이상 잘못 입력하여 계정이 일시 잠겼습니다. 잠시 후 다시 시도해주세요."
+    override val authErrorAccountLocked = "비밀번호를 5회 이상 잘못 입력하여 계정이 일시적으로 잠겼습니다. 10분 뒤에 다시 시도해주세요."
+
+    // System & Network Errors
+    override val errorTooManyRequests = "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."
+    override val errorForbidden = "접근 권한이 없습니다."
+    override val errorInternalServer = "일시적인 서버 오류가 발생했습니다."
+    override val errorTimeout = "서버 응답 시간이 초과되었습니다."
+    override val errorNetwork = "네트워크 연결 상태를 확인해주세요."
+
+    // Server Health & Maintenance
+    override val serverMaintenanceTitle = "서버 점검 안내"
+    override val serverMaintenanceDesc = "안정적인 서비스 제공을 위해 시스템 점검을 진행하고 있습니다. 잠시 후 다시 이용해주세요."
+    override val serverStatusLabel = "서버 상태"
+    override val databaseStatusLabel = "데이터베이스 상태"
+    override val statusOperational = "정상"
+    override val statusMaintenance = "점검 중"
+    override val serverRetryBtn = "다시 시도"
+    override val serverCheckingTitle = "서버 연결 확인 중..."
 
     // Profile Edit & Avatars
     override val profileEditTitle = "내 정보 수정"

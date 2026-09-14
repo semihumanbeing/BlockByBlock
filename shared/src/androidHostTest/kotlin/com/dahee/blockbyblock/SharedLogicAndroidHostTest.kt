@@ -1017,21 +1017,21 @@ class SharedLogicAndroidHostTest {
             isLogin = true,
             com.dahee.blockbyblock.core.i18n.KoStrings
         )
-        assertEquals("비밀번호를 5회 이상 잘못 입력하여 계정이 일시 잠겼습니다. 잠시 후 다시 시도해주세요.", koLockedMsg)
+        assertEquals("비밀번호를 5회 이상 잘못 입력하여 계정이 일시적으로 잠겼습니다. 10분 뒤에 다시 시도해주세요.", koLockedMsg)
 
         val enLockedMsg = com.dahee.blockbyblock.presentation.auth.formatAuthError(
             lockedApiError,
             isLogin = true,
             com.dahee.blockbyblock.core.i18n.EnStrings
         )
-        assertEquals("Your account has been temporarily locked after 5 failed password attempts. Please try again later.", enLockedMsg)
+        assertEquals("Your account has been temporarily locked after 5 failed password attempts. Please try again in 10 minutes.", enLockedMsg)
 
         // From raw JSON response
         val rawJson = """{"code":"ACCOUNT_LOCKED","message":"Too many failed attempts"}"""
         val parsed = com.dahee.blockbyblock.data.remote.error.ApiError.fromHttpResponse(429, rawJson)
         assertTrue(parsed.isAccountLocked())
         assertEquals(
-            "비밀번호를 5회 이상 잘못 입력하여 계정이 일시 잠겼습니다. 잠시 후 다시 시도해주세요.",
+            "비밀번호를 5회 이상 잘못 입력하여 계정이 일시적으로 잠겼습니다. 10분 뒤에 다시 시도해주세요.",
             com.dahee.blockbyblock.presentation.auth.formatAuthError(parsed, isLogin = true, com.dahee.blockbyblock.core.i18n.KoStrings)
         )
     }
@@ -1048,6 +1048,58 @@ class SharedLogicAndroidHostTest {
         assertEquals("UP", resp2.data.status)
         assertEquals("UP", resp2.data.database)
         assertEquals("2026-09-14T04:05:47.352700570Z", resp2.data.timestamp)
+    }
+
+    @Test
+    fun testApiErrorLocalization() {
+        val ko = com.dahee.blockbyblock.core.i18n.KoStrings
+        val en = com.dahee.blockbyblock.core.i18n.EnStrings
+
+        val lockedError = com.dahee.blockbyblock.data.remote.error.ApiError(
+            message = "Locked",
+            code = com.dahee.blockbyblock.data.remote.error.ErrorCode.ACCOUNT_LOCKED,
+            status = 429
+        )
+        assertEquals("비밀번호를 5회 이상 잘못 입력하여 계정이 일시적으로 잠겼습니다. 10분 뒤에 다시 시도해주세요.", lockedError.getLocalizedMessage(ko))
+        assertEquals("Your account has been temporarily locked after 5 failed password attempts. Please try again in 10 minutes.", lockedError.getLocalizedMessage(en))
+
+        val rateLimitError = com.dahee.blockbyblock.data.remote.error.ApiError(
+            message = "Rate limited",
+            code = com.dahee.blockbyblock.data.remote.error.ErrorCode.TOO_MANY_REQUESTS,
+            status = 429
+        )
+        assertEquals("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.", rateLimitError.getLocalizedMessage(ko))
+        assertEquals("Too many requests. Please try again later.", rateLimitError.getLocalizedMessage(en))
+
+        val deniedError = com.dahee.blockbyblock.data.remote.error.ApiError(
+            message = "Forbidden",
+            code = com.dahee.blockbyblock.data.remote.error.ErrorCode.ACCESS_DENIED,
+            status = 403
+        )
+        assertEquals("접근 권한이 없습니다.", deniedError.getLocalizedMessage(ko))
+        assertEquals("Access denied.", deniedError.getLocalizedMessage(en))
+
+        val serverError = com.dahee.blockbyblock.data.remote.error.ApiError(
+            message = "",
+            code = com.dahee.blockbyblock.data.remote.error.ErrorCode.INTERNAL_SERVER_ERROR,
+            status = 500
+        )
+        assertEquals("일시적인 서버 오류가 발생했습니다.", serverError.getLocalizedMessage(ko))
+        assertEquals("A temporary server error occurred.", serverError.getLocalizedMessage(en))
+
+        val timeoutError = com.dahee.blockbyblock.data.remote.error.ApiError(
+            message = "Timeout",
+            code = com.dahee.blockbyblock.data.remote.error.ErrorCode.TIMEOUT_ERROR
+        )
+        assertEquals("서버 응답 시간이 초과되었습니다.", timeoutError.getLocalizedMessage(ko))
+        assertEquals("Server response timed out.", timeoutError.getLocalizedMessage(en))
+
+        val networkError = com.dahee.blockbyblock.data.remote.error.ApiError(
+            message = "Network",
+            code = com.dahee.blockbyblock.data.remote.error.ErrorCode.NETWORK_ERROR
+        )
+        assertEquals("네트워크 연결 상태를 확인해주세요.", networkError.getLocalizedMessage(ko))
+        assertEquals("Please check your network connection.", networkError.getLocalizedMessage(en))
     }
 
 }

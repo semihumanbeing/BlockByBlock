@@ -96,6 +96,12 @@ enum class AuthMode {
     SIGN_UP
 }
 
+private sealed interface AuthErrorState {
+    data class Form(val throwable: Throwable, val isLogin: Boolean) : AuthErrorState
+    data object SocialNetwork : AuthErrorState
+    data object SocialFailed : AuthErrorState
+}
+
 @Composable
 fun AuthScreen(
     onLoginSuccess: (user: UserProfile) -> Unit,
@@ -112,10 +118,17 @@ fun AuthScreen(
     val scope = rememberCoroutineScope()
 
     var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var authErrorState by remember { mutableStateOf<AuthErrorState?>(null) }
+    val errorMessage = authErrorState?.let { state ->
+        when (state) {
+            is AuthErrorState.Form -> formatAuthError(state.throwable, isLogin = state.isLogin, strings)
+            AuthErrorState.SocialNetwork -> strings.authErrorNetwork
+            AuthErrorState.SocialFailed -> strings.authErrorSocialLogin
+        }
+    }
 
     LaunchedEffect(mode) {
-        errorMessage = null
+        authErrorState = null
     }
 
     // Form inputs
@@ -158,7 +171,7 @@ fun AuthScreen(
         if (isFormValid && !isLoading) {
             scope.launch {
                 isLoading = true
-                errorMessage = null
+                authErrorState = null
                 if (mode == AuthMode.LOGIN) {
                     val res = authApiService.login(LoginRequest(emailInput.trim(), passwordInput))
                     isLoading = false
@@ -178,7 +191,7 @@ fun AuthScreen(
                             )
                         )
                     }.onFailure { err ->
-                        errorMessage = formatAuthError(err, isLogin = true, strings)
+                        authErrorState = AuthErrorState.Form(err, isLogin = true)
                     }
                 } else {
                     val nickname = emailInput.substringBefore("@")
@@ -195,7 +208,7 @@ fun AuthScreen(
                             )
                         )
                     }.onFailure { err ->
-                        errorMessage = formatAuthError(err, isLogin = false, strings)
+                        authErrorState = AuthErrorState.Form(err, isLogin = false)
                     }
                 }
             }
@@ -357,19 +370,19 @@ fun AuthScreen(
                     if (!isLoading) {
                         scope.launch {
                             isLoading = true
-                            errorMessage = null
+                            authErrorState = null
                             when (val authResult = googleAuthProvider.signIn()) {
                                 is GoogleAuthResult.Cancelled -> {
                                     isLoading = false
                                 }
                                 is GoogleAuthResult.Failure -> {
                                     isLoading = false
-                                    errorMessage = if (authResult.message.contains("network", ignoreCase = true) ||
+                                    authErrorState = if (authResult.message.contains("network", ignoreCase = true) ||
                                         authResult.message.contains("connect", ignoreCase = true)
                                     ) {
-                                        strings.authErrorNetwork
+                                        AuthErrorState.SocialNetwork
                                     } else {
-                                        strings.authErrorSocialLogin
+                                        AuthErrorState.SocialFailed
                                     }
                                 }
                                 is GoogleAuthResult.Success -> {
@@ -395,10 +408,10 @@ fun AuthScreen(
                                         )
                                         if (mode == AuthMode.LOGIN) onLoginSuccess(profile) else onSignUpSuccess(profile)
                                     }.onFailure { err ->
-                                        errorMessage = if (err is ApiError && (err.code == ErrorCode.NETWORK_ERROR || err.code == ErrorCode.TIMEOUT_ERROR)) {
-                                            strings.authErrorNetwork
+                                        authErrorState = if (err is ApiError && (err.code == ErrorCode.NETWORK_ERROR || err.code == ErrorCode.TIMEOUT_ERROR)) {
+                                            AuthErrorState.SocialNetwork
                                         } else {
-                                            strings.authErrorSocialLogin
+                                            AuthErrorState.SocialFailed
                                         }
                                     }
                                 }
@@ -449,7 +462,7 @@ fun AuthScreen(
                                 .padding(horizontal = 12.dp, vertical = 8.dp)
                         ) {
                             Text(
-                                text = errorMessage ?: "",
+                                text = errorMessage,
                                 color = Color(0xFFC62828),
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Medium
@@ -470,7 +483,7 @@ fun AuthScreen(
                             value = emailInput,
                             onValueChange = {
                                 emailInput = it
-                                if (errorMessage != null) errorMessage = null
+                                if (authErrorState != null) authErrorState = null
                             },
                             placeholder = strings.authEmailPlaceholder,
                             focusRequester = emailFocusRequester,
@@ -521,7 +534,7 @@ fun AuthScreen(
                                 value = passwordInput,
                                 onValueChange = {
                                     passwordInput = it
-                                    if (errorMessage != null) errorMessage = null
+                                    if (authErrorState != null) authErrorState = null
                                 },
                                 placeholder = strings.authPasswordPlaceholder,
                                 focusRequester = passwordFocusRequester,
@@ -629,7 +642,7 @@ fun AuthScreen(
                                     value = passwordConfirmInput,
                                     onValueChange = {
                                         passwordConfirmInput = it
-                                        if (errorMessage != null) errorMessage = null
+                                        if (authErrorState != null) authErrorState = null
                                     },
                                     placeholder = strings.authPasswordConfirmPlaceholder,
                                     focusRequester = passwordConfirmFocusRequester,
@@ -938,7 +951,7 @@ internal fun formatAuthError(
     if (err is ApiError) {
         if (err.isAccountLocked() || err.code == ErrorCode.ACCOUNT_LOCKED ||
             (err.status == 429 && (lower.contains("account_locked") || lower.contains("locked") || err.code.contains("ACCOUNT_LOCKED", ignoreCase = true))) ||
-            lower.contains("account_locked") || lower.contains("account is locked") || lower.contains("계정이 일시 잠겼습니다") || lower.contains("잠겼습니다")
+            lower.contains("account_locked") || lower.contains("account is locked") || lower.contains("일시적으로 잠겼습니다") || lower.contains("일시 잠겼습니다") || lower.contains("잠겼습니다")
         ) {
             return strings.authErrorAccountLocked
         }
@@ -972,7 +985,7 @@ internal fun formatAuthError(
         }
     }
 
-    if (lower.contains("account_locked") || lower.contains("account locked") || lower.contains("계정이 일시 잠겼습니다") || lower.contains("잠겼습니다")) {
+    if (lower.contains("account_locked") || lower.contains("account locked") || lower.contains("일시적으로 잠겼습니다") || lower.contains("일시 잠겼습니다") || lower.contains("잠겼습니다")) {
         return strings.authErrorAccountLocked
     }
     if (lower.contains("invalid email or password") || lower.contains("bad credential") || lower.contains("incorrect password") || lower.contains("user not found")) {

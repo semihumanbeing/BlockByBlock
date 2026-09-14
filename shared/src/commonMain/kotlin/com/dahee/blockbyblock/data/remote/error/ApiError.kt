@@ -63,6 +63,17 @@ class ApiError(
         return map
     }
 
+    fun getLocalizedMessage(strings: com.dahee.blockbyblock.core.i18n.AppStrings): String = when {
+        isAccountLocked() -> strings.authErrorAccountLocked
+        isTooManyRequests() -> strings.errorTooManyRequests
+        isAccessDenied() -> strings.errorForbidden
+        code == ErrorCode.TIMEOUT_ERROR -> strings.errorTimeout
+        code == ErrorCode.NETWORK_ERROR -> strings.errorNetwork
+        isServerError() -> strings.errorInternalServer
+        message.isNotBlank() -> message
+        else -> strings.errorInternalServer
+    }
+
     companion object {
         fun fromHttpResponse(status: Int, responseBodyText: String): ApiError {
             return try {

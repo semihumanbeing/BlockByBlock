@@ -180,14 +180,19 @@ object ApiClient {
     suspend fun parseError(response: HttpResponse): ApiError {
         val text = response.bodyAsText()
         val error = ApiError.fromHttpResponse(response.status.value, text)
+        val currentLang = TokenStorage.getUserLang()?.let {
+            try { com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(it) } catch (_: Throwable) { null }
+        } ?: getPlatform().defaultLanguage
+        val strings = com.dahee.blockbyblock.core.i18n.getStrings(currentLang)
+
         if (response.status.value == 429) {
             if (error.code != ErrorCode.ACCOUNT_LOCKED && !error.isAccountLocked()) {
-                showToast("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.")
+                showToast(strings.errorTooManyRequests)
             }
         } else if (response.status.value == 403) {
-            showToast("접근 권한이 없습니다.")
+            showToast(strings.errorForbidden)
         } else if (response.status.value >= 500) {
-            showToast("일시적인 서버 오류가 발생했습니다.")
+            showToast(strings.errorInternalServer)
         }
         return error
     }
