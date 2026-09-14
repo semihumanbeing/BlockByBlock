@@ -57,7 +57,6 @@ import com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed
 import com.dahee.blockbyblock.presentation.block.components.FoodBlockTopView
 import com.dahee.blockbyblock.presentation.mealplan.AvailableBlockPiece
 
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Add
@@ -79,6 +78,7 @@ fun MealRecordDialog(
     dateLabel: String,
     selectedBlocks: List<MealBlockItem>,
     availableBlocks: List<AvailableBlockPiece>,
+    originalBlocks: List<MealBlockItem> = emptyList(),
     titleInput: String = "",
     onTitleChange: (String) -> Unit = {},
     memoInput: String,
@@ -110,8 +110,8 @@ fun MealRecordDialog(
     }
     var showDiscardConfirmDialog by remember { mutableStateOf(false) }
 
-    val blockStatuses = remember(selectedBlocks, allFoodBlocks) {
-        determineBlockStatusesIndexed(selectedBlocks, allFoodBlocks)
+    val blockStatuses = remember(selectedBlocks, allFoodBlocks, originalBlocks) {
+        determineBlockStatusesIndexed(selectedBlocks, allFoodBlocks, originalBlocks)
     }
     val hasInvalidBlocks = remember(blockStatuses) {
         blockStatuses.any { it != MealBlockStatus.AVAILABLE }
@@ -260,7 +260,7 @@ fun MealRecordDialog(
                     }
                 }
                 // 2. Bento Box Tray (Centered lunchbox container)
-                BentoLunchBoxView(
+                LunchBoxView(
                     blocks = selectedBlocks,
                     isDynamicExpandable = true,
                     blockHeight = 96.dp,
@@ -928,7 +928,7 @@ private fun SavedMealPresetCard(
             }
 
             // Authentic Bento Lunch Box Preview with Lego blocks inside
-            BentoLunchBoxView(
+            LunchBoxView(
                 blocks = preset.blocks,
                 allFoodBlocks = allFoodBlocks,
                 modifier = Modifier

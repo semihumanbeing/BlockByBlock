@@ -1,6 +1,5 @@
 package com.dahee.blockbyblock.core.i18n
 
-import com.dahee.blockbyblock.domain.model.BlockSizeCategory
 import com.dahee.blockbyblock.domain.model.CookingToolType
 import com.dahee.blockbyblock.domain.model.IngredientCategory
 import com.dahee.blockbyblock.domain.model.IngredientStatus

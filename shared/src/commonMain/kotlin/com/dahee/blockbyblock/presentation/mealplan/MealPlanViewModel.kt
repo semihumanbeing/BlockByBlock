@@ -33,6 +33,7 @@ private data class SlotDialogInternalState(
     val dateString: String = "",
     val dateLabel: String = "",
     val mealType: MealType = MealType.LUNCH,
+    val originalBlocks: List<MealBlockItem> = emptyList(),
     val selectedBlocks: List<MealBlockItem> = emptyList(),
     val availablePieces: List<AvailableBlockPiece> = emptyList(),
     val title: String = "",
@@ -115,6 +116,7 @@ class MealPlanViewModel(
             editingDateString = dialog.dateString,
             editingDateLabel = dialogDateLabel,
             editingMealType = dialog.mealType,
+            slotOriginalBlocks = dialog.originalBlocks,
             slotSelectedBlocks = dialog.selectedBlocks,
             slotAvailableBlocks = dialog.availablePieces,
             slotTitleInput = dialog.title,
@@ -132,6 +134,7 @@ class MealPlanViewModel(
         loadWeek(_navState.value.weekStartDate)
         viewModelScope.launch {
             mealRecordRepository.fetchMealPresets()
+            foodBlockRepository.fetchFoodBlocks()
         }
     }
 
@@ -272,12 +275,13 @@ class MealPlanViewModel(
 
     fun onOpenSlotDialog(dateString: String, dateLabel: String, mealType: MealType) {
         viewModelScope.launch {
+            foodBlockRepository.fetchFoodBlocks()
             val record = mealRecordRepository.getMealRecordByDate(dateString)
             val slot = record?.getSlot(mealType) ?: MealSlotRecord(mealType)
 
             val currentSelected = slot.blocks
 
-            // Generate full piece pool from food blocks storage (multiple identical blocks appear individually)
+            // Generate full piece pool from current freezer food blocks storage
             val allFoodBlocks = foodBlockRepository.getFoodBlocks()
             val allPieces = mutableListOf<AvailableBlockPiece>()
 
@@ -298,15 +302,6 @@ class MealPlanViewModel(
                 }
             }
 
-            // Remove already selected count for each block from available pieces
-            val availableList = allPieces.toMutableList()
-            currentSelected.forEach { sel ->
-                val matchIdx = availableList.indexOfFirst { it.blockId == sel.blockId }
-                if (matchIdx >= 0) {
-                    availableList.removeAt(matchIdx)
-                }
-            }
-
             val initialTitle = if (slot.customTitle.isNotBlank()) slot.customTitle else ""
 
             _dialogState.value = SlotDialogInternalState(
@@ -314,8 +309,9 @@ class MealPlanViewModel(
                 dateString = dateString,
                 dateLabel = dateLabel,
                 mealType = mealType,
+                originalBlocks = currentSelected,
                 selectedBlocks = currentSelected,
-                availablePieces = availableList,
+                availablePieces = allPieces,
                 title = initialTitle,
                 memo = slot.memo
             )
@@ -404,7 +400,7 @@ class MealPlanViewModel(
             return
         }
         val currentFoodBlocks = uiState.value.allFoodBlocks
-        val statuses = determineBlockStatusesIndexed(dialog.selectedBlocks, currentFoodBlocks)
+        val statuses = determineBlockStatusesIndexed(dialog.selectedBlocks, currentFoodBlocks, dialog.originalBlocks)
         if (statuses.any { it != MealBlockStatus.AVAILABLE }) {
             return
         }
@@ -432,6 +428,7 @@ class MealPlanViewModel(
                 val updatedDay = existingDay.updateSlot(updatedSlot).copy(updatedAt = currentTimeMillis())
                 mealRecordRepository.saveMealRecord(updatedDay)
                 updateWeekCacheForDay(updatedDay)
+                foodBlockRepository.fetchFoodBlocks()
                 onCloseSlotDialog()
                 onSlotSavedListener?.invoke()
             } catch (e: Exception) {
@@ -459,6 +456,7 @@ class MealPlanViewModel(
                 mealRecordRepository.saveMealRecord(updatedDay)
                 updateWeekCacheForDay(updatedDay)
             }
+            foodBlockRepository.fetchFoodBlocks()
         }
     }
 
@@ -466,7 +464,7 @@ class MealPlanViewModel(
         val dialog = _dialogState.value
         if (dialog.selectedBlocks.isEmpty()) return
         val currentFoodBlocks = uiState.value.allFoodBlocks
-        val statuses = determineBlockStatusesIndexed(dialog.selectedBlocks, currentFoodBlocks)
+        val statuses = determineBlockStatusesIndexed(dialog.selectedBlocks, currentFoodBlocks, dialog.originalBlocks)
         if (statuses.any { it != MealBlockStatus.AVAILABLE }) return
 
         val defaultName = if (dialog.title.isNotBlank()) dialog.title.trim()
@@ -497,7 +495,7 @@ class MealPlanViewModel(
                 val slot = dayRecord.getSlot(mealType)
                 if (slot.blocks.isEmpty()) return@launch
                 val currentFoodBlocks = uiState.value.allFoodBlocks
-                val statuses = determineBlockStatusesIndexed(slot.blocks, currentFoodBlocks)
+                val statuses = determineBlockStatusesIndexed(slot.blocks, currentFoodBlocks, slot.blocks)
                 if (statuses.any { it != MealBlockStatus.AVAILABLE }) return@launch
 
                 val defaultName = if (slot.customTitle.isNotBlank()) slot.customTitle
@@ -521,6 +519,7 @@ class MealPlanViewModel(
 
     fun onApplyPreset(preset: MealPreset) {
         viewModelScope.launch {
+            foodBlockRepository.fetchFoodBlocks()
             val allFoodBlocks = foodBlockRepository.getFoodBlocks()
             val allPieces = mutableListOf<AvailableBlockPiece>()
             allFoodBlocks.forEach { block ->
@@ -538,6 +537,21 @@ class MealPlanViewModel(
                         )
                     }
                 }
+            }
+
+            // Also credit original blocks from this slot since preset replaces them
+            val origBlocks = _dialogState.value.originalBlocks
+            origBlocks.forEachIndexed { idx, orig ->
+                allPieces.add(
+                    AvailableBlockPiece(
+                        instanceId = "${orig.blockId}-orig-$idx",
+                        blockId = orig.blockId,
+                        blockName = orig.blockName,
+                        blockColorHex = orig.blockColorHex,
+                        moldCapacityMl = orig.moldCapacityMl,
+                        moldCellCount = orig.moldCellCount
+                    )
+                )
             }
 
             val newSelected = preset.blocks.mapIndexed { index, blockItem ->
@@ -567,6 +581,7 @@ class MealPlanViewModel(
     fun onRefillBlockQuantity(blockId: String, delta: Int = 1) {
         viewModelScope.launch {
             foodBlockRepository.updateQuantity(blockId, delta)
+            foodBlockRepository.fetchFoodBlocks()
             val currentDialog = _dialogState.value
             if (currentDialog.isOpen) {
                 val updatedFoodBlocks = foodBlockRepository.getFoodBlocks()
@@ -587,9 +602,15 @@ class MealPlanViewModel(
                         }
                     }
                 }
+                // Subtract newly added blocks (selectedBlocks minus originalBlocks)
+                val newlyAdded = currentDialog.selectedBlocks.toMutableList()
+                currentDialog.originalBlocks.forEach { orig ->
+                    val idx = newlyAdded.indexOfFirst { it.blockId == orig.blockId }
+                    if (idx >= 0) newlyAdded.removeAt(idx)
+                }
                 val availableList = allPieces.toMutableList()
-                currentDialog.selectedBlocks.forEach { sel ->
-                    val matchIdx = availableList.indexOfFirst { it.blockId == sel.blockId }
+                newlyAdded.forEach { added ->
+                    val matchIdx = availableList.indexOfFirst { it.blockId == added.blockId }
                     if (matchIdx >= 0) {
                         availableList.removeAt(matchIdx)
                     }

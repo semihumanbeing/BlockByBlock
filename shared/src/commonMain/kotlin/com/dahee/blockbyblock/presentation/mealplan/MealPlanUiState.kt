@@ -60,6 +60,7 @@ data class MealPlanUiState(
     val editingDateString: String = "",
     val editingDateLabel: String = "",
     val editingMealType: MealType = MealType.LUNCH,
+    val slotOriginalBlocks: List<MealBlockItem> = emptyList(), // Blocks originally saved in this slot
     val slotSelectedBlocks: List<MealBlockItem> = emptyList(), // Blocks currently placed in the slot (Top)
     val slotAvailableBlocks: List<AvailableBlockPiece> = emptyList(), // Blocks available to pick (Bottom)
     val slotTitleInput: String = "",

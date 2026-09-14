@@ -99,7 +99,8 @@ enum class MealBlockStatus {
  */
 fun determineBlockStatusesIndexed(
     blocks: List<MealBlockItem>,
-    allFoodBlocks: List<FoodBlock>?
+    allFoodBlocks: List<FoodBlock>?,
+    originalSlotBlocks: List<MealBlockItem> = emptyList()
 ): List<MealBlockStatus> {
     if (allFoodBlocks == null) {
         return blocks.map { item ->
@@ -113,7 +114,11 @@ fun determineBlockStatusesIndexed(
     }
 
     val foodBlocksMap = allFoodBlocks.associateBy { it.id }
+    // Effective available stock = current freezer stock + blocks already allocated to this slot
     val remainingStock = allFoodBlocks.associate { it.id to it.quantity }.toMutableMap()
+    originalSlotBlocks.forEach { orig ->
+        remainingStock[orig.blockId] = (remainingStock[orig.blockId] ?: 0) + 1
+    }
 
     return blocks.map { item ->
         val foodBlock = foodBlocksMap[item.blockId]

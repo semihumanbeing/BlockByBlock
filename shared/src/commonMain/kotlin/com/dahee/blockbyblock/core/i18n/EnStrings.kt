@@ -1,6 +1,5 @@
 package com.dahee.blockbyblock.core.i18n
 
-import com.dahee.blockbyblock.domain.model.BlockSizeCategory
 import com.dahee.blockbyblock.domain.model.CookingToolType
 import com.dahee.blockbyblock.domain.model.IngredientCategory
 import com.dahee.blockbyblock.domain.model.IngredientStatus
@@ -302,7 +301,7 @@ object EnStrings : AppStrings {
     override val authErrorDefaultSignUp = "Sign up failed. Please try again"
     override val authErrorSocialLogin = "Social login failed. Please try again"
     override val authErrorNetwork = "Please check your network connection"
-    override val authErrorAccountLocked = "Your account has been temporarily locked after 5 failed password attempts. Please try again in 10 minutes."
+    override val authErrorAccountLocked = "Your account has been temporarily locked due to multiple failed password attempts. Please try again in 10 minutes."
 
     // Password Reset
     override val authForgotPasswordLink = "Forgot password?"

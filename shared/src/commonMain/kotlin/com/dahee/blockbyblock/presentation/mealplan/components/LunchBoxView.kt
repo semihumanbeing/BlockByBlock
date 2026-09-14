@@ -2,7 +2,6 @@ package com.dahee.blockbyblock.presentation.mealplan.components
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -52,7 +51,7 @@ import com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed
 import com.dahee.blockbyblock.presentation.block.components.FoodBlockTopView
 
 /**
- * Reusable Bento Lunch Box (도시락통) UI Component.
+ * Reusable Lunch Box (도시락통) UI Component.
  *
  * Provides the authentic lunchbox frame with:
  * - Ivory rim body with smooth rounded corners
@@ -62,7 +61,7 @@ import com.dahee.blockbyblock.presentation.block.components.FoodBlockTopView
  * - Adaptive layout: supports dynamic auto-expansion (for Dialog) and fixed-proportion fill (for Slot Cards)
  */
 @Composable
-fun BentoLunchBoxView(
+fun LunchBoxView(
     blocks: List<MealBlockItem>,
     modifier: Modifier = Modifier,
     blockHeight: Dp = 76.dp,
@@ -103,7 +102,7 @@ fun BentoLunchBoxView(
     }
 
     val blockStatuses = remember(blocks, allFoodBlocks) {
-        determineBlockStatusesIndexed(blocks, allFoodBlocks)
+        determineBlockStatusesIndexed(blocks, allFoodBlocks, blocks)
     }
 
     BoxWithConstraints(

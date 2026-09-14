@@ -1,6 +1,5 @@
 package com.dahee.blockbyblock.core.i18n
 
-import com.dahee.blockbyblock.domain.model.BlockSizeCategory
 import com.dahee.blockbyblock.domain.model.CookingToolType
 import com.dahee.blockbyblock.domain.model.IngredientCategory
 import com.dahee.blockbyblock.domain.model.IngredientStatus
@@ -302,7 +301,7 @@ object KoStrings : AppStrings {
     override val authErrorDefaultSignUp = "회원가입에 실패했습니다. 다시 시도해주세요"
     override val authErrorSocialLogin = "소셜 로그인에 실패했습니다. 다시 시도해주세요"
     override val authErrorNetwork = "네트워크 연결 상태를 확인해주세요"
-    override val authErrorAccountLocked = "비밀번호를 5회 이상 잘못 입력하여 계정이 일시적으로 잠겼습니다. 10분 뒤에 다시 시도해주세요."
+    override val authErrorAccountLocked = "비밀번호를 여러 번 잘못 입력하여 계정이 일시적으로 잠겼습니다. 10분 뒤에 다시 시도해주세요."
 
     // Password Reset
     override val authForgotPasswordLink = "비밀번호를 잊으셨나요?"

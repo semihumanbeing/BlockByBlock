@@ -1017,21 +1017,21 @@ class SharedLogicAndroidHostTest {
             isLogin = true,
             com.dahee.blockbyblock.core.i18n.KoStrings
         )
-        assertEquals("비밀번호를 5회 이상 잘못 입력하여 계정이 일시적으로 잠겼습니다. 10분 뒤에 다시 시도해주세요.", koLockedMsg)
+        assertEquals("비밀번호를 여러 번 잘못 입력하여 계정이 일시적으로 잠겼습니다. 10분 뒤에 다시 시도해주세요.", koLockedMsg)
 
         val enLockedMsg = com.dahee.blockbyblock.presentation.auth.formatAuthError(
             lockedApiError,
             isLogin = true,
             com.dahee.blockbyblock.core.i18n.EnStrings
         )
-        assertEquals("Your account has been temporarily locked after 5 failed password attempts. Please try again in 10 minutes.", enLockedMsg)
+        assertEquals("Your account has been temporarily locked due to multiple failed password attempts. Please try again in 10 minutes.", enLockedMsg)
 
         // From raw JSON response
         val rawJson = """{"code":"ACCOUNT_LOCKED","message":"Too many failed attempts"}"""
         val parsed = com.dahee.blockbyblock.data.remote.error.ApiError.fromHttpResponse(429, rawJson)
         assertTrue(parsed.isAccountLocked())
         assertEquals(
-            "비밀번호를 5회 이상 잘못 입력하여 계정이 일시적으로 잠겼습니다. 10분 뒤에 다시 시도해주세요.",
+            "비밀번호를 여러 번 잘못 입력하여 계정이 일시적으로 잠겼습니다. 10분 뒤에 다시 시도해주세요.",
             com.dahee.blockbyblock.presentation.auth.formatAuthError(parsed, isLogin = true, com.dahee.blockbyblock.core.i18n.KoStrings)
         )
     }
@@ -1060,8 +1060,8 @@ class SharedLogicAndroidHostTest {
             code = com.dahee.blockbyblock.data.remote.error.ErrorCode.ACCOUNT_LOCKED,
             status = 429
         )
-        assertEquals("비밀번호를 5회 이상 잘못 입력하여 계정이 일시적으로 잠겼습니다. 10분 뒤에 다시 시도해주세요.", lockedError.getLocalizedMessage(ko))
-        assertEquals("Your account has been temporarily locked after 5 failed password attempts. Please try again in 10 minutes.", lockedError.getLocalizedMessage(en))
+        assertEquals("비밀번호를 여러 번 잘못 입력하여 계정이 일시적으로 잠겼습니다. 10분 뒤에 다시 시도해주세요.", lockedError.getLocalizedMessage(ko))
+        assertEquals("Your account has been temporarily locked due to multiple failed password attempts. Please try again in 10 minutes.", lockedError.getLocalizedMessage(en))
 
         val rateLimitError = com.dahee.blockbyblock.data.remote.error.ApiError(
             message = "Rate limited",
@@ -1150,6 +1150,101 @@ class SharedLogicAndroidHostTest {
         assertEquals("user@example.com", decodedReq2.email)
         assertEquals("123456", decodedReq2.code)
         assertEquals("newPassword123", decodedReq2.newPassword)
+    }
+
+    @Test
+    fun testDetermineBlockStatusesIndexedWithOriginalBlocks() {
+        val carrotBlock = com.dahee.blockbyblock.domain.model.FoodBlock(
+            id = "carrot-1",
+            name = "당근 블록",
+            moldId = "m1",
+            moldName = "몰드 1",
+            moldCapacityMl = 50,
+            moldCellCount = 6,
+            moldColorHex = "#FF7043",
+            mainIngredients = listOf("당근"),
+            quantity = 0 // Freezer inventory is 0 because it's already used in Breakfast!
+        )
+        val beefBlock = com.dahee.blockbyblock.domain.model.FoodBlock(
+            id = "beef-1",
+            name = "소고기 블록",
+            moldId = "m2",
+            moldName = "몰드 2",
+            moldCapacityMl = 50,
+            moldCellCount = 6,
+            moldColorHex = "#8D6E63",
+            mainIngredients = listOf("소고기"),
+            quantity = 1
+        )
+        val allFoodBlocks = listOf(carrotBlock, beefBlock)
+
+        val origCarrotItem = com.dahee.blockbyblock.domain.model.MealBlockItem(
+            instanceId = "carrot-inst-1",
+            blockId = "carrot-1",
+            blockName = "당근 블록"
+        )
+        val secondCarrotItem = com.dahee.blockbyblock.domain.model.MealBlockItem(
+            instanceId = "carrot-inst-2",
+            blockId = "carrot-1",
+            blockName = "당근 블록"
+        )
+
+        // Case 1: Editing Breakfast which originally had 1 carrot block.
+        // Even though freezer quantity is 0, the original carrot block should be AVAILABLE.
+        val statuses = com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed(
+            blocks = listOf(origCarrotItem),
+            allFoodBlocks = allFoodBlocks,
+            originalSlotBlocks = listOf(origCarrotItem)
+        )
+        assertEquals(listOf(com.dahee.blockbyblock.domain.model.MealBlockStatus.AVAILABLE), statuses)
+
+        // Case 2: In Breakfast, trying to add a 2nd carrot block when freezer has 0 and original had 1.
+        // 1st is AVAILABLE, 2nd is OUT_OF_STOCK.
+        val statusesWithExtra = com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed(
+            blocks = listOf(origCarrotItem, secondCarrotItem),
+            allFoodBlocks = allFoodBlocks,
+            originalSlotBlocks = listOf(origCarrotItem)
+        )
+        assertEquals(
+            listOf(
+                com.dahee.blockbyblock.domain.model.MealBlockStatus.AVAILABLE,
+                com.dahee.blockbyblock.domain.model.MealBlockStatus.OUT_OF_STOCK
+            ),
+            statusesWithExtra
+        )
+
+        // Case 3: Editing Lunch (which originally had 0 carrot blocks).
+        // Since freezer quantity is 0 and Lunch had no original carrot blocks, carrot is OUT_OF_STOCK.
+        val lunchStatuses = com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed(
+            blocks = listOf(origCarrotItem),
+            allFoodBlocks = allFoodBlocks,
+            originalSlotBlocks = emptyList()
+        )
+        assertEquals(listOf(com.dahee.blockbyblock.domain.model.MealBlockStatus.OUT_OF_STOCK), lunchStatuses)
+
+        // Case 4: Beef has 1 in freezer. In Lunch (original had 0), 1 beef block is AVAILABLE.
+        val beefItem = com.dahee.blockbyblock.domain.model.MealBlockItem(
+            instanceId = "beef-inst-1",
+            blockId = "beef-1",
+            blockName = "소고기 블록"
+        )
+        val beefItem2 = com.dahee.blockbyblock.domain.model.MealBlockItem(
+            instanceId = "beef-inst-2",
+            blockId = "beef-1",
+            blockName = "소고기 블록"
+        )
+        val lunchBeefStatuses = com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed(
+            blocks = listOf(beefItem, beefItem2),
+            allFoodBlocks = allFoodBlocks,
+            originalSlotBlocks = emptyList()
+        )
+        assertEquals(
+            listOf(
+                com.dahee.blockbyblock.domain.model.MealBlockStatus.AVAILABLE,
+                com.dahee.blockbyblock.domain.model.MealBlockStatus.OUT_OF_STOCK
+            ),
+            lunchBeefStatuses
+        )
     }
 
 }

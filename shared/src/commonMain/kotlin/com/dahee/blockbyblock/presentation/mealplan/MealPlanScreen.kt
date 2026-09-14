@@ -45,22 +45,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -76,7 +68,7 @@ import com.dahee.blockbyblock.domain.model.MealBlockStatus
 import com.dahee.blockbyblock.domain.model.MealSlotRecord
 import com.dahee.blockbyblock.domain.model.MealType
 import com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed
-import com.dahee.blockbyblock.presentation.mealplan.components.BentoLunchBoxView
+import com.dahee.blockbyblock.presentation.mealplan.components.LunchBoxView
 import com.dahee.blockbyblock.presentation.mealplan.components.MealRecordDialog
 
 @Composable
@@ -134,6 +126,7 @@ fun MealPlanScreen(
             dateLabel = uiState.editingDateLabel,
             selectedBlocks = uiState.slotSelectedBlocks,
             availableBlocks = uiState.slotAvailableBlocks,
+            originalBlocks = uiState.slotOriginalBlocks,
             titleInput = uiState.slotTitleInput,
             onTitleChange = { viewModel.onTitleInputChange(it) },
             memoInput = uiState.slotMemoInput,
@@ -378,7 +371,7 @@ fun MealPlanScreen(
                     },
                     onSavePresetSlot = { mealType ->
                         val slot = uiState.currentDayMealRecord?.getSlot(mealType)
-                        val slotStatuses = if (slot != null) determineBlockStatusesIndexed(slot.blocks, uiState.allFoodBlocks) else emptyList()
+                        val slotStatuses = if (slot != null) determineBlockStatusesIndexed(slot.blocks, uiState.allFoodBlocks, slot.blocks) else emptyList()
                         val hasInvalidInSlot = slotStatuses.any { it != MealBlockStatus.AVAILABLE }
                         if (slot != null && slot.blocks.isNotEmpty() && !hasInvalidInSlot) {
                             val defaultName = if (slot.customTitle.isNotBlank()) {
@@ -718,6 +711,9 @@ private fun MealSlotCard(
     }
 
     val titleText = if (isAddSlotType && slot.customTitle.isNotBlank()) slot.customTitle else strings.mealTypeName(mealType)
+    val slotStatuses = remember(slot.blocks, allFoodBlocks) {
+        determineBlockStatusesIndexed(slot.blocks, allFoodBlocks, slot.blocks)
+    }
 
     AppCard(
         modifier = modifier
@@ -753,9 +749,6 @@ private fun MealSlotCard(
                 )
 
                 if (hasContent) {
-                    val slotStatuses = remember(slot.blocks, allFoodBlocks) {
-                        determineBlockStatusesIndexed(slot.blocks, allFoodBlocks)
-                    }
                     val hasInvalidInSlot = remember(slotStatuses) {
                         slotStatuses.any { it != MealBlockStatus.AVAILABLE }
                     }
@@ -830,7 +823,7 @@ private fun MealSlotCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // [Left 50%] Bento Box Container
-                BentoLunchBoxView(
+                LunchBoxView(
                     blocks = slot.blocks,
                     allFoodBlocks = allFoodBlocks,
                     modifier = Modifier
@@ -869,12 +862,13 @@ private fun MealSlotCard(
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             groupedBlocks.forEach { (sampleBlock, count) ->
-                                val blockStatus = remember(sampleBlock.blockId, allFoodBlocks) {
-                                    val foodBlock = allFoodBlocks?.firstOrNull { it.id == sampleBlock.blockId }
+                                val blockStatus = remember(sampleBlock.blockId, slotStatuses) {
+                                    val groupStatuses = slot.blocks.indices
+                                        .filter { slot.blocks[it].blockId == sampleBlock.blockId }
+                                        .mapNotNull { slotStatuses.getOrNull(it) }
                                     when {
-                                        allFoodBlocks == null -> MealBlockStatus.AVAILABLE
-                                        foodBlock == null -> MealBlockStatus.DELETED
-                                        foodBlock.quantity <= 0 -> MealBlockStatus.OUT_OF_STOCK
+                                        groupStatuses.any { it == MealBlockStatus.DELETED } -> MealBlockStatus.DELETED
+                                        groupStatuses.any { it == MealBlockStatus.OUT_OF_STOCK } -> MealBlockStatus.OUT_OF_STOCK
                                         else -> MealBlockStatus.AVAILABLE
                                     }
                                 }
@@ -1143,7 +1137,7 @@ private fun WeekMealView(
                                 val slot = record?.getSlot(mealType)
                                 val blocks = slot?.blocks.orEmpty()
 
-                                BentoLunchBoxView(
+                                LunchBoxView(
                                     blocks = blocks,
                                     allFoodBlocks = allFoodBlocks,
                                     modifier = Modifier
@@ -1175,7 +1169,7 @@ private fun WeekMealView(
                                     val slot = record?.getSlot(mealType)
                                     val blocks = slot?.blocks.orEmpty()
 
-                                    BentoLunchBoxView(
+                                    LunchBoxView(
                                         blocks = blocks,
                                         allFoodBlocks = allFoodBlocks,
                                         modifier = Modifier
