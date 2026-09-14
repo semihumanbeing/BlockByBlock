@@ -68,16 +68,24 @@ val localProperties = Properties().apply {
     }
 }
 
-fun resolveAuthProperty(envKey: String, propKey: String): String {
-    return System.getenv(envKey)
-        ?: (localProperties.getProperty(envKey) ?: localProperties.getProperty(propKey))
-        ?: (project.findProperty(propKey) as? String)
-        ?: ""
+fun resolveAuthProperty(envKey: String, propKey: String, defaultValue: String = ""): String {
+    val envVal = System.getenv(envKey)?.trim()?.takeIf { it.isNotBlank() }
+    val propVal = (localProperties.getProperty(envKey) ?: localProperties.getProperty(propKey))?.trim()?.takeIf { it.isNotBlank() }
+    val gradleProp = (project.findProperty(propKey) as? String)?.trim()?.takeIf { it.isNotBlank() }
+    return envVal ?: propVal ?: gradleProp ?: defaultValue
 }
 
 val generateGoogleAuthConfig = tasks.register<GenerateGoogleAuthConfigTask>("generateGoogleAuthConfig") {
-    webClientId.set(resolveAuthProperty("GOOGLE_WEB_CLIENT_ID", "google.web.client.id"))
-    iosClientId.set(resolveAuthProperty("GOOGLE_IOS_CLIENT_ID", "google.ios.client.id"))
+    webClientId.set(resolveAuthProperty(
+        "GOOGLE_WEB_CLIENT_ID",
+        "google.web.client.id",
+        "232594695076-po18jgun7bqc8rdqqajoqgpf17lhbqrt.apps.googleusercontent.com"
+    ))
+    iosClientId.set(resolveAuthProperty(
+        "GOOGLE_IOS_CLIENT_ID",
+        "google.ios.client.id",
+        "232594695076-glsfq5jllshdh8oklqcea5agff1f5d2l.apps.googleusercontent.com"
+    ))
     outputDir.set(layout.buildDirectory.dir("generated/source/googleAuth/commonMain"))
     xcconfigFile.set(rootProject.file("iosApp/Configuration/Generated.xcconfig"))
 }
