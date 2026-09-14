@@ -239,7 +239,14 @@ fun AuthScreen(
                     }
                 } else {
                     val nickname = emailInput.substringBefore("@")
-                    val res = authApiService.signUp(SignUpRequest(emailInput.trim(), passwordInput, nickname))
+                    val res = authApiService.signUp(
+                        SignUpRequest(
+                            email = emailInput.trim(),
+                            password = passwordInput,
+                            nickname = nickname,
+                            lang = currentLanguage.name
+                        )
+                    )
                     isLoading = false
                     res.onSuccess { signUpRes ->
                         onSignUpSuccess(

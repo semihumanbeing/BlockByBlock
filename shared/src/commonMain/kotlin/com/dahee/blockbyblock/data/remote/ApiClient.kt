@@ -146,6 +146,8 @@ object ApiClient {
 
         defaultRequest {
             header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            val currentLang = TokenStorage.getUserLang() ?: getPlatform().defaultLanguage.name
+            header(HttpHeaders.AcceptLanguage, if (currentLang.equals("KO", ignoreCase = true)) "ko" else "en")
             val token = TokenStorage.getAccessToken()
             val urlString = url.toString()
             val isAuthEndpoint = urlString.contains("/auth/login") ||

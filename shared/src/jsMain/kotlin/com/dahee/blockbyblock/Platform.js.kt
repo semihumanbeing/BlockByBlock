@@ -14,8 +14,16 @@ class JsPlatform: Platform {
     override val isWeb: Boolean = true
     override val defaultLanguage: AppLanguage
         get() {
+            val tz = try { com.dahee.blockbyblock.core.utils.getCurrentTimeZone() } catch (_: Throwable) { "" }
+            val isKoreanTz = tz.isEmpty() || tz == "UTC" ||
+                tz.contains("Seoul", ignoreCase = true) ||
+                tz.contains("Pyongyang", ignoreCase = true) ||
+                tz.contains("ROK", ignoreCase = true) ||
+                tz.contains("KST", ignoreCase = true)
+
             val lang = navigator.language.lowercase()
-            return if (lang.startsWith("ko")) AppLanguage.KO else AppLanguage.EN
+            val isKoreanLang = lang.startsWith("ko")
+            return if (isKoreanLang && isKoreanTz) AppLanguage.KO else AppLanguage.EN
         }
     override val defaultBaseUrl: String = "https://api.blockbyblock-mealprep.com"
 

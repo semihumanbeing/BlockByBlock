@@ -13,9 +13,18 @@ class IOSPlatform: Platform {
     override val isWeb: Boolean = false
     override val defaultLanguage: AppLanguage
         get() {
+            val tz = try { com.dahee.blockbyblock.core.utils.getCurrentTimeZone() } catch (_: Throwable) { "" }
+            val isKoreanTz = tz.isEmpty() || tz == "UTC" ||
+                tz.contains("Seoul", ignoreCase = true) ||
+                tz.contains("Pyongyang", ignoreCase = true) ||
+                tz.contains("ROK", ignoreCase = true) ||
+                tz.contains("KST", ignoreCase = true)
+
             val preferred = (NSLocale.preferredLanguages.firstOrNull() as? String)?.lowercase() ?: ""
             val current = NSLocale.currentLocale.languageCode.lowercase()
-            return if (preferred.startsWith("ko") || current.startsWith("ko")) {
+            val isKoreanLang = preferred.startsWith("ko") || current.startsWith("ko")
+
+            return if (isKoreanLang && isKoreanTz) {
                 AppLanguage.KO
             } else {
                 AppLanguage.EN

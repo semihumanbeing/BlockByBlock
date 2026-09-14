@@ -27,7 +27,8 @@ class AuthApiService {
         if (response.status.isSuccess()) {
             val body = response.body<ApiResponse<LoginResponse>>()
             ApiClient.updateAuthTokens(body.data.accessToken, body.data.refreshToken)
-            TokenStorage.setUserInfo(body.data.user.id, body.data.user.lang)
+            val localLang = TokenStorage.getUserLang()
+            TokenStorage.setUserInfo(body.data.user.id, localLang ?: body.data.user.lang)
             body.data
         } else {
             throw parseError(response)
@@ -41,7 +42,8 @@ class AuthApiService {
         if (response.status.isSuccess()) {
             val body = response.body<ApiResponse<SignUpResponse>>()
             ApiClient.updateAuthTokens(body.data.accessToken, body.data.refreshToken)
-            TokenStorage.setUserInfo(body.data.userId, TokenStorage.getUserLang() ?: "KO")
+            val initialLang = TokenStorage.getUserLang() ?: request.lang ?: com.dahee.blockbyblock.getPlatform().defaultLanguage.name
+            TokenStorage.setUserInfo(body.data.userId, initialLang)
             body.data
         } else {
             throw parseError(response)
@@ -55,7 +57,8 @@ class AuthApiService {
         if (response.status.isSuccess()) {
             val body = response.body<ApiResponse<LoginResponse>>()
             ApiClient.updateAuthTokens(body.data.accessToken, body.data.refreshToken)
-            TokenStorage.setUserInfo(body.data.user.id, body.data.user.lang)
+            val localLang = TokenStorage.getUserLang()
+            TokenStorage.setUserInfo(body.data.user.id, localLang ?: body.data.user.lang)
             body.data
         } else {
             throw parseError(response)

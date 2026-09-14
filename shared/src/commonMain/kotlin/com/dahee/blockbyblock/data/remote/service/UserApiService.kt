@@ -21,7 +21,8 @@ class UserApiService {
         val response: HttpResponse = ApiClient.client.get(ApiClient.endpoint("api/v1/users/me"))
         if (response.status.isSuccess()) {
             val body = response.body<ApiResponse<UserResponse>>()
-            TokenStorage.setUserInfo(body.data.id, body.data.lang)
+            val localLang = TokenStorage.getUserLang()
+            TokenStorage.setUserInfo(body.data.id, localLang ?: body.data.lang)
             body.data
         } else {
             throw parseError(response)
@@ -34,7 +35,8 @@ class UserApiService {
         }
         if (response.status.isSuccess()) {
             val body = response.body<ApiResponse<UserResponse>>()
-            TokenStorage.setUserInfo(body.data.id, body.data.lang)
+            val resolvedLang = request.lang ?: TokenStorage.getUserLang() ?: body.data.lang
+            TokenStorage.setUserInfo(body.data.id, resolvedLang)
             body.data
         } else {
             throw parseError(response)
@@ -47,7 +49,8 @@ class UserApiService {
         }
         if (response.status.isSuccess()) {
             val body = response.body<ApiResponse<UserResponse>>()
-            TokenStorage.setUserInfo(body.data.id, body.data.lang)
+            val localLang = TokenStorage.getUserLang()
+            TokenStorage.setUserInfo(body.data.id, localLang ?: body.data.lang)
             body.data
         } else {
             throw parseError(response)

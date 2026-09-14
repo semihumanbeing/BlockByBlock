@@ -12,7 +12,8 @@ data class LoginRequest(
 data class SignUpRequest(
     val email: String,
     val password: String,
-    val nickname: String? = null
+    val nickname: String? = null,
+    val lang: String? = null
 )
 
 @Serializable
