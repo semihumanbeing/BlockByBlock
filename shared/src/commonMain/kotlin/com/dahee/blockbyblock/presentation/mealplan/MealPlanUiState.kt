@@ -66,5 +66,6 @@ data class MealPlanUiState(
     val slotTitleInput: String = "",
     val slotMemoInput: String = "",
     val savedPresets: List<MealPreset> = emptyList(),
-    val allFoodBlocks: List<FoodBlock> = emptyList()
+    val allFoodBlocks: List<FoodBlock> = emptyList(),
+    val hasPendingRefills: Boolean = false
 )

@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.test.assertFalse
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collect
@@ -1429,7 +1430,7 @@ class SharedLogicAndroidHostTest {
         )
         assertTrue(finalStatuses.all { it == com.dahee.blockbyblock.domain.model.MealBlockStatus.AVAILABLE })
 
-        // 8. Test onRefillMissingBlocks() (부족한 블록 생성)
+        // 8. Test onRefillMissingBlocks() (부족한 블록 생성 - 지연 반영 방식)
         // Re-apply preset so selected blocks have the depleted block again
         viewModel.onApplyPreset(preset)
         assertEquals(2, viewModel.uiState.value.slotSelectedBlocks.size)
@@ -1439,16 +1440,32 @@ class SharedLogicAndroidHostTest {
         // Call onRefillMissingBlocks()
         viewModel.onRefillMissingBlocks()
 
-        // Now depleted-1 quantity in foodRepo should have been replenished by 1
-        assertEquals(1, foodRepo.getFoodBlocks().first { it.id == "depleted-1" }.quantity)
+        // With delayed reflection, foodRepo is NOT mutated immediately!
+        assertEquals(0, foodRepo.getFoodBlocks().first { it.id == "depleted-1" }.quantity)
+        assertTrue(viewModel.uiState.value.hasPendingRefills)
 
-        // And all blocks in slot should now be AVAILABLE
+        // And in UI state, effective blocks make all blocks in slot AVAILABLE
         val refilledStatuses = com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed(
             viewModel.uiState.value.slotSelectedBlocks,
             viewModel.uiState.value.allFoodBlocks,
             viewModel.uiState.value.slotOriginalBlocks
         )
         assertTrue(refilledStatuses.all { it == com.dahee.blockbyblock.domain.model.MealBlockStatus.AVAILABLE })
+
+        // Test cancel/close: closing dialog discards pending refills without mutating repository
+        viewModel.onCloseSlotDialog()
+        assertEquals(0, foodRepo.getFoodBlocks().first { it.id == "depleted-1" }.quantity)
+        assertFalse(viewModel.uiState.value.hasPendingRefills)
+
+        // Re-open dialog, apply preset again, refill missing blocks, and SAVE
+        viewModel.onOpenSlotDialog("2026-09-14", "9월 14일 월요일", com.dahee.blockbyblock.domain.model.MealType.LUNCH)
+        viewModel.onApplyPreset(preset)
+        viewModel.onRefillMissingBlocks()
+        assertEquals(0, foodRepo.getFoodBlocks().first { it.id == "depleted-1" }.quantity)
+
+        // Save slot: pending refills are now committed to foodRepo
+        viewModel.onSaveSlot()
+        assertEquals(1, foodRepo.getFoodBlocks().first { it.id == "depleted-1" }.quantity)
 
         // 9. Verify i18n string parity
         assertEquals("소진된 블록이 있어 저장할 수 없습니다.", com.dahee.blockbyblock.core.i18n.KoStrings.invalidBlocksWarning)

@@ -83,6 +83,7 @@ fun MealRecordDialog(
     selectedBlocks: List<MealBlockItem>,
     availableBlocks: List<AvailableBlockPiece>,
     originalBlocks: List<MealBlockItem> = emptyList(),
+    hasPendingRefills: Boolean = false,
     titleInput: String = "",
     onTitleChange: (String) -> Unit = {},
     memoInput: String,
@@ -111,8 +112,8 @@ fun MealRecordDialog(
     val initialTitle = remember { titleInput }
     val initialMemo = remember { memoInput }
 
-    val hasUnsavedChanges = remember(selectedBlocks, titleInput, memoInput) {
-        selectedBlocks != initialSelectedBlocks || titleInput != initialTitle || memoInput != initialMemo
+    val hasUnsavedChanges = remember(selectedBlocks, titleInput, memoInput, hasPendingRefills) {
+        selectedBlocks != initialSelectedBlocks || titleInput != initialTitle || memoInput != initialMemo || hasPendingRefills
     }
     var showDiscardConfirmDialog by remember { mutableStateOf(false) }
 

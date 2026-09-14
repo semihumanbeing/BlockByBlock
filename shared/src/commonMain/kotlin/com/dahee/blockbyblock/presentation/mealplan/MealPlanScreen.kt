@@ -136,6 +136,7 @@ fun MealPlanScreen(
             selectedBlocks = uiState.slotSelectedBlocks,
             availableBlocks = uiState.slotAvailableBlocks,
             originalBlocks = uiState.slotOriginalBlocks,
+            hasPendingRefills = uiState.hasPendingRefills,
             titleInput = uiState.slotTitleInput,
             onTitleChange = { viewModel.onTitleInputChange(it) },
             memoInput = uiState.slotMemoInput,

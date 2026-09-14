@@ -37,7 +37,8 @@ private data class SlotDialogInternalState(
     val selectedBlocks: List<MealBlockItem> = emptyList(),
     val availablePieces: List<AvailableBlockPiece> = emptyList(),
     val title: String = "",
-    val memo: String = ""
+    val memo: String = "",
+    val pendingRefillCounts: Map<String, Int> = emptyMap()
 )
 
 class MealPlanViewModel(
@@ -52,6 +53,8 @@ class MealPlanViewModel(
     private val _navState = MutableStateFlow(DateNavigationState())
     private val _dialogState = MutableStateFlow(SlotDialogInternalState())
     private val _languageState = MutableStateFlow(initialLanguage)
+
+    private var latestRawFoodBlocks: List<FoodBlock> = emptyList()
 
     // In-memory cache for weekly meal records keyed by weekStartDate ("YYYY-MM-DD")
     private val weeklyMealCache = mutableMapOf<String, List<DayMealRecord>>()
@@ -73,10 +76,20 @@ class MealPlanViewModel(
     ) { params ->
         val records = params[0] as List<DayMealRecord>
         val foodBlocks = params[1] as List<FoodBlock>
+        latestRawFoodBlocks = foodBlocks
         val presets = params[2] as List<MealPreset>
         val nav = params[3] as DateNavigationState
         val dialog = params[4] as SlotDialogInternalState
         val lang = params[5] as com.dahee.blockbyblock.core.i18n.AppLanguage
+
+        val effectiveFoodBlocks = if (dialog.isOpen && dialog.pendingRefillCounts.isNotEmpty()) {
+            foodBlocks.map { fb ->
+                val pending = dialog.pendingRefillCounts[fb.id] ?: 0
+                if (pending > 0) fb.copy(quantity = fb.quantity + pending) else fb
+            }
+        } else {
+            foodBlocks
+        }
 
         val currentDayRecord = records.find { it.dateString == nav.selectedDateString }
 
@@ -122,7 +135,8 @@ class MealPlanViewModel(
             slotTitleInput = dialog.title,
             slotMemoInput = dialog.memo,
             savedPresets = presets,
-            allFoodBlocks = foodBlocks
+            allFoodBlocks = effectiveFoodBlocks,
+            hasPendingRefills = dialog.pendingRefillCounts.isNotEmpty()
         )
     }.stateIn(
         scope = viewModelScope,
@@ -386,11 +400,14 @@ class MealPlanViewModel(
         )
         val status = statuses.getOrElse(index) { MealBlockStatus.AVAILABLE }
 
+        val countInSelectedBefore = currentSelected.count { it.blockId == item.blockId }
+        val rawStock = (latestRawFoodBlocks.find { it.id == item.blockId }?.quantity ?: 0) +
+            _dialogState.value.originalBlocks.count { it.blockId == item.blockId }
+
         currentSelected.removeAt(index)
 
-        // Only return to available pieces if it has inventory (i.e. was AVAILABLE).
-        // If it was depleted (OUT_OF_STOCK) or deleted (DELETED), it simply gets removed without returning to inventory.
-        if (status == MealBlockStatus.AVAILABLE) {
+        // Only return to available pieces if backed by actual inventory
+        if (status == MealBlockStatus.AVAILABLE && countInSelectedBefore <= rawStock) {
             currentAvailable.add(
                 AvailableBlockPiece(
                     instanceId = item.instanceId,
@@ -405,9 +422,20 @@ class MealPlanViewModel(
 
         val reindexedSelected = currentSelected.mapIndexed { i, b -> b.copy(sortOrder = i) }
 
+        val newPending = _dialogState.value.pendingRefillCounts.toMutableMap()
+        if (countInSelectedBefore > rawStock && (newPending[item.blockId] ?: 0) > 0) {
+            val currentPending = newPending[item.blockId] ?: 1
+            if (currentPending <= 1) {
+                newPending.remove(item.blockId)
+            } else {
+                newPending[item.blockId] = currentPending - 1
+            }
+        }
+
         _dialogState.value = _dialogState.value.copy(
             selectedBlocks = reindexedSelected,
-            availablePieces = currentAvailable
+            availablePieces = currentAvailable,
+            pendingRefillCounts = newPending
         )
     }
 
@@ -468,6 +496,25 @@ class MealPlanViewModel(
         }
         viewModelScope.launch {
             try {
+                // Actually commit pending refills to repository now that user confirmed save
+                if (dialog.pendingRefillCounts.isNotEmpty()) {
+                    val rawFoodBlocks = latestRawFoodBlocks.associate { it.id to it.quantity }
+                    val origCounts = dialog.originalBlocks.groupingBy { it.blockId }.eachCount()
+                    val selectedCounts = dialog.selectedBlocks.groupingBy { it.blockId }.eachCount()
+
+                    dialog.pendingRefillCounts.forEach { (blockId, count) ->
+                        val inStock = rawFoodBlocks[blockId] ?: 0
+                        val orig = origCounts[blockId] ?: 0
+                        val selected = selectedCounts[blockId] ?: 0
+                        val effectiveStock = inStock + orig
+                        val missing = (selected - effectiveStock).coerceAtLeast(0)
+                        val toRefill = minOf(count, missing)
+                        if (toRefill > 0) {
+                            foodBlockRepository.updateQuantity(blockId, toRefill)
+                        }
+                    }
+                }
+
                 val existingDay = mealRecordRepository.getMealRecordByDate(dialog.dateString)
                     ?: DayMealRecord(
                         id = "meal-${dialog.dateString}",
@@ -635,7 +682,8 @@ class MealPlanViewModel(
                 selectedBlocks = newSelected,
                 availablePieces = availableList,
                 title = if (_dialogState.value.title.isBlank()) preset.name else _dialogState.value.title,
-                memo = if (_dialogState.value.memo.isBlank()) preset.memo else _dialogState.value.memo
+                memo = if (_dialogState.value.memo.isBlank()) preset.memo else _dialogState.value.memo,
+                pendingRefillCounts = emptyMap()
             )
         }
     }
@@ -678,38 +726,42 @@ class MealPlanViewModel(
     }
 
     fun onRefillBlockQuantity(blockId: String, delta: Int = 1) {
-        viewModelScope.launch {
-            foodBlockRepository.updateQuantity(blockId, delta)
-            foodBlockRepository.fetchFoodBlocks()
-            syncDialogAvailablePieces()
+        val dialog = _dialogState.value
+        val newPending = dialog.pendingRefillCounts.toMutableMap()
+        val nextVal = (newPending[blockId] ?: 0) + delta
+        if (nextVal <= 0) {
+            newPending.remove(blockId)
+        } else {
+            newPending[blockId] = nextVal
         }
+        _dialogState.value = dialog.copy(pendingRefillCounts = newPending)
     }
 
     fun onRefillMissingBlocks() {
-        viewModelScope.launch {
-            val dialog = _dialogState.value
-            val currentFoodBlocks = uiState.value.allFoodBlocks.takeIf { it.isNotEmpty() }
-                ?: foodBlockRepository.getFoodBlocks()
-            val statuses = determineBlockStatusesIndexed(
-                dialog.selectedBlocks,
-                currentFoodBlocks,
-                dialog.originalBlocks
-            )
+        val dialog = _dialogState.value
+        if (!dialog.isOpen) return
+        val currentFoodBlocks = uiState.value.allFoodBlocks.takeIf { it.isNotEmpty() }
+            ?: return
+        val statuses = determineBlockStatusesIndexed(
+            dialog.selectedBlocks,
+            currentFoodBlocks,
+            dialog.originalBlocks
+        )
 
-            // Find all blocks that are OUT_OF_STOCK and calculate how many units need to be replenished
-            val missingCounts = dialog.selectedBlocks
-                .filterIndexed { index, _ -> statuses.getOrElse(index) { MealBlockStatus.AVAILABLE } == MealBlockStatus.OUT_OF_STOCK }
-                .groupingBy { it.blockId }
-                .eachCount()
+        // Find all blocks that are OUT_OF_STOCK and calculate how many units need to be replenished
+        val missingCounts = dialog.selectedBlocks
+            .filterIndexed { index, _ -> statuses.getOrElse(index) { MealBlockStatus.AVAILABLE } == MealBlockStatus.OUT_OF_STOCK }
+            .groupingBy { it.blockId }
+            .eachCount()
 
-            if (missingCounts.isEmpty()) return@launch
+        if (missingCounts.isEmpty()) return
 
-            missingCounts.forEach { (blockId, count) ->
-                foodBlockRepository.updateQuantity(blockId, count)
-            }
-            foodBlockRepository.fetchFoodBlocks()
-            syncDialogAvailablePieces()
+        val newPending = dialog.pendingRefillCounts.toMutableMap()
+        missingCounts.forEach { (blockId, count) ->
+            newPending[blockId] = (newPending[blockId] ?: 0) + count
         }
+
+        _dialogState.value = dialog.copy(pendingRefillCounts = newPending)
     }
 
     fun onDeletePreset(presetId: String) {
