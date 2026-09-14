@@ -67,6 +67,7 @@ fun LunchBoxView(
     blockHeight: Dp = 76.dp,
     isDynamicExpandable: Boolean = false,
     allFoodBlocks: List<FoodBlock>? = null,
+    blockStatuses: List<MealBlockStatus>? = null,
     onBlockClick: ((MealBlockItem) -> Unit)? = null,
     emptyPlaceholder: (@Composable () -> Unit)? = null
 ) {
@@ -101,8 +102,8 @@ fun LunchBoxView(
             .padding(horizontal = 6.dp, vertical = 2.dp)
     }
 
-    val blockStatuses = remember(blocks, allFoodBlocks) {
-        determineBlockStatusesIndexed(blocks, allFoodBlocks, blocks)
+    val currentBlockStatuses = remember(blocks, allFoodBlocks, blockStatuses) {
+        blockStatuses ?: determineBlockStatusesIndexed(blocks, allFoodBlocks, blocks)
     }
 
     BoxWithConstraints(
@@ -147,7 +148,7 @@ fun LunchBoxView(
                             ) {
                                 blocks.forEachIndexed { index, item ->
                                     key(item.instanceId) {
-                                        val status = blockStatuses.getOrElse(index) { MealBlockStatus.AVAILABLE }
+                                        val status = currentBlockStatuses.getOrElse(index) { MealBlockStatus.AVAILABLE }
                                         val blockModifier = if (onBlockClick != null) {
                                             Modifier
                                                 .pointerHoverIcon(PointerIcon.Hand)
@@ -186,7 +187,7 @@ fun LunchBoxView(
                                 ) {
                                     blocks.forEachIndexed { index, item ->
                                         key(item.instanceId) {
-                                            val status = blockStatuses.getOrElse(index) { MealBlockStatus.AVAILABLE }
+                                            val status = currentBlockStatuses.getOrElse(index) { MealBlockStatus.AVAILABLE }
                                             val blockModifier = if (onBlockClick != null) {
                                                 Modifier
                                                     .pointerHoverIcon(PointerIcon.Hand)

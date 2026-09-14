@@ -18,6 +18,9 @@ interface AppStrings {
     val add: String
     val addBtn: String
     val back: String
+    val close: String
+    val addMold: String
+    val addIngredientBtn: String
     val selected: String
     val unitSlot: String // slot(s)
     val unitPiece: String // piece(s)
@@ -102,6 +105,7 @@ interface AppStrings {
     val createBlockSectionIngredients: String
     val createBlockSearchIngredientPlaceholder: String
     val createBlockNoMatchingIngredients: String
+    val directAddIngredientBtn: String
     val prevPageBtn: String
     val nextPageBtn: String
     fun selectedIngredientsCount(count: Int): String
@@ -133,6 +137,8 @@ interface AppStrings {
     val historySubtitle: String
     val createBlockSectionCookingTool: String
     val noOwnedCookingTools: String
+    val createBlockGoToCookingTools: String
+    val addCookingTool: String
     val createBlockNoIngredientTooltip: String
     val cookingTemperatureLabel: String
     val cookingTimeLabel: String
@@ -195,8 +201,11 @@ interface AppStrings {
     val backToToday: String
     val mealPlanTitle: String
     val mealPlanTabDaily: String
-
     val mealPlanTabWeekly: String
+    val selectDate: String
+    val selectWeek: String
+    val thisWeek: String
+    val today: String
     val mealPlanHint: String
     fun memoPrefix(memo: String): String
     fun mealRecordDialogTitle(mealType: String): String
@@ -221,6 +230,8 @@ interface AppStrings {
     val depletedShortBadge: String
     val deletedBlockBadge: String
     val invalidBlocksWarning: String
+    val removeDepletedBlocksBtn: String
+    val createMissingBlocksBtn: String
     val replaceBlockAction: String
     val refillQuantityAction: String
     val createBlockAction: String

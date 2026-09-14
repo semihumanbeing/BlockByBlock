@@ -29,8 +29,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -69,6 +72,8 @@ import com.dahee.blockbyblock.domain.model.MealSlotRecord
 import com.dahee.blockbyblock.domain.model.MealType
 import com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed
 import com.dahee.blockbyblock.presentation.mealplan.components.LunchBoxView
+import com.dahee.blockbyblock.presentation.mealplan.components.MealPlanDatePickerDialog
+import com.dahee.blockbyblock.presentation.mealplan.components.MealPlanWeekPickerDialog
 import com.dahee.blockbyblock.presentation.mealplan.components.MealRecordDialog
 
 @Composable
@@ -91,6 +96,10 @@ fun MealPlanScreen(
     // Preset Save Dialog State
     var pendingSavePresetMealType by remember { mutableStateOf<MealType?>(null) }
     var presetNameInput by remember { mutableStateOf("") }
+
+    // Calendar Date/Week Picker Dialogs State
+    var showDatePickerDialog by remember { mutableStateOf(false) }
+    var showWeekPickerDialog by remember { mutableStateOf(false) }
 
     // Meal Saved Transient Notice Toast State
     var showSavedNotice by remember { mutableStateOf(false) }
@@ -133,6 +142,8 @@ fun MealPlanScreen(
             onMemoChange = { viewModel.onMemoInputChange(it) },
             onMoveToTop = { viewModel.onMoveBlockToTop(it) },
             onMoveToBottom = { viewModel.onMoveBlockToBottom(it) },
+            onRemoveInvalidBlocks = { viewModel.onRemoveInvalidBlocks() },
+            onRefillMissingBlocks = { viewModel.onRefillMissingBlocks() },
             savedPresets = uiState.savedPresets,
             allFoodBlocks = uiState.allFoodBlocks,
             onRefillBlockQuantity = { viewModel.onRefillBlockQuantity(it) },
@@ -298,6 +309,30 @@ fun MealPlanScreen(
         )
     }
 
+    // Calendar Date Picker Dialog
+    if (showDatePickerDialog) {
+        MealPlanDatePickerDialog(
+            initialDate = uiState.selectedDateString,
+            todayDate = uiState.todayDateString,
+            onDateSelected = { dateStr ->
+                viewModel.onSelectDate(dateStr)
+            },
+            onDismiss = { showDatePickerDialog = false }
+        )
+    }
+
+    // Calendar Week Picker Dialog
+    if (showWeekPickerDialog) {
+        MealPlanWeekPickerDialog(
+            currentWeekStartDate = uiState.weekStartDateString,
+            todayDate = uiState.todayDateString,
+            onWeekSelected = { weekStartStr ->
+                viewModel.onSelectWeek(weekStartStr)
+            },
+            onDismiss = { showWeekPickerDialog = false }
+        )
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -358,6 +393,7 @@ fun MealPlanScreen(
                     onPreviousDay = { viewModel.onPreviousDay() },
                     onNextDay = { viewModel.onNextDay() },
                     onResetToToday = { viewModel.onResetToToday() },
+                    onOpenDatePicker = { showDatePickerDialog = true },
                     onOpenSlot = { mealType ->
                         viewModel.onOpenSlotDialog(
                             dateString = uiState.selectedDateString,
@@ -391,6 +427,7 @@ fun MealPlanScreen(
                     onPreviousWeek = { viewModel.onPreviousWeek() },
                     onNextWeek = { viewModel.onNextWeek() },
                     onCurrentWeek = { viewModel.onCurrentWeek() },
+                    onOpenWeekPicker = { showWeekPickerDialog = true },
                     onSelectDate = { dateString ->
                         viewModel.onSelectDateAndOpenDayView(dateString)
                     },
@@ -482,6 +519,7 @@ private fun TodayMealView(
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onResetToToday: () -> Unit,
+    onOpenDatePicker: () -> Unit = {},
     onOpenSlot: (MealType) -> Unit,
     onPromptDeleteSlot: (MealType) -> Unit,
     onSavePresetSlot: (MealType) -> Unit
@@ -534,17 +572,43 @@ private fun TodayMealView(
                 )
             }
 
-            // Date Label & Today indicator
+            // Date Label (Clickable to open calendar DatePicker) & Today indicator
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Text(
-                    text = selectedDateFormatted,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AppColors.TextPrimary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onOpenDatePicker
+                        )
+                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CalendarToday,
+                        contentDescription = strings.selectDate,
+                        tint = AppColors.PrimaryDark,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        text = selectedDateFormatted,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.TextPrimary
+                    )
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = strings.selectDate,
+                        tint = AppColors.TextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
 
                 if (!isSelectedDateToday) {
                     Box(
@@ -978,6 +1042,7 @@ private fun WeekMealView(
     onPreviousWeek: () -> Unit,
     onNextWeek: () -> Unit,
     onCurrentWeek: () -> Unit,
+    onOpenWeekPicker: () -> Unit = {},
     onSelectDate: (String) -> Unit,
     onOpenDaySlot: (String, String, MealType) -> Unit
 ) {
@@ -1018,12 +1083,67 @@ private fun WeekMealView(
                 )
             }
 
-            Text(
-                text = currentWeekLabel,
-                fontSize = 14.5.sp,
-                fontWeight = FontWeight.Bold,
-                color = AppColors.TextPrimary
-            )
+            val isCurrentWeek = remember(weekDays) { weekDays.any { it.isToday } }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onOpenWeekPicker
+                        )
+                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = strings.selectWeek,
+                        tint = AppColors.PrimaryDark,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        text = currentWeekLabel,
+                        fontSize = 14.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.TextPrimary
+                    )
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = strings.selectWeek,
+                        tint = AppColors.TextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                if (!isCurrentWeek) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(AppColors.PrimaryLight)
+                            .pointerHoverIcon(PointerIcon.Hand)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onCurrentWeek
+                            )
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = strings.thisWeek,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppColors.PrimaryDark
+                        )
+                    }
+                }
+            }
 
             Box(
                 modifier = Modifier

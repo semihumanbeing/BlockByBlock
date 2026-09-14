@@ -8,6 +8,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -72,6 +75,7 @@ private data class AvailableBlockGroup(
     val remainingPieces: List<AvailableBlockPiece>
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MealRecordDialog(
     mealType: MealType,
@@ -85,6 +89,8 @@ fun MealRecordDialog(
     onMemoChange: (String) -> Unit,
     onMoveToTop: (AvailableBlockPiece) -> Unit,
     onMoveToBottom: (MealBlockItem) -> Unit,
+    onRemoveInvalidBlocks: () -> Unit = {},
+    onRefillMissingBlocks: () -> Unit = {},
     savedPresets: List<MealPreset> = emptyList(),
     allFoodBlocks: List<FoodBlock> = emptyList(),
     onRefillBlockQuantity: (String) -> Unit = {},
@@ -116,12 +122,9 @@ fun MealRecordDialog(
     val hasInvalidBlocks = remember(blockStatuses) {
         blockStatuses.any { it != MealBlockStatus.AVAILABLE }
     }
-    var actionTargetBlock by remember { mutableStateOf<Pair<MealBlockItem, MealBlockStatus>?>(null) }
 
     val handleDismissAttempt = {
-        if (actionTargetBlock != null) {
-            actionTargetBlock = null
-        } else if (showDiscardConfirmDialog) {
+        if (showDiscardConfirmDialog) {
             showDiscardConfirmDialog = false
         } else if (hasUnsavedChanges) {
             focusManager.clearFocus()
@@ -265,33 +268,61 @@ fun MealRecordDialog(
                     isDynamicExpandable = true,
                     blockHeight = 96.dp,
                     allFoodBlocks = allFoodBlocks,
+                    blockStatuses = blockStatuses,
                     onBlockClick = { item ->
-                        val index = selectedBlocks.indexOf(item)
-                        val status = if (index >= 0) blockStatuses.getOrElse(index) { MealBlockStatus.AVAILABLE } else MealBlockStatus.AVAILABLE
-                        if (status == MealBlockStatus.AVAILABLE) {
-                            onMoveToBottom(item)
-                        } else {
-                            actionTargetBlock = item to status
-                        }
+                        onMoveToBottom(item)
                     }
                 )
 
                 // Warning banner if any blocks are depleted or deleted
                 if (hasInvalidBlocks) {
+                    val hasOutOfStockBlocks = remember(blockStatuses) {
+                        blockStatuses.any { it == MealBlockStatus.OUT_OF_STOCK }
+                    }
+
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
                             .background(Color(0xFFFEF2F2))
                             .border(1.dp, Color(0xFFFCA5A5), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                            .padding(12.dp)
                     ) {
-                        Text(
-                            text = strings.invalidBlocksWarning,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFFDC2626)
-                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(
+                                text = strings.invalidBlocksWarning,
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFDC2626),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Left: 블록 제거
+                                AppButton(
+                                    text = strings.removeDepletedBlocksBtn,
+                                    onClick = onRemoveInvalidBlocks,
+                                    variant = ButtonVariant.DANGER,
+                                    height = 36.dp,
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                if (hasOutOfStockBlocks) {
+                                    // Right: +블록 추가
+                                    AppButton(
+                                        text = strings.createMissingBlocksBtn,
+                                        onClick = onRefillMissingBlocks,
+                                        variant = ButtonVariant.PRIMARY,
+                                        height = 36.dp,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -655,134 +686,6 @@ fun MealRecordDialog(
                                     onDismiss()
                                 },
                                 modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Action popup for Depleted or Deleted Block
-            if (actionTargetBlock != null) {
-                val (targetItem, targetStatus) = actionTargetBlock!!
-                val isDepleted = targetStatus == MealBlockStatus.OUT_OF_STOCK
-
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(Color.Black.copy(alpha = 0.55f))
-                        .clickable(
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        ) {
-                            actionTargetBlock = null
-                        }
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AppCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 350.dp)
-                            .clickable(
-                                indication = null,
-                                interactionSource = remember { MutableInteractionSource() }
-                            ) {},
-                        backgroundColor = AppColors.Surface,
-                        cornerRadius = 16.dp,
-                        padding = 20.dp
-                    ) {
-                        // Header with block preview icon & title
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Box(modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center) {
-                                FoodBlockTopView(
-                                    colorHex = targetItem.blockColorHex,
-                                    moldCapacityMl = targetItem.moldCapacityMl,
-                                    height = 36.dp,
-                                    isGrayscale = !isDepleted
-                                )
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = targetItem.blockName,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (!isDepleted) AppColors.TextMuted else AppColors.TextPrimary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = if (isDepleted) strings.depletedBlockBadge else strings.deletedBlockBadge,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (isDepleted) Color(0xFFF97316) else Color(0xFF6B7280)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Text(
-                            text = if (isDepleted) strings.depletedBlockDesc(targetItem.blockName)
-                            else strings.deletedBlockDesc(targetItem.blockName),
-                            fontSize = 13.sp,
-                            color = AppColors.TextSecondary,
-                            lineHeight = 18.sp
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        // Action Buttons:
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            // Action 1: 다른 블록으로 교체 (Replace with another block)
-                            AppButton(
-                                text = strings.replaceBlockAction,
-                                variant = ButtonVariant.PRIMARY,
-                                height = 44.dp,
-                                onClick = {
-                                    onMoveToBottom(targetItem)
-                                    actionTargetBlock = null
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            // Action 2: 수량 채우기 (+1개) / 새 블록 만들기
-                            if (isDepleted) {
-                                AppButton(
-                                    text = strings.refillQuantityAction,
-                                    variant = ButtonVariant.SECONDARY,
-                                    height = 44.dp,
-                                    onClick = {
-                                        onRefillBlockQuantity(targetItem.blockId)
-                                        actionTargetBlock = null
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            } else if (onCreateBlockClick != null) {
-                                AppButton(
-                                    text = strings.createBlockAction,
-                                    variant = ButtonVariant.SECONDARY,
-                                    height = 44.dp,
-                                    onClick = {
-                                        actionTargetBlock = null
-                                        onCreateBlockClick.invoke()
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-
-                            // Action 3: 닫기 (Cancel)
-                            AppButton(
-                                text = strings.cancel,
-                                variant = ButtonVariant.OUTLINE,
-                                height = 40.dp,
-                                onClick = { actionTargetBlock = null },
-                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }

@@ -243,6 +243,33 @@ class MealPlanViewModel(
         loadWeek(targetWeek)
     }
 
+    fun onSelectDate(dateString: String) {
+        val targetWeek = getMondayOfWeek(dateString)
+        _navState.value = _navState.value.copy(
+            selectedDateString = dateString,
+            weekStartDate = targetWeek
+        )
+        loadWeek(targetWeek)
+    }
+
+    fun onSelectWeek(startDate: String) {
+        val targetWeek = getMondayOfWeek(startDate)
+        val weekDates = generate7Days(targetWeek)
+        val today = todayString
+        val newSelectedDate = if (weekDates.contains(today)) {
+            today
+        } else if (weekDates.contains(_navState.value.selectedDateString)) {
+            _navState.value.selectedDateString
+        } else {
+            targetWeek
+        }
+        _navState.value = _navState.value.copy(
+            weekStartDate = targetWeek,
+            selectedDateString = newSelectedDate
+        )
+        loadWeek(targetWeek)
+    }
+
     fun onResetToToday() {
         val today = getCurrentDateIso()
         val currentMonday = getMondayOfWeek(today)
@@ -348,24 +375,59 @@ class MealPlanViewModel(
     fun onMoveBlockToBottom(item: MealBlockItem) {
         val currentSelected = _dialogState.value.selectedBlocks.toMutableList()
         val currentAvailable = _dialogState.value.availablePieces.toMutableList()
+        val index = currentSelected.indexOf(item)
+        if (index == -1) return
 
-        currentSelected.remove(item)
-        currentAvailable.add(
-            AvailableBlockPiece(
-                instanceId = item.instanceId,
-                blockId = item.blockId,
-                blockName = item.blockName,
-                blockColorHex = item.blockColorHex,
-                moldCapacityMl = item.moldCapacityMl,
-                moldCellCount = item.moldCellCount
-            )
+        val currentFoodBlocks = uiState.value.allFoodBlocks
+        val statuses = determineBlockStatusesIndexed(
+            currentSelected,
+            currentFoodBlocks,
+            _dialogState.value.originalBlocks
         )
+        val status = statuses.getOrElse(index) { MealBlockStatus.AVAILABLE }
 
-        val reindexedSelected = currentSelected.mapIndexed { index, b -> b.copy(sortOrder = index) }
+        currentSelected.removeAt(index)
+
+        // Only return to available pieces if it has inventory (i.e. was AVAILABLE).
+        // If it was depleted (OUT_OF_STOCK) or deleted (DELETED), it simply gets removed without returning to inventory.
+        if (status == MealBlockStatus.AVAILABLE) {
+            currentAvailable.add(
+                AvailableBlockPiece(
+                    instanceId = item.instanceId,
+                    blockId = item.blockId,
+                    blockName = item.blockName,
+                    blockColorHex = item.blockColorHex,
+                    moldCapacityMl = item.moldCapacityMl,
+                    moldCellCount = item.moldCellCount
+                )
+            )
+        }
+
+        val reindexedSelected = currentSelected.mapIndexed { i, b -> b.copy(sortOrder = i) }
 
         _dialogState.value = _dialogState.value.copy(
             selectedBlocks = reindexedSelected,
             availablePieces = currentAvailable
+        )
+    }
+
+    fun onRemoveInvalidBlocks() {
+        val currentSelected = _dialogState.value.selectedBlocks.toMutableList()
+        val currentFoodBlocks = uiState.value.allFoodBlocks
+        val statuses = determineBlockStatusesIndexed(
+            currentSelected,
+            currentFoodBlocks,
+            _dialogState.value.originalBlocks
+        )
+
+        val validBlocks = currentSelected.filterIndexed { index, _ ->
+            statuses.getOrElse(index) { MealBlockStatus.AVAILABLE } == MealBlockStatus.AVAILABLE
+        }
+
+        val reindexedSelected = validBlocks.mapIndexed { i, b -> b.copy(sortOrder = i) }
+
+        _dialogState.value = _dialogState.value.copy(
+            selectedBlocks = reindexedSelected
         )
     }
 
@@ -578,45 +640,75 @@ class MealPlanViewModel(
         }
     }
 
+    private suspend fun syncDialogAvailablePieces() {
+        val currentDialog = _dialogState.value
+        if (!currentDialog.isOpen) return
+        val updatedFoodBlocks = foodBlockRepository.getFoodBlocks()
+        val allPieces = mutableListOf<AvailableBlockPiece>()
+        updatedFoodBlocks.forEach { block ->
+            if (block.quantity > 0) {
+                for (i in 1..block.quantity) {
+                    allPieces.add(
+                        AvailableBlockPiece(
+                            instanceId = "${block.id}-piece-$i",
+                            blockId = block.id,
+                            blockName = block.name,
+                            blockColorHex = block.blockColorHex,
+                            moldCapacityMl = block.moldCapacityMl,
+                            moldCellCount = block.moldCellCount
+                        )
+                    )
+                }
+            }
+        }
+        // Subtract newly added blocks (selectedBlocks minus originalBlocks)
+        val newlyAdded = currentDialog.selectedBlocks.toMutableList()
+        currentDialog.originalBlocks.forEach { orig ->
+            val idx = newlyAdded.indexOfFirst { it.blockId == orig.blockId }
+            if (idx >= 0) newlyAdded.removeAt(idx)
+        }
+        val availableList = allPieces.toMutableList()
+        newlyAdded.forEach { added ->
+            val matchIdx = availableList.indexOfFirst { it.blockId == added.blockId }
+            if (matchIdx >= 0) {
+                availableList.removeAt(matchIdx)
+            }
+        }
+        _dialogState.value = currentDialog.copy(availablePieces = availableList)
+    }
+
     fun onRefillBlockQuantity(blockId: String, delta: Int = 1) {
         viewModelScope.launch {
             foodBlockRepository.updateQuantity(blockId, delta)
             foodBlockRepository.fetchFoodBlocks()
-            val currentDialog = _dialogState.value
-            if (currentDialog.isOpen) {
-                val updatedFoodBlocks = foodBlockRepository.getFoodBlocks()
-                val allPieces = mutableListOf<AvailableBlockPiece>()
-                updatedFoodBlocks.forEach { block ->
-                    if (block.quantity > 0) {
-                        for (i in 1..block.quantity) {
-                            allPieces.add(
-                                AvailableBlockPiece(
-                                    instanceId = "${block.id}-piece-$i",
-                                    blockId = block.id,
-                                    blockName = block.name,
-                                    blockColorHex = block.blockColorHex,
-                                    moldCapacityMl = block.moldCapacityMl,
-                                    moldCellCount = block.moldCellCount
-                                )
-                            )
-                        }
-                    }
-                }
-                // Subtract newly added blocks (selectedBlocks minus originalBlocks)
-                val newlyAdded = currentDialog.selectedBlocks.toMutableList()
-                currentDialog.originalBlocks.forEach { orig ->
-                    val idx = newlyAdded.indexOfFirst { it.blockId == orig.blockId }
-                    if (idx >= 0) newlyAdded.removeAt(idx)
-                }
-                val availableList = allPieces.toMutableList()
-                newlyAdded.forEach { added ->
-                    val matchIdx = availableList.indexOfFirst { it.blockId == added.blockId }
-                    if (matchIdx >= 0) {
-                        availableList.removeAt(matchIdx)
-                    }
-                }
-                _dialogState.value = currentDialog.copy(availablePieces = availableList)
+            syncDialogAvailablePieces()
+        }
+    }
+
+    fun onRefillMissingBlocks() {
+        viewModelScope.launch {
+            val dialog = _dialogState.value
+            val currentFoodBlocks = uiState.value.allFoodBlocks.takeIf { it.isNotEmpty() }
+                ?: foodBlockRepository.getFoodBlocks()
+            val statuses = determineBlockStatusesIndexed(
+                dialog.selectedBlocks,
+                currentFoodBlocks,
+                dialog.originalBlocks
+            )
+
+            // Find all blocks that are OUT_OF_STOCK and calculate how many units need to be replenished
+            val missingCounts = dialog.selectedBlocks
+                .filterIndexed { index, _ -> statuses.getOrElse(index) { MealBlockStatus.AVAILABLE } == MealBlockStatus.OUT_OF_STOCK }
+                .groupingBy { it.blockId }
+                .eachCount()
+
+            if (missingCounts.isEmpty()) return@launch
+
+            missingCounts.forEach { (blockId, count) ->
+                foodBlockRepository.updateQuantity(blockId, count)
             }
+            foodBlockRepository.fetchFoodBlocks()
+            syncDialogAvailablePieces()
         }
     }
 
@@ -627,7 +719,7 @@ class MealPlanViewModel(
     }
 
     companion object {
-        private fun generate7Days(startMonday: String): List<String> {
+        fun generate7Days(startMonday: String): List<String> {
             return (0..6).map { offsetDate(startMonday, it) }
         }
 
@@ -691,7 +783,7 @@ class MealPlanViewModel(
             }
         }
 
-        private fun getEnglishMonthShort(month: Int): String {
+        fun getEnglishMonthShort(month: Int): String {
             return when (month) {
                 1 -> "Jan"
                 2 -> "Feb"
@@ -730,7 +822,7 @@ class MealPlanViewModel(
 
         fun formatFullDateKorean(dateStr: String): String = formatFullDate(dateStr, com.dahee.blockbyblock.core.i18n.AppLanguage.KO)
 
-        private fun computeWeekLabel(
+        fun computeWeekLabel(
             startMonday: String,
             endSunday: String,
             lang: com.dahee.blockbyblock.core.i18n.AppLanguage = com.dahee.blockbyblock.core.i18n.AppLanguage.KO
@@ -787,7 +879,7 @@ class MealPlanViewModel(
             return "$y-$mm-$dd"
         }
 
-        private fun daysInMonth(year: Int, month: Int): Int {
+        fun daysInMonth(year: Int, month: Int): Int {
             return when (month) {
                 1, 3, 5, 7, 8, 10, 12 -> 31
                 4, 6, 9, 11 -> 30
@@ -796,7 +888,7 @@ class MealPlanViewModel(
             }
         }
 
-        private fun isLeapYear(year: Int): Boolean {
+        fun isLeapYear(year: Int): Boolean {
             return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
         }
 
