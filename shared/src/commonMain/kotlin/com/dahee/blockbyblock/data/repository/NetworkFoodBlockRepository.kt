@@ -2,9 +2,7 @@ package com.dahee.blockbyblock.data.repository
 
 import com.dahee.blockbyblock.data.remote.dto.BlockResponse
 import com.dahee.blockbyblock.data.remote.dto.CookingInstructionRequest
-import com.dahee.blockbyblock.data.remote.dto.CookingInstructionResponse
 import com.dahee.blockbyblock.data.remote.dto.CreateBlockRequest
-import com.dahee.blockbyblock.data.remote.dto.UpdateBlockQuantityRequest
 import com.dahee.blockbyblock.data.remote.dto.UpdateBlockRequest
 import com.dahee.blockbyblock.data.remote.service.BlockApiService
 import com.dahee.blockbyblock.domain.model.CookingInstruction

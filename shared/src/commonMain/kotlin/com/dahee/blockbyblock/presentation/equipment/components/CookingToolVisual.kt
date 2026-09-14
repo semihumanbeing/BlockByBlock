@@ -12,7 +12,6 @@ import blockbyblock.shared.generated.resources.air_fryer
 import blockbyblock.shared.generated.resources.blender
 import blockbyblock.shared.generated.resources.gas_stove
 import blockbyblock.shared.generated.resources.microwave
-import blockbyblock.shared.generated.resources.other_utensils
 import blockbyblock.shared.generated.resources.oven
 import blockbyblock.shared.generated.resources.slow_cooker
 import com.dahee.blockbyblock.domain.model.CookingToolType

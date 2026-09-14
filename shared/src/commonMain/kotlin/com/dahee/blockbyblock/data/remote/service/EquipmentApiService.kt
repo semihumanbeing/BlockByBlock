@@ -1,7 +1,6 @@
 package com.dahee.blockbyblock.data.remote.service
 
 import com.dahee.blockbyblock.data.remote.ApiClient
-import com.dahee.blockbyblock.data.remote.ApiErrorResponse
 import com.dahee.blockbyblock.data.remote.ApiResponse
 import com.dahee.blockbyblock.data.remote.dto.CreateMoldRequest
 import com.dahee.blockbyblock.data.remote.dto.EquipmentsResponse
@@ -17,7 +16,6 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 
 class EquipmentApiService {

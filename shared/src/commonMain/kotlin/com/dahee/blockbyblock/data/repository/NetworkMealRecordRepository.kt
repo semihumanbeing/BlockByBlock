@@ -4,7 +4,6 @@ import com.dahee.blockbyblock.core.utils.getCurrentEpochMillis
 import com.dahee.blockbyblock.data.remote.dto.CreateMealPresetRequest
 import com.dahee.blockbyblock.data.remote.dto.DailyMealResponse
 import com.dahee.blockbyblock.data.remote.dto.MealBlockItemRequest
-import com.dahee.blockbyblock.data.remote.dto.MealBlockResponse
 import com.dahee.blockbyblock.data.remote.dto.MealPresetResponse
 import com.dahee.blockbyblock.data.remote.dto.MealSlotResponse
 import com.dahee.blockbyblock.data.remote.dto.SaveMealSlotRequest

@@ -3,7 +3,6 @@ package com.dahee.blockbyblock.presentation.block
 import com.dahee.blockbyblock.domain.model.CookingToolType
 import com.dahee.blockbyblock.domain.model.EquipmentCategory
 import com.dahee.blockbyblock.domain.model.FoodBlock
-import com.dahee.blockbyblock.domain.model.FoodBlockPalette
 import com.dahee.blockbyblock.domain.model.IngredientStatus
 import com.dahee.blockbyblock.domain.repository.EquipmentRepository
 import com.dahee.blockbyblock.domain.repository.FoodBlockRepository

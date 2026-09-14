@@ -1,10 +1,6 @@
 package com.dahee.blockbyblock.presentation.notification
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -25,7 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material3.CircularProgressIndicator
@@ -56,7 +51,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.theme.AppColors
-import com.dahee.blockbyblock.domain.model.AppNotification
 import com.dahee.blockbyblock.domain.model.NotificationType
 import com.dahee.blockbyblock.presentation.notification.components.NotificationItemCard
 

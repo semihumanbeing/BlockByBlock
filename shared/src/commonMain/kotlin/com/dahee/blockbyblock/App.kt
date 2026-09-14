@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -36,10 +35,6 @@ import com.dahee.blockbyblock.core.i18n.getStrings
 import com.dahee.blockbyblock.core.notification.PushNotificationManager
 import com.dahee.blockbyblock.core.theme.AppColors
 import com.dahee.blockbyblock.core.theme.BlockByBlockTheme
-import com.dahee.blockbyblock.data.repository.InMemoryEquipmentRepository
-import com.dahee.blockbyblock.data.repository.InMemoryFoodBlockRepository
-import com.dahee.blockbyblock.data.repository.InMemoryIngredientRepository
-import com.dahee.blockbyblock.data.repository.InMemoryMealRecordRepository
 import com.dahee.blockbyblock.domain.model.UserProfile
 import com.dahee.blockbyblock.presentation.auth.AuthScreen
 import com.dahee.blockbyblock.presentation.block.BlockInventoryScreen

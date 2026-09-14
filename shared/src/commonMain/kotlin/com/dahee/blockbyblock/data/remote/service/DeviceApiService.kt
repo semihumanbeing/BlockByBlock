@@ -4,7 +4,6 @@ import com.dahee.blockbyblock.data.remote.ApiClient
 import com.dahee.blockbyblock.data.remote.ApiResponse
 import com.dahee.blockbyblock.data.remote.dto.DeviceResponse
 import com.dahee.blockbyblock.data.remote.dto.RegisterDeviceRequest
-import com.dahee.blockbyblock.data.remote.dto.SuccessResponse
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
 import io.ktor.client.request.parameter

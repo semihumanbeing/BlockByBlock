@@ -2,7 +2,6 @@ package com.dahee.blockbyblock
 
 import com.dahee.blockbyblock.data.remote.ApiClient
 import com.dahee.blockbyblock.data.remote.TokenStorage
-import com.dahee.blockbyblock.data.remote.dto.LoginRequest
 import com.dahee.blockbyblock.data.remote.dto.UpdateProfileRequest
 import com.dahee.blockbyblock.data.remote.service.AuthApiService
 import com.dahee.blockbyblock.data.remote.service.UserApiService

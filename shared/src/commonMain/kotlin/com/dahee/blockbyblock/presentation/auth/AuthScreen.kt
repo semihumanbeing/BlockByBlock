@@ -87,7 +87,6 @@ import org.jetbrains.compose.resources.painterResource
 import androidx.compose.runtime.rememberCoroutineScope
 import com.dahee.blockbyblock.data.remote.dto.LoginRequest
 import com.dahee.blockbyblock.data.remote.dto.PasswordResetConfirmRequest
-import com.dahee.blockbyblock.data.remote.dto.PasswordResetRequest
 import com.dahee.blockbyblock.data.remote.dto.SignUpRequest
 import com.dahee.blockbyblock.data.remote.dto.SocialLoginRequest
 import com.dahee.blockbyblock.data.remote.service.AuthApiService

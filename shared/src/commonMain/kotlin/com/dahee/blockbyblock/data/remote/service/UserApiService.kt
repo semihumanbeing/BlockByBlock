@@ -1,11 +1,9 @@
 package com.dahee.blockbyblock.data.remote.service
 
 import com.dahee.blockbyblock.data.remote.ApiClient
-import com.dahee.blockbyblock.data.remote.ApiErrorResponse
 import com.dahee.blockbyblock.data.remote.ApiResponse
 import com.dahee.blockbyblock.data.remote.TokenStorage
 import com.dahee.blockbyblock.data.remote.dto.OnboardingResponse
-import com.dahee.blockbyblock.data.remote.dto.SuccessResponse
 import com.dahee.blockbyblock.data.remote.dto.UpdateOnboardingRequest
 import com.dahee.blockbyblock.data.remote.dto.UpdateProfileRequest
 import com.dahee.blockbyblock.data.remote.dto.UserResponse
@@ -15,7 +13,6 @@ import io.ktor.client.request.get
 import io.ktor.client.request.patch
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 
 class UserApiService {

@@ -2,7 +2,6 @@ package com.dahee.blockbyblock.data.repository
 
 import com.dahee.blockbyblock.data.remote.TokenStorage
 import com.dahee.blockbyblock.data.remote.service.NotificationApiService
-import com.dahee.blockbyblock.domain.model.AppNotification
 import com.dahee.blockbyblock.domain.model.NotificationPagedResult
 import com.dahee.blockbyblock.domain.model.toDomain
 import com.dahee.blockbyblock.domain.repository.NotificationRepository
