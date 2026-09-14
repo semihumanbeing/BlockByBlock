@@ -31,8 +31,9 @@ object ErrorCode {
     // 500: Internal Server Error
     const val INTERNAL_SERVER_ERROR = "INTERNAL_SERVER_ERROR"
 
-    // 429: Rate Limit
+    // 429: Rate Limit & Account Locked
     const val TOO_MANY_REQUESTS = "TOO_MANY_REQUESTS"
+    const val ACCOUNT_LOCKED = "ACCOUNT_LOCKED"
 
     // Client-side synthesized errors
     const val TIMEOUT_ERROR = "TIMEOUT_ERROR"
