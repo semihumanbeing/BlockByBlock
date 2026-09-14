@@ -49,9 +49,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.theme.AppColors
+import com.dahee.blockbyblock.core.ui.AppButton
 import com.dahee.blockbyblock.core.ui.AppCard
 import com.dahee.blockbyblock.core.ui.AppChip
 import com.dahee.blockbyblock.core.ui.AppTextField
+import com.dahee.blockbyblock.core.ui.ButtonVariant
 import com.dahee.blockbyblock.domain.model.CatalogIngredient
 import com.dahee.blockbyblock.domain.model.Ingredient
 import com.dahee.blockbyblock.domain.model.IngredientCategory
@@ -432,6 +434,15 @@ fun IngredientSearchAddDialog(
                         }
                     }
                 }
+
+                // 5. Bottom Close Button
+                AppButton(
+                    text = strings.close,
+                    onClick = onDismiss,
+                    variant = ButtonVariant.SECONDARY,
+                    modifier = Modifier.fillMaxWidth(),
+                    height = 44.dp
+                )
             }
         }
     }

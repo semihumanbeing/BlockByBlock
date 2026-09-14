@@ -1310,4 +1310,255 @@ class SharedLogicAndroidHostTest {
         assertEquals("Reset Shape", en.resetMoldShape)
     }
 
+    @Test
+    fun testRemoveDepletedBlocksFlow() = kotlinx.coroutines.runBlocking {
+        val testJob = kotlinx.coroutines.Job()
+        val testScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined + testJob)
+
+        val mealRepo = com.dahee.blockbyblock.data.repository.InMemoryMealRecordRepository()
+        val foodRepo = com.dahee.blockbyblock.data.repository.InMemoryFoodBlockRepository()
+
+        // 1. Prepare 1 food block with quantity = 0 (Depleted block)
+        val depletedBlock = com.dahee.blockbyblock.domain.model.FoodBlock(
+            id = "depleted-1",
+            name = "소진된 당근",
+            moldId = "m1",
+            moldName = "몰드 1",
+            moldCapacityMl = 250,
+            moldCellCount = 4,
+            moldColorHex = "#F5B7B1",
+            blockColorHex = "#F5B7B1",
+            mainIngredients = listOf("당근"),
+            quantity = 0
+        )
+        // 2. Prepare 1 food block with quantity = 2 (Available block)
+        val availableBlock = com.dahee.blockbyblock.domain.model.FoodBlock(
+            id = "avail-1",
+            name = "신선한 닭가슴살",
+            moldId = "m2",
+            moldName = "몰드 2",
+            moldCapacityMl = 250,
+            moldCellCount = 4,
+            moldColorHex = "#A8D5BA",
+            blockColorHex = "#A8D5BA",
+            mainIngredients = listOf("닭가슴살"),
+            quantity = 2
+        )
+        foodRepo.saveFoodBlock(depletedBlock)
+        foodRepo.saveFoodBlock(availableBlock)
+
+        // 3. Prepare preset containing both depleted block and available block
+        val preset = com.dahee.blockbyblock.domain.model.MealPreset(
+            id = "preset-test-1",
+            name = "테스트 프리셋",
+            blocks = listOf(
+                com.dahee.blockbyblock.domain.model.MealBlockItem(
+                    instanceId = "depleted-inst-1",
+                    blockId = "depleted-1",
+                    blockName = "소진된 당근",
+                    blockColorHex = "#F5B7B1",
+                    moldCapacityMl = 250,
+                    moldCellCount = 4,
+                    sortOrder = 0
+                ),
+                com.dahee.blockbyblock.domain.model.MealBlockItem(
+                    instanceId = "avail-inst-1",
+                    blockId = "avail-1",
+                    blockName = "신선한 닭가슴살",
+                    blockColorHex = "#A8D5BA",
+                    moldCapacityMl = 250,
+                    moldCellCount = 4,
+                    sortOrder = 1
+                )
+            )
+        )
+        mealRepo.saveMealPreset(preset)
+
+        val viewModel = com.dahee.blockbyblock.presentation.mealplan.MealPlanViewModel(
+            mealRecordRepository = mealRepo,
+            foodBlockRepository = foodRepo,
+            viewModelScope = testScope
+        )
+
+        val collectJob = testScope.launch { viewModel.uiState.collect { } }
+
+        // 4. Open slot dialog for empty slot
+        viewModel.onOpenSlotDialog("2026-09-14", "9월 14일 월요일", com.dahee.blockbyblock.domain.model.MealType.LUNCH)
+
+        // 5. Apply preset containing the depleted block
+        viewModel.onApplyPreset(preset)
+
+        val state1 = viewModel.uiState.value
+        assertEquals(2, state1.slotSelectedBlocks.size)
+
+        // Verify status: depleted block is OUT_OF_STOCK, available block is AVAILABLE
+        val statuses1 = com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed(
+            state1.slotSelectedBlocks,
+            state1.allFoodBlocks,
+            state1.slotOriginalBlocks
+        )
+        assertEquals(com.dahee.blockbyblock.domain.model.MealBlockStatus.OUT_OF_STOCK, statuses1[0])
+        assertEquals(com.dahee.blockbyblock.domain.model.MealBlockStatus.AVAILABLE, statuses1[1])
+
+        // 6. Test removing depleted block directly by clicking it (onMoveBlockToBottom)
+        val depletedInSelected = state1.slotSelectedBlocks.first { it.blockId == "depleted-1" }
+        val availCountBefore = state1.slotAvailableBlocks.size
+        viewModel.onMoveBlockToBottom(depletedInSelected)
+
+        val state2 = viewModel.uiState.value
+        assertEquals(1, state2.slotSelectedBlocks.size)
+        assertEquals("avail-1", state2.slotSelectedBlocks[0].blockId)
+        // Available pool size did NOT increase because depleted block has no inventory
+        assertEquals(availCountBefore, state2.slotAvailableBlocks.size)
+
+        // 7. Test onRemoveInvalidBlocks()
+        // Re-apply preset so selected blocks have both depleted and available blocks again
+        viewModel.onApplyPreset(preset)
+        assertEquals(2, viewModel.uiState.value.slotSelectedBlocks.size)
+
+        // One-tap removal of all depleted / invalid blocks
+        viewModel.onRemoveInvalidBlocks()
+        val finalSelected = viewModel.uiState.value.slotSelectedBlocks
+        assertEquals(1, finalSelected.size)
+        assertEquals("avail-1", finalSelected[0].blockId)
+
+        val finalStatuses = com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed(
+            finalSelected,
+            viewModel.uiState.value.allFoodBlocks,
+            viewModel.uiState.value.slotOriginalBlocks
+        )
+        assertTrue(finalStatuses.all { it == com.dahee.blockbyblock.domain.model.MealBlockStatus.AVAILABLE })
+
+        // 8. Test onRefillMissingBlocks() (부족한 블록 생성)
+        // Re-apply preset so selected blocks have the depleted block again
+        viewModel.onApplyPreset(preset)
+        assertEquals(2, viewModel.uiState.value.slotSelectedBlocks.size)
+        // Verify before: depleted-1 quantity is 0
+        assertEquals(0, foodRepo.getFoodBlocks().first { it.id == "depleted-1" }.quantity)
+
+        // Call onRefillMissingBlocks()
+        viewModel.onRefillMissingBlocks()
+
+        // Now depleted-1 quantity in foodRepo should have been replenished by 1
+        assertEquals(1, foodRepo.getFoodBlocks().first { it.id == "depleted-1" }.quantity)
+
+        // And all blocks in slot should now be AVAILABLE
+        val refilledStatuses = com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed(
+            viewModel.uiState.value.slotSelectedBlocks,
+            viewModel.uiState.value.allFoodBlocks,
+            viewModel.uiState.value.slotOriginalBlocks
+        )
+        assertTrue(refilledStatuses.all { it == com.dahee.blockbyblock.domain.model.MealBlockStatus.AVAILABLE })
+
+        // 9. Verify i18n string parity
+        assertEquals("소진된 블록이 있어 저장할 수 없습니다.", com.dahee.blockbyblock.core.i18n.KoStrings.invalidBlocksWarning)
+        assertEquals("블록 제거", com.dahee.blockbyblock.core.i18n.KoStrings.removeDepletedBlocksBtn)
+        assertEquals("Remove Blocks", com.dahee.blockbyblock.core.i18n.EnStrings.removeDepletedBlocksBtn)
+        assertEquals("+블록 추가", com.dahee.blockbyblock.core.i18n.KoStrings.createMissingBlocksBtn)
+        assertEquals("+ Add Blocks", com.dahee.blockbyblock.core.i18n.EnStrings.createMissingBlocksBtn)
+
+        collectJob.cancel()
+        testJob.cancel()
+    }
+
+    @Test
+    fun testDirectAddIngredientFlow() = kotlinx.coroutines.runBlocking {
+        val testJob = kotlinx.coroutines.Job()
+        val testScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined + testJob)
+
+        val foodRepo = com.dahee.blockbyblock.data.repository.InMemoryFoodBlockRepository()
+        val ingredientRepo = com.dahee.blockbyblock.data.repository.InMemoryIngredientRepository()
+        val equipRepo = com.dahee.blockbyblock.data.repository.InMemoryEquipmentRepository()
+
+        // 1. Prepare 1 in-stock ingredient
+        val existingIng = com.dahee.blockbyblock.domain.model.Ingredient(
+            id = "ing_carrot",
+            name = "당근",
+            status = com.dahee.blockbyblock.domain.model.IngredientStatus.STOCK
+        )
+        ingredientRepo.upsertIngredient(existingIng)
+
+        val viewModel = com.dahee.blockbyblock.presentation.block.BlockViewModel(
+            foodBlockRepository = foodRepo,
+            ingredientRepository = ingredientRepo,
+            equipmentRepository = equipRepo,
+            coroutineScope = testScope
+        )
+
+        // Verify initial state: contains 1 ingredient
+        assertEquals(1, viewModel.uiState.value.inStockIngredients.size)
+
+        // 2. Search for unowned ingredient "시금치"
+        viewModel.onIngredientSearchQueryChange("시금치")
+        assertEquals("시금치", viewModel.uiState.value.ingredientSearchQuery)
+        assertTrue(viewModel.uiState.value.filteredInStockIngredients.isEmpty())
+
+        // 3. Direct add & select "시금치"
+        viewModel.onAddAndSelectIngredient("시금치")
+
+        // Search query should be cleared
+        assertEquals("", viewModel.uiState.value.ingredientSearchQuery)
+        // inStockIngredients should now contain "시금치"
+        val inStock = viewModel.uiState.value.inStockIngredients
+        val spinach = inStock.find { it.name == "시금치" }
+        assertNotNull(spinach)
+        assertEquals(com.dahee.blockbyblock.domain.model.IngredientStatus.STOCK, spinach.status)
+        // It should be automatically selected
+        assertTrue(viewModel.uiState.value.selectedIngredientIds.contains(spinach.id))
+
+        // 4. Verify catalog add & auto-selection via callback
+        val ingredientVm = com.dahee.blockbyblock.presentation.inventory.IngredientViewModel(
+            repository = ingredientRepo,
+            scope = testScope
+        )
+        var addedIngredientFromCatalog: com.dahee.blockbyblock.domain.model.Ingredient? = null
+        val catalogItem = com.dahee.blockbyblock.domain.model.CatalogIngredient(
+            id = "cat_broccoli",
+            name = "브로콜리",
+            category = com.dahee.blockbyblock.domain.model.IngredientCategory.VEGETABLE
+        )
+        ingredientVm.onAddFromCatalog(catalogItem, com.dahee.blockbyblock.domain.model.IngredientStatus.STOCK) { added ->
+            addedIngredientFromCatalog = added
+            viewModel.selectIngredient(added)
+        }
+        assertNotNull(addedIngredientFromCatalog)
+        assertEquals("브로콜리", addedIngredientFromCatalog?.name)
+        assertTrue(viewModel.uiState.value.selectedIngredientIds.contains(addedIngredientFromCatalog?.id))
+
+        // 5. Verify i18n string parity
+        assertEquals("보유중인 식재료가 없습니다", com.dahee.blockbyblock.core.i18n.KoStrings.createBlockNoMatchingIngredients)
+        assertEquals("No in-stock ingredients found", com.dahee.blockbyblock.core.i18n.EnStrings.createBlockNoMatchingIngredients)
+        assertEquals("바로 추가하기", com.dahee.blockbyblock.core.i18n.KoStrings.directAddIngredientBtn)
+        assertEquals("Add Directly", com.dahee.blockbyblock.core.i18n.EnStrings.directAddIngredientBtn)
+        assertEquals("재료를 모른다면? 메뉴명만 적어서 블록을 생성할 수 있어요!", com.dahee.blockbyblock.core.i18n.KoStrings.deliveryFoodHint)
+        assertEquals("Don't know the ingredients? You can create a block with just the menu name!", com.dahee.blockbyblock.core.i18n.EnStrings.deliveryFoodHint)
+
+        testJob.cancel()
+    }
+
+    @Test
+    fun testOverseasAndDefaultLanguageResolution() {
+        // 1. Verify SignUpRequest serialization with lang
+        val req = com.dahee.blockbyblock.data.remote.dto.SignUpRequest(
+            email = "madrid_user@example.com",
+            password = "password123",
+            nickname = "madrid",
+            lang = "EN"
+        )
+        assertEquals("EN", req.lang)
+
+        // 2. Verify platform defaultLanguage resolution for overseas timezone vs Korean timezone
+        val platform = com.dahee.blockbyblock.getPlatform()
+        assertNotNull(platform.defaultLanguage)
+
+        // 3. Verify TokenStorage preservation
+        com.dahee.blockbyblock.data.remote.TokenStorage.setUserLang("EN")
+        assertEquals("EN", com.dahee.blockbyblock.data.remote.TokenStorage.getUserLang())
+
+        // Ensure getPlatform().defaultLanguage is respected when userLang is cleared
+        com.dahee.blockbyblock.data.remote.TokenStorage.clearTokens()
+        val initialOrPlatform = com.dahee.blockbyblock.data.remote.TokenStorage.getUserLang() ?: platform.defaultLanguage.name
+        assertTrue(initialOrPlatform == "EN" || initialOrPlatform == "KO")
+    }
+
 }

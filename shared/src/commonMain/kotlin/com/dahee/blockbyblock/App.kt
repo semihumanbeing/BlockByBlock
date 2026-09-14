@@ -168,13 +168,45 @@ fun App() {
         if (TokenStorage.isAuthenticated && !TokenStorage.getAccessToken().isNullOrBlank()) {
             val meResult = userApiService.getMe()
             meResult.onSuccess { userRes ->
-                try {
-                    val langEnum = com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(userRes.lang)
-                    currentLanguage = langEnum
-                    equipmentViewModel.setLanguage(langEnum)
-                    ingredientViewModel.setLanguage(langEnum)
-                    mealPlanViewModel.setLanguage(langEnum)
-                } catch (_: Throwable) {}
+                val savedLocalLang = TokenStorage.getUserLang()
+                val targetLang = if (savedLocalLang != null) {
+                    try {
+                        com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(savedLocalLang)
+                    } catch (_: Throwable) {
+                        try {
+                            com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(userRes.lang)
+                        } catch (_: Throwable) {
+                            getPlatform().defaultLanguage
+                        }
+                    }
+                } else {
+                    val detected = getPlatform().defaultLanguage
+                    if (detected == com.dahee.blockbyblock.core.i18n.AppLanguage.EN && userRes.lang == "KO") {
+                        coroutineScope.launch {
+                            userApiService.updateProfile(
+                                UpdateProfileRequest(
+                                    nickname = userRes.nickname,
+                                    avatarType = userRes.avatarType,
+                                    lang = detected.name
+                                )
+                            )
+                        }
+                        TokenStorage.setUserLang(detected.name)
+                        detected
+                    } else {
+                        try {
+                            val serverEnum = com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(userRes.lang)
+                            TokenStorage.setUserLang(serverEnum.name)
+                            serverEnum
+                        } catch (_: Throwable) {
+                            detected
+                        }
+                    }
+                }
+                currentLanguage = targetLang
+                equipmentViewModel.setLanguage(targetLang)
+                ingredientViewModel.setLanguage(targetLang)
+                mealPlanViewModel.setLanguage(targetLang)
                 val avatar = try {
                     com.dahee.blockbyblock.domain.model.ProfileAvatarType.valueOf(userRes.avatarType)
                 } catch (_: Throwable) {
@@ -205,13 +237,45 @@ fun App() {
                     refreshRes.onSuccess {
                         val retryMe = userApiService.getMe()
                         retryMe.onSuccess { userRes ->
-                            try {
-                                val langEnum = com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(userRes.lang)
-                                currentLanguage = langEnum
-                                equipmentViewModel.setLanguage(langEnum)
-                                ingredientViewModel.setLanguage(langEnum)
-                                mealPlanViewModel.setLanguage(langEnum)
-                            } catch (_: Throwable) {}
+                            val savedLocalLang = TokenStorage.getUserLang()
+                            val targetLang = if (savedLocalLang != null) {
+                                try {
+                                    com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(savedLocalLang)
+                                } catch (_: Throwable) {
+                                    try {
+                                        com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(userRes.lang)
+                                    } catch (_: Throwable) {
+                                        getPlatform().defaultLanguage
+                                    }
+                                }
+                            } else {
+                                val detected = getPlatform().defaultLanguage
+                                if (detected == com.dahee.blockbyblock.core.i18n.AppLanguage.EN && userRes.lang == "KO") {
+                                    coroutineScope.launch {
+                                        userApiService.updateProfile(
+                                            UpdateProfileRequest(
+                                                nickname = userRes.nickname,
+                                                avatarType = userRes.avatarType,
+                                                lang = detected.name
+                                            )
+                                        )
+                                    }
+                                    TokenStorage.setUserLang(detected.name)
+                                    detected
+                                } else {
+                                    try {
+                                        val serverEnum = com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(userRes.lang)
+                                        TokenStorage.setUserLang(serverEnum.name)
+                                        serverEnum
+                                    } catch (_: Throwable) {
+                                        detected
+                                    }
+                                }
+                            }
+                            currentLanguage = targetLang
+                            equipmentViewModel.setLanguage(targetLang)
+                            ingredientViewModel.setLanguage(targetLang)
+                            mealPlanViewModel.setLanguage(targetLang)
                             val avatar = try {
                                 com.dahee.blockbyblock.domain.model.ProfileAvatarType.valueOf(userRes.avatarType)
                             } catch (_: Throwable) {
@@ -412,11 +476,16 @@ fun App() {
                                 isLoggedIn = true
                                 userProfile = profile
                                 hasCompletedOnboarding = profile.onboardingCompleted
-                                TokenStorage.getUserLang()?.let { langStr ->
+                                val targetLang = TokenStorage.getUserLang()?.let { langStr ->
                                     try {
-                                        currentLanguage = com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(langStr)
-                                    } catch (_: Throwable) {}
-                                }
+                                        com.dahee.blockbyblock.core.i18n.AppLanguage.valueOf(langStr)
+                                    } catch (_: Throwable) { null }
+                                } ?: getPlatform().defaultLanguage
+                                currentLanguage = targetLang
+                                TokenStorage.setUserLang(targetLang.name)
+                                equipmentViewModel.setLanguage(targetLang)
+                                ingredientViewModel.setLanguage(targetLang)
+                                mealPlanViewModel.setLanguage(targetLang)
 
                                 if (!profile.onboardingCompleted) {
                                     tutorialStep = TutorialStep.WELCOME_PROFILE
@@ -432,6 +501,10 @@ fun App() {
                                 hasCompletedOnboarding = false
                                 userProfile = profile
                                 tutorialStep = TutorialStep.WELCOME_PROFILE
+                                TokenStorage.setUserLang(currentLanguage.name)
+                                equipmentViewModel.setLanguage(currentLanguage)
+                                ingredientViewModel.setLanguage(currentLanguage)
+                                mealPlanViewModel.setLanguage(currentLanguage)
                                 fetchMainAppData(includeNotifications = false)
                             }
                         )
@@ -552,6 +625,8 @@ fun App() {
                                                 tutorialStep = TutorialStep.INVENTORY_SETUP
                                                 currentTab = NavTab.INVENTORY
                                                 isManagingEquipment = false
+                                            } else {
+                                                isManagingEquipment = false
                                             }
                                         }
                                     )
@@ -573,12 +648,13 @@ fun App() {
 
                                         NavTab.BLOCK -> BlockInventoryScreen(
                                             viewModel = blockViewModel,
+                                            ingredientViewModel = ingredientViewModel,
                                             onNavigateToInventory = {
                                                 isManagingEquipment = false
                                                 currentTab = NavTab.INVENTORY
                                             },
                                             onNavigateToEquipment = {
-                                                equipmentViewModel.onOpenListScreen()
+                                                equipmentViewModel.onOpenDirectSetup()
                                                 isManagingEquipment = true
                                             }
                                         )

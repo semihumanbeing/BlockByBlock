@@ -3,7 +3,9 @@ package com.dahee.blockbyblock.presentation.block
 import com.dahee.blockbyblock.domain.model.CookingToolType
 import com.dahee.blockbyblock.domain.model.EquipmentCategory
 import com.dahee.blockbyblock.domain.model.FoodBlock
+import com.dahee.blockbyblock.domain.model.Ingredient
 import com.dahee.blockbyblock.domain.model.IngredientStatus
+import com.dahee.blockbyblock.domain.model.guessCategoryByName
 import com.dahee.blockbyblock.domain.repository.EquipmentRepository
 import com.dahee.blockbyblock.domain.repository.FoodBlockRepository
 import com.dahee.blockbyblock.domain.repository.IngredientRepository
@@ -14,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -234,6 +237,48 @@ class BlockViewModel(
                 current.add(ingredientId)
             }
             state.copy(selectedIngredientIds = current)
+        }
+    }
+
+    fun selectIngredient(ingredient: Ingredient) {
+        _uiState.update { state ->
+            val currentInStock = state.inStockIngredients
+            val updatedInStock = if (currentInStock.none { it.id == ingredient.id }) {
+                currentInStock + ingredient
+            } else {
+                currentInStock.map { if (it.id == ingredient.id) ingredient else it }
+            }
+            state.copy(
+                inStockIngredients = updatedInStock,
+                selectedIngredientIds = state.selectedIngredientIds + ingredient.id,
+                ingredientSearchQuery = ""
+            )
+        }
+    }
+
+    fun onAddAndSelectIngredient(name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isBlank()) return
+        coroutineScope.launch {
+            val all = ingredientRepository.getAllIngredients().first()
+            val existing = all.find { it.name.trim().equals(trimmed, ignoreCase = true) }
+            val targetIngredient: Ingredient
+            if (existing != null) {
+                if (existing.status != IngredientStatus.STOCK) {
+                    ingredientRepository.updateStatus(existing.id, IngredientStatus.STOCK)
+                }
+                targetIngredient = existing.copy(status = IngredientStatus.STOCK)
+            } else {
+                val newIng = Ingredient(
+                    id = "ing_${kotlin.random.Random.nextInt(100000, 999999)}",
+                    name = trimmed,
+                    status = IngredientStatus.STOCK,
+                    category = guessCategoryByName(trimmed)
+                )
+                ingredientRepository.upsertIngredient(newIng)
+                targetIngredient = newIng
+            }
+            selectIngredient(targetIngredient)
         }
     }
 

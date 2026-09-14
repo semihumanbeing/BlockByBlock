@@ -5,6 +5,7 @@ import com.dahee.blockbyblock.domain.model.CatalogIngredient
 import com.dahee.blockbyblock.domain.model.Ingredient
 import com.dahee.blockbyblock.domain.model.IngredientCategory
 import com.dahee.blockbyblock.domain.model.IngredientStatus
+import com.dahee.blockbyblock.domain.model.guessCategoryByName
 import com.dahee.blockbyblock.domain.repository.IngredientRepository
 import com.dahee.blockbyblock.presentation.inventory.state.IngredientTab
 import com.dahee.blockbyblock.presentation.inventory.state.IngredientUiState
@@ -389,7 +390,8 @@ class IngredientViewModel(
     // Add ingredient selected from catalog (re-activates if consumed, prevents duplicates if active)
     fun onAddFromCatalog(
         catalogItem: CatalogIngredient,
-        status: IngredientStatus
+        status: IngredientStatus,
+        onAdded: ((Ingredient) -> Unit)? = null
     ) {
         val trimmedName = catalogItem.name.trim()
         val existing = _uiState.value.registeredIngredients.find {
@@ -402,11 +404,13 @@ class IngredientViewModel(
                     repository.updateStatus(existing.id, status)
                     val targetText = if (status == IngredientStatus.STOCK) "보유중" else "장바구니"
                     showAutoSaveToast("'${trimmedName}'이(가) ${targetText}에 추가되었습니다.")
+                    onAdded?.invoke(existing.copy(status = status))
                 }
                 return
             } else {
                 val statusText = if (existing.status == IngredientStatus.STOCK) "보유중" else "장바구니"
                 showAutoSaveToast("'${trimmedName}'은(는) 이미 ${statusText}에 등록되어 있습니다.")
+                onAdded?.invoke(existing)
                 return
             }
         }
@@ -420,13 +424,15 @@ class IngredientViewModel(
             )
             repository.upsertIngredient(newIngredient)
             showAutoSaveToast("'${trimmedName}'이(가) ${if (status == IngredientStatus.STOCK) "보유중" else "장바구니"}에 추가되었습니다.")
+            onAdded?.invoke(newIngredient)
         }
     }
 
     // Add custom ingredient from search text (re-activates if consumed, prevents duplicates if active)
     fun onAddCustomFromCatalogQuery(
         name: String,
-        status: IngredientStatus
+        status: IngredientStatus,
+        onAdded: ((Ingredient) -> Unit)? = null
     ) {
         val trimmed = name.trim()
         if (trimmed.isBlank()) return
@@ -441,11 +447,13 @@ class IngredientViewModel(
                     repository.updateStatus(existing.id, status)
                     val targetText = if (status == IngredientStatus.STOCK) "보유중" else "장바구니"
                     showAutoSaveToast("'${trimmed}'이(가) ${targetText}에 추가되었습니다.")
+                    onAdded?.invoke(existing.copy(status = status))
                 }
                 return
             } else {
                 val statusText = if (existing.status == IngredientStatus.STOCK) "보유중" else "장바구니"
                 showAutoSaveToast("'${trimmed}'은(는) 이미 ${statusText}에 등록되어 있습니다.")
+                onAdded?.invoke(existing)
                 return
             }
         }
@@ -459,6 +467,7 @@ class IngredientViewModel(
             )
             repository.upsertIngredient(newIngredient)
             showAutoSaveToast("'${trimmed}'이(가) ${if (status == IngredientStatus.STOCK) "보유중" else "장바구니"}에 추가되었습니다.")
+            onAdded?.invoke(newIngredient)
         }
     }
 
@@ -552,22 +561,5 @@ class IngredientViewModel(
     companion object {
         const val CATALOG_PAGE_SIZE = 20
         private const val PAGE_SIZE = 12
-    }
-
-    private fun guessCategoryByName(name: String): IngredientCategory {
-        val lower = name.lowercase()
-        return when {
-            listOf("닭", "소고기", "돼지", "연어", "새우", "참치", "고기", "beef", "chicken", "pork", "salmon", "shrimp", "fish").any { lower.contains(it) } ->
-                IngredientCategory.MEAT_SEAFOOD
-            listOf("양파", "브로콜리", "당근", "파프리카", "마늘", "대파", "버섯", "아보카도", "시금치", "블루베리", "onion", "carrot", "broccoli", "spinach", "vegetable").any { lower.contains(it) } ->
-                IngredientCategory.VEGETABLE
-            listOf("밥", "오트밀", "파스타", "면", "고구마", "감자", "쌀", "rice", "oat", "pasta", "potato", "bread").any { lower.contains(it) } ->
-                IngredientCategory.GRAIN_CARB
-            listOf("간장", "올리브유", "기름", "소스", "양념", "후추", "육수", "페스토", "퓨레", "sauce", "oil", "pepper", "broth", "pesto").any { lower.contains(it) } ->
-                IngredientCategory.SAUCE_SEASONING
-            listOf("계란", "달걀", "요거트", "치즈", "우유", "버터", "egg", "yogurt", "cheese", "milk").any { lower.contains(it) } ->
-                IngredientCategory.DAIRY_EGG
-            else -> IngredientCategory.OTHER
-        }
     }
 }

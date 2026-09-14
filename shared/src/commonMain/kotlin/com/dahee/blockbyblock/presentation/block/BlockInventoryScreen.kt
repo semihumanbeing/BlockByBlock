@@ -64,11 +64,13 @@ import com.dahee.blockbyblock.core.ui.ButtonVariant
 import com.dahee.blockbyblock.domain.model.FoodBlock
 import com.dahee.blockbyblock.presentation.block.components.CreateBlockScreen
 import com.dahee.blockbyblock.presentation.block.components.FoodBlock3DView
+import com.dahee.blockbyblock.presentation.inventory.IngredientViewModel
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BlockInventoryScreen(
     viewModel: BlockViewModel,
+    ingredientViewModel: IngredientViewModel? = null,
     onNavigateToInventory: () -> Unit = {},
     onNavigateToEquipment: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -82,6 +84,7 @@ fun BlockInventoryScreen(
         CreateBlockScreen(
             uiState = uiState,
             viewModel = viewModel,
+            ingredientViewModel = ingredientViewModel,
             onNavigateToInventory = onNavigateToInventory,
             onNavigateToEquipment = onNavigateToEquipment,
             modifier = modifier
