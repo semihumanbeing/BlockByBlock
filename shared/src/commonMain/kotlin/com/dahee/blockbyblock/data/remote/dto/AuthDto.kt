@@ -50,3 +50,15 @@ data class SignUpResponse(
 data class SuccessResponse(
     val success: Boolean
 )
+
+@Serializable
+data class PasswordResetRequest(
+    val email: String
+)
+
+@Serializable
+data class PasswordResetConfirmRequest(
+    val email: String,
+    val code: String,
+    val newPassword: String
+)

@@ -53,6 +53,12 @@ class ApiError(
     fun isAccountLocked(): Boolean =
         code == ErrorCode.ACCOUNT_LOCKED || (status == 429 && code.contains("ACCOUNT_LOCKED", ignoreCase = true))
 
+    fun isUserNotFound(): Boolean =
+        status == 404 || code == ErrorCode.USER_NOT_FOUND || code == ErrorCode.RESOURCE_NOT_FOUND
+
+    fun isInvalidVerificationCode(): Boolean =
+        code == ErrorCode.INVALID_VERIFICATION_CODE || (status == 400 && code.contains("VERIFICATION", ignoreCase = true))
+
     fun extractFieldErrorMap(): Map<String, String> {
         val map = mutableMapOf<String, String>()
         errors?.forEach { detail ->
@@ -65,6 +71,8 @@ class ApiError(
 
     fun getLocalizedMessage(strings: com.dahee.blockbyblock.core.i18n.AppStrings): String = when {
         isAccountLocked() -> strings.authErrorAccountLocked
+        isInvalidVerificationCode() -> strings.authErrorInvalidVerificationCode
+        isUserNotFound() -> strings.authErrorUserNotFound
         isTooManyRequests() -> strings.errorTooManyRequests
         isAccessDenied() -> strings.errorForbidden
         code == ErrorCode.TIMEOUT_ERROR -> strings.errorTimeout

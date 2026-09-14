@@ -285,6 +285,29 @@ interface AppStrings {
     val authErrorNetwork: String
     val authErrorAccountLocked: String
 
+    // Password Reset
+    val authForgotPasswordLink: String
+    val authPasswordResetTitle: String
+    val authPasswordResetStep1Desc: String
+    val authPasswordResetStep2Desc: String
+    val authPasswordResetSendCodeBtn: String
+    val authPasswordResetResendCodeBtn: String
+    val authVerificationCodeLabel: String
+    val authVerificationCodePlaceholder: String
+    val authNewPasswordLabel: String
+    val authNewPasswordPlaceholder: String
+    val authNewPasswordConfirmLabel: String
+    val authNewPasswordConfirmPlaceholder: String
+    val authPasswordResetSubmitBtn: String
+    val authPasswordResetSuccessTitle: String
+    val authPasswordResetSuccessDesc: String
+    val authPasswordResetBackToLoginBtn: String
+    val authPasswordResetTimerLabel: String
+    val authPasswordResetCodeSentToast: String
+    val authErrorUserNotFound: String
+    val authErrorInvalidVerificationCode: String
+    val authErrorVerificationCodeExpired: String
+
     // System & Network Errors
     val errorTooManyRequests: String
     val errorForbidden: String

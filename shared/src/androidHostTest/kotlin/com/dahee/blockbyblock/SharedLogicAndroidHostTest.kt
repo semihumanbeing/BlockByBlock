@@ -1100,6 +1100,56 @@ class SharedLogicAndroidHostTest {
         )
         assertEquals("네트워크 연결 상태를 확인해주세요.", networkError.getLocalizedMessage(ko))
         assertEquals("Please check your network connection.", networkError.getLocalizedMessage(en))
+
+        val userNotFoundError = com.dahee.blockbyblock.data.remote.error.ApiError(
+            message = "User not found",
+            code = com.dahee.blockbyblock.data.remote.error.ErrorCode.USER_NOT_FOUND,
+            status = 404
+        )
+        assertEquals("가입되지 않은 이메일입니다.", userNotFoundError.getLocalizedMessage(ko))
+        assertEquals("No account found with this email.", userNotFoundError.getLocalizedMessage(en))
+        assertEquals("가입되지 않은 이메일입니다.", com.dahee.blockbyblock.presentation.auth.formatAuthError(userNotFoundError, isLogin = false, ko))
+        assertEquals("No account found with this email.", com.dahee.blockbyblock.presentation.auth.formatAuthError(userNotFoundError, isLogin = false, en))
+
+        val invalidCodeError = com.dahee.blockbyblock.data.remote.error.ApiError(
+            message = "Invalid verification code",
+            code = com.dahee.blockbyblock.data.remote.error.ErrorCode.INVALID_VERIFICATION_CODE,
+            status = 400
+        )
+        assertEquals("인증번호가 일치하지 않거나 만료되었습니다.", invalidCodeError.getLocalizedMessage(ko))
+        assertEquals("Verification code is invalid or has expired.", invalidCodeError.getLocalizedMessage(en))
+        assertEquals("인증번호가 일치하지 않거나 만료되었습니다.", com.dahee.blockbyblock.presentation.auth.formatAuthError(invalidCodeError, isLogin = false, ko))
+        assertEquals("Verification code is invalid or has expired.", com.dahee.blockbyblock.presentation.auth.formatAuthError(invalidCodeError, isLogin = false, en))
+    }
+
+    @Test
+    fun testPasswordResetDtoSerialization() {
+        val req1 = com.dahee.blockbyblock.data.remote.dto.PasswordResetRequest(email = "user@example.com")
+        val json1 = com.dahee.blockbyblock.data.remote.ApiClient.jsonConfig.encodeToString(
+            com.dahee.blockbyblock.data.remote.dto.PasswordResetRequest.serializer(),
+            req1
+        )
+        assertTrue(json1.contains("\"email\":\"user@example.com\""))
+
+        val req2 = com.dahee.blockbyblock.data.remote.dto.PasswordResetConfirmRequest(
+            email = "user@example.com",
+            code = "123456",
+            newPassword = "newPassword123"
+        )
+        val json2 = com.dahee.blockbyblock.data.remote.ApiClient.jsonConfig.encodeToString(
+            com.dahee.blockbyblock.data.remote.dto.PasswordResetConfirmRequest.serializer(),
+            req2
+        )
+        assertTrue(json2.contains("\"code\":\"123456\""))
+        assertTrue(json2.contains("\"newPassword\":\"newPassword123\""))
+
+        val decodedReq2 = com.dahee.blockbyblock.data.remote.ApiClient.jsonConfig.decodeFromString(
+            com.dahee.blockbyblock.data.remote.dto.PasswordResetConfirmRequest.serializer(),
+            json2
+        )
+        assertEquals("user@example.com", decodedReq2.email)
+        assertEquals("123456", decodedReq2.code)
+        assertEquals("newPassword123", decodedReq2.newPassword)
     }
 
 }

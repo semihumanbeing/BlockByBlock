@@ -15,6 +15,7 @@ object ErrorCode {
 
     // 400: Bad Request
     const val INVALID_INPUT_VALUE = "INVALID_INPUT_VALUE"
+    const val INVALID_VERIFICATION_CODE = "INVALID_VERIFICATION_CODE"
 
     // 409: Conflict
     const val EMAIL_ALREADY_EXISTS = "EMAIL_ALREADY_EXISTS"

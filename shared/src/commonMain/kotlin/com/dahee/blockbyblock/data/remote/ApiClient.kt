@@ -138,6 +138,7 @@ object ApiClient {
                     !urlStr.contains("/auth/login") &&
                     !urlStr.contains("/auth/signup") &&
                     !urlStr.contains("/auth/social-login") &&
+                    !urlStr.contains("/auth/password-reset") &&
                     !urlStr.contains("/health")
                 }
             }
@@ -150,6 +151,7 @@ object ApiClient {
             val isAuthEndpoint = urlString.contains("/auth/login") ||
                                  urlString.contains("/auth/signup") ||
                                  urlString.contains("/auth/social-login") ||
+                                 urlString.contains("/auth/password-reset") ||
                                  urlString.contains("/health")
             if (!token.isNullOrBlank() && !isAuthEndpoint) {
                 header(HttpHeaders.Authorization, "Bearer $token")

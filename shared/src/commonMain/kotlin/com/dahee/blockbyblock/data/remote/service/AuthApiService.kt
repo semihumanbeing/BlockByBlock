@@ -6,6 +6,8 @@ import com.dahee.blockbyblock.data.remote.ApiResponse
 import com.dahee.blockbyblock.data.remote.TokenStorage
 import com.dahee.blockbyblock.data.remote.dto.LoginRequest
 import com.dahee.blockbyblock.data.remote.dto.LoginResponse
+import com.dahee.blockbyblock.data.remote.dto.PasswordResetConfirmRequest
+import com.dahee.blockbyblock.data.remote.dto.PasswordResetRequest
 import com.dahee.blockbyblock.data.remote.dto.RefreshTokenRequest
 import com.dahee.blockbyblock.data.remote.dto.SignUpRequest
 import com.dahee.blockbyblock.data.remote.dto.SignUpResponse
@@ -87,6 +89,28 @@ class AuthApiService {
 
     suspend fun checkHealth(): Result<com.dahee.blockbyblock.data.remote.dto.HealthStatusData> =
         HealthApiService().checkHealth()
+
+    suspend fun requestPasswordReset(email: String): Result<Boolean> = runCatching {
+        val response: HttpResponse = ApiClient.client.post(ApiClient.endpoint("api/v1/auth/password-reset/request")) {
+            setBody(PasswordResetRequest(email.trim()))
+        }
+        if (response.status.isSuccess()) {
+            true
+        } else {
+            throw parseError(response)
+        }
+    }
+
+    suspend fun confirmPasswordReset(request: PasswordResetConfirmRequest): Result<Boolean> = runCatching {
+        val response: HttpResponse = ApiClient.client.post(ApiClient.endpoint("api/v1/auth/password-reset/confirm")) {
+            setBody(request)
+        }
+        if (response.status.isSuccess()) {
+            true
+        } else {
+            throw parseError(response)
+        }
+    }
 
     private suspend fun parseError(response: HttpResponse): com.dahee.blockbyblock.data.remote.error.ApiError {
         return ApiClient.parseError(response)

@@ -31,6 +31,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.HorizontalDivider
@@ -84,6 +86,8 @@ import org.jetbrains.compose.resources.painterResource
 
 import androidx.compose.runtime.rememberCoroutineScope
 import com.dahee.blockbyblock.data.remote.dto.LoginRequest
+import com.dahee.blockbyblock.data.remote.dto.PasswordResetConfirmRequest
+import com.dahee.blockbyblock.data.remote.dto.PasswordResetRequest
 import com.dahee.blockbyblock.data.remote.dto.SignUpRequest
 import com.dahee.blockbyblock.data.remote.dto.SocialLoginRequest
 import com.dahee.blockbyblock.data.remote.service.AuthApiService
@@ -93,13 +97,24 @@ import kotlinx.coroutines.launch
 
 enum class AuthMode {
     LOGIN,
-    SIGN_UP
+    SIGN_UP,
+    RESET_PASSWORD
+}
+
+enum class ResetPasswordStep {
+    REQUEST_CODE,
+    CONFIRM_CODE,
+    SUCCESS
 }
 
 private sealed interface AuthErrorState {
     data class Form(val throwable: Throwable, val isLogin: Boolean) : AuthErrorState
     data object SocialNetwork : AuthErrorState
     data object SocialFailed : AuthErrorState
+    data object UserNotFound : AuthErrorState
+    data object InvalidVerificationCode : AuthErrorState
+    data object VerificationCodeExpired : AuthErrorState
+    data class Custom(val message: String) : AuthErrorState
 }
 
 @Composable
@@ -124,11 +139,41 @@ fun AuthScreen(
             is AuthErrorState.Form -> formatAuthError(state.throwable, isLogin = state.isLogin, strings)
             AuthErrorState.SocialNetwork -> strings.authErrorNetwork
             AuthErrorState.SocialFailed -> strings.authErrorSocialLogin
+            AuthErrorState.UserNotFound -> strings.authErrorUserNotFound
+            AuthErrorState.InvalidVerificationCode -> strings.authErrorInvalidVerificationCode
+            AuthErrorState.VerificationCodeExpired -> strings.authErrorVerificationCodeExpired
+            is AuthErrorState.Custom -> state.message
         }
     }
 
+    // Password Reset States
+    var resetStep by remember { mutableStateOf(ResetPasswordStep.REQUEST_CODE) }
+    var resetEmailInput by remember { mutableStateOf("") }
+    var resetCodeInput by remember { mutableStateOf("") }
+    var newPasswordInput by remember { mutableStateOf("") }
+    var newPasswordConfirmInput by remember { mutableStateOf("") }
+    var newPasswordVisible by remember { mutableStateOf(false) }
+    var newPasswordConfirmVisible by remember { mutableStateOf(false) }
+    var remainingSeconds by remember { mutableStateOf(600) }
+    var isTimerRunning by remember { mutableStateOf(false) }
+    var isResendingCode by remember { mutableStateOf(false) }
+    var codeSentToastVisible by remember { mutableStateOf(false) }
+
     LaunchedEffect(mode) {
         authErrorState = null
+        if (mode != AuthMode.RESET_PASSWORD) {
+            isTimerRunning = false
+        }
+    }
+
+    LaunchedEffect(isTimerRunning) {
+        if (isTimerRunning) {
+            while (remainingSeconds > 0) {
+                kotlinx.coroutines.delay(1000L)
+                remainingSeconds--
+            }
+            isTimerRunning = false
+        }
     }
 
     // Form inputs
@@ -214,6 +259,89 @@ fun AuthScreen(
             }
         }
     }
+    val isResetEmailValid = resetEmailInput.contains("@") && resetEmailInput.substringAfter("@").contains(".") && !resetEmailInput.endsWith(".")
+    val isStep1Valid = resetEmailInput.isNotBlank() && isResetEmailValid
+
+    val hasNewNumber = newPasswordInput.any { it.isDigit() }
+    val hasNewLower = newPasswordInput.any { it.isLowerCase() }
+    val isNewLengthValid = newPasswordInput.length >= 8
+    val isNewPasswordPolicyMet = hasNewNumber && hasNewLower && isNewLengthValid
+    val isNewPasswordConfirmMatched = newPasswordConfirmInput.isNotBlank() && newPasswordConfirmInput == newPasswordInput
+    val isStep2Valid = resetCodeInput.trim().length == 6 && isNewPasswordPolicyMet && isNewPasswordConfirmMatched && remainingSeconds > 0
+
+    val submitResetRequest = {
+        if (isStep1Valid && !isLoading) {
+            scope.launch {
+                isLoading = true
+                authErrorState = null
+                val res = authApiService.requestPasswordReset(resetEmailInput.trim())
+                isLoading = false
+                res.onSuccess {
+                    remainingSeconds = 600
+                    isTimerRunning = true
+                    resetStep = ResetPasswordStep.CONFIRM_CODE
+                    codeSentToastVisible = true
+                }.onFailure { err ->
+                    authErrorState = if (err is ApiError && (err.isUserNotFound() || err.status == 404)) {
+                        AuthErrorState.UserNotFound
+                    } else {
+                        AuthErrorState.Form(err, isLogin = false)
+                    }
+                }
+            }
+        }
+    }
+
+    val resendResetCode = {
+        if (!isResendingCode && !isLoading) {
+            scope.launch {
+                isResendingCode = true
+                val res = authApiService.requestPasswordReset(resetEmailInput.trim())
+                isResendingCode = false
+                res.onSuccess {
+                    remainingSeconds = 600
+                    isTimerRunning = true
+                    authErrorState = null
+                    codeSentToastVisible = true
+                }.onFailure { err ->
+                    authErrorState = if (err is ApiError && (err.isUserNotFound() || err.status == 404)) {
+                        AuthErrorState.UserNotFound
+                    } else {
+                        AuthErrorState.Form(err, isLogin = false)
+                    }
+                }
+            }
+        }
+    }
+
+    val submitResetConfirm = {
+        if (remainingSeconds <= 0) {
+            authErrorState = AuthErrorState.VerificationCodeExpired
+        } else if (isStep2Valid && !isLoading) {
+            scope.launch {
+                isLoading = true
+                authErrorState = null
+                val res = authApiService.confirmPasswordReset(
+                    PasswordResetConfirmRequest(
+                        email = resetEmailInput.trim(),
+                        code = resetCodeInput.trim(),
+                        newPassword = newPasswordInput
+                    )
+                )
+                isLoading = false
+                res.onSuccess {
+                    isTimerRunning = false
+                    resetStep = ResetPasswordStep.SUCCESS
+                }.onFailure { err ->
+                    authErrorState = if (err is ApiError && (err.isInvalidVerificationCode() || err.status == 400)) {
+                        AuthErrorState.InvalidVerificationCode
+                    } else {
+                        AuthErrorState.Form(err, isLogin = false)
+                    }
+                }
+            }
+        }
+    }
 
     Box(
         modifier = modifier
@@ -253,8 +381,8 @@ fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Top Header: Back button for SIGN_UP mode
-            if (mode == AuthMode.SIGN_UP) {
+            // Top Header: Back button for SIGN_UP and RESET_PASSWORD mode
+            if (mode == AuthMode.SIGN_UP || mode == AuthMode.RESET_PASSWORD) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -270,7 +398,13 @@ fun AuthScreen(
                             .clickable(
                                 indication = null,
                                 interactionSource = remember { MutableInteractionSource() },
-                                onClick = { mode = AuthMode.LOGIN }
+                                onClick = {
+                                    if (mode == AuthMode.RESET_PASSWORD && resetStep == ResetPasswordStep.CONFIRM_CODE) {
+                                        resetStep = ResetPasswordStep.REQUEST_CODE
+                                    } else {
+                                        mode = AuthMode.LOGIN
+                                    }
+                                }
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -285,7 +419,7 @@ fun AuthScreen(
                     Spacer(modifier = Modifier.width(12.dp))
 
                     Text(
-                        text = strings.authSignUpTitle,
+                        text = if (mode == AuthMode.SIGN_UP) strings.authSignUpTitle else strings.authPasswordResetTitle,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = AppColors.TextPrimary
@@ -363,95 +497,145 @@ fun AuthScreen(
                 Spacer(modifier = Modifier.height(22.dp))
             }
 
-            // Google Social Action Button
-            GoogleSocialButton(
-                text = if (mode == AuthMode.LOGIN) strings.authGoogleLoginBtn else strings.authGoogleSignUpBtn,
-                onClick = {
-                    if (!isLoading) {
-                        scope.launch {
-                            isLoading = true
-                            authErrorState = null
-                            when (val authResult = googleAuthProvider.signIn()) {
-                                is GoogleAuthResult.Cancelled -> {
-                                    isLoading = false
-                                }
-                                is GoogleAuthResult.Failure -> {
-                                    isLoading = false
-                                    authErrorState = if (authResult.message.contains("network", ignoreCase = true) ||
-                                        authResult.message.contains("connect", ignoreCase = true)
-                                    ) {
-                                        AuthErrorState.SocialNetwork
-                                    } else {
-                                        AuthErrorState.SocialFailed
+            if (mode != AuthMode.RESET_PASSWORD) {
+                // Google Social Action Button
+                GoogleSocialButton(
+                    text = if (mode == AuthMode.LOGIN) strings.authGoogleLoginBtn else strings.authGoogleSignUpBtn,
+                    onClick = {
+                        if (!isLoading) {
+                            scope.launch {
+                                isLoading = true
+                                authErrorState = null
+                                when (val authResult = googleAuthProvider.signIn()) {
+                                    is GoogleAuthResult.Cancelled -> {
+                                        isLoading = false
                                     }
-                                }
-                                is GoogleAuthResult.Success -> {
-                                    val res = authApiService.socialLogin(
-                                        SocialLoginRequest(
-                                            provider = "GOOGLE",
-                                            idToken = authResult.idToken
-                                        )
-                                    )
-                                    isLoading = false
-                                    res.onSuccess { loginRes ->
-                                        val avatar = try {
-                                            ProfileAvatarType.valueOf(loginRes.user.avatarType)
-                                        } catch (_: Exception) {
-                                            ProfileAvatarType.PERSON
-                                        }
-                                        val profile = UserProfile(
-                                            id = loginRes.user.id,
-                                            nickname = loginRes.user.nickname,
-                                            avatarType = avatar,
-                                            email = loginRes.user.email,
-                                            onboardingCompleted = loginRes.user.onboardingCompleted
-                                        )
-                                        if (mode == AuthMode.LOGIN) onLoginSuccess(profile) else onSignUpSuccess(profile)
-                                    }.onFailure { err ->
-                                        authErrorState = if (err is ApiError && (err.code == ErrorCode.NETWORK_ERROR || err.code == ErrorCode.TIMEOUT_ERROR)) {
+                                    is GoogleAuthResult.Failure -> {
+                                        isLoading = false
+                                        authErrorState = if (authResult.message.contains("network", ignoreCase = true) ||
+                                            authResult.message.contains("connect", ignoreCase = true)
+                                        ) {
                                             AuthErrorState.SocialNetwork
                                         } else {
                                             AuthErrorState.SocialFailed
                                         }
                                     }
+                                    is GoogleAuthResult.Success -> {
+                                        val res = authApiService.socialLogin(
+                                            SocialLoginRequest(
+                                                provider = "GOOGLE",
+                                                idToken = authResult.idToken
+                                            )
+                                        )
+                                        isLoading = false
+                                        res.onSuccess { loginRes ->
+                                            val avatar = try {
+                                                ProfileAvatarType.valueOf(loginRes.user.avatarType)
+                                            } catch (_: Exception) {
+                                                ProfileAvatarType.PERSON
+                                            }
+                                            val profile = UserProfile(
+                                                id = loginRes.user.id,
+                                                nickname = loginRes.user.nickname,
+                                                avatarType = avatar,
+                                                email = loginRes.user.email,
+                                                onboardingCompleted = loginRes.user.onboardingCompleted
+                                            )
+                                            if (mode == AuthMode.LOGIN) onLoginSuccess(profile) else onSignUpSuccess(profile)
+                                        }.onFailure { err ->
+                                            authErrorState = if (err is ApiError && (err.code == ErrorCode.NETWORK_ERROR || err.code == ErrorCode.TIMEOUT_ERROR)) {
+                                                AuthErrorState.SocialNetwork
+                                            } else {
+                                                AuthErrorState.SocialFailed
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            // Divider: [--- or ---]
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = AppColors.Border.copy(alpha = 0.6f)
-                )
-                Text(
-                    text = strings.authOrDivider,
-                    fontSize = 12.sp,
-                    color = AppColors.TextMuted,
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                )
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = AppColors.Border.copy(alpha = 0.6f)
-                )
+                // Divider: [--- or ---]
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = AppColors.Border.copy(alpha = 0.6f)
+                    )
+                    Text(
+                        text = strings.authOrDivider,
+                        fontSize = 12.sp,
+                        color = AppColors.TextMuted,
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = AppColors.Border.copy(alpha = 0.6f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Main Form Box
-            AppCard(
-                modifier = Modifier.fillMaxWidth(),
-                padding = 18.dp
-            ) {
+            if (mode == AuthMode.RESET_PASSWORD) {
+                PasswordResetCard(
+                    step = resetStep,
+                    email = resetEmailInput,
+                    onEmailChange = {
+                        resetEmailInput = it
+                        if (authErrorState != null) authErrorState = null
+                    },
+                    isEmailValid = isResetEmailValid,
+                    code = resetCodeInput,
+                    onCodeChange = {
+                        resetCodeInput = it
+                        if (authErrorState != null) authErrorState = null
+                        if (codeSentToastVisible) codeSentToastVisible = false
+                    },
+                    newPassword = newPasswordInput,
+                    onNewPasswordChange = {
+                        newPasswordInput = it
+                        if (authErrorState != null) authErrorState = null
+                    },
+                    newPasswordConfirm = newPasswordConfirmInput,
+                    onNewPasswordConfirmChange = {
+                        newPasswordConfirmInput = it
+                        if (authErrorState != null) authErrorState = null
+                    },
+                    newPasswordVisible = newPasswordVisible,
+                    onToggleNewPasswordVisible = { newPasswordVisible = !newPasswordVisible },
+                    newPasswordConfirmVisible = newPasswordConfirmVisible,
+                    onToggleNewPasswordConfirmVisible = { newPasswordConfirmVisible = !newPasswordConfirmVisible },
+                    isNewPasswordPolicyMet = isNewPasswordPolicyMet,
+                    isNewPasswordConfirmMatched = isNewPasswordConfirmMatched,
+                    remainingSeconds = remainingSeconds,
+                    isLoading = isLoading,
+                    isResendingCode = isResendingCode,
+                    codeSentToastVisible = codeSentToastVisible,
+                    errorMessage = errorMessage,
+                    strings = strings,
+                    onRequestCode = submitResetRequest,
+                    onResendCode = resendResetCode,
+                    onConfirmReset = submitResetConfirm,
+                    onBackToLogin = {
+                        emailInput = resetEmailInput
+                        passwordInput = ""
+                        authErrorState = null
+                        mode = AuthMode.LOGIN
+                    }
+                )
+            } else {
+                // Main Form Box
+                AppCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    padding = 18.dp
+                ) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     if (errorMessage != null) {
                         Box(
@@ -624,6 +808,34 @@ fun AuthScreen(
                                     color = if (isPasswordPolicyMet) AppColors.Primary else AppColors.TextMuted
                                 )
                             }
+                        }
+                    }
+
+                    if (mode == AuthMode.LOGIN) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Text(
+                                text = strings.authForgotPasswordLink,
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = AppColors.TextSecondary,
+                                modifier = Modifier
+                                    .pointerHoverIcon(PointerIcon.Hand)
+                                    .clickable(
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        onClick = {
+                                            resetEmailInput = emailInput.trim()
+                                            resetStep = ResetPasswordStep.REQUEST_CODE
+                                            mode = AuthMode.RESET_PASSWORD
+                                            authErrorState = null
+                                        }
+                                    )
+                                    .padding(vertical = 4.dp)
+                            )
                         }
                     }
 
@@ -818,7 +1030,9 @@ fun AuthScreen(
                     )
                 }
             }
+        }
 
+        if (mode != AuthMode.RESET_PASSWORD) {
             Spacer(modifier = Modifier.height(20.dp))
 
             // Bottom Switcher: [No account? Sign Up] / [Have account? Log In]
@@ -851,8 +1065,482 @@ fun AuthScreen(
                         .padding(4.dp)
                 )
             }
+        }
 
             Spacer(modifier = Modifier.height(20.dp))
+        }
+    }
+}
+
+@Composable
+private fun PasswordResetCard(
+    step: ResetPasswordStep,
+    email: String,
+    onEmailChange: (String) -> Unit,
+    isEmailValid: Boolean,
+    code: String,
+    onCodeChange: (String) -> Unit,
+    newPassword: String,
+    onNewPasswordChange: (String) -> Unit,
+    newPasswordConfirm: String,
+    onNewPasswordConfirmChange: (String) -> Unit,
+    newPasswordVisible: Boolean,
+    onToggleNewPasswordVisible: () -> Unit,
+    newPasswordConfirmVisible: Boolean,
+    onToggleNewPasswordConfirmVisible: () -> Unit,
+    isNewPasswordPolicyMet: Boolean,
+    isNewPasswordConfirmMatched: Boolean,
+    remainingSeconds: Int,
+    isLoading: Boolean,
+    isResendingCode: Boolean,
+    codeSentToastVisible: Boolean,
+    errorMessage: String?,
+    strings: AppStrings,
+    onRequestCode: () -> Unit,
+    onResendCode: () -> Unit,
+    onConfirmReset: () -> Unit,
+    onBackToLogin: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AppCard(
+        modifier = modifier.fillMaxWidth(),
+        elevation = 3.dp,
+        padding = 18.dp
+    ) {
+        when (step) {
+            ResetPasswordStep.REQUEST_CODE -> {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(
+                        text = strings.authPasswordResetStep1Desc,
+                        fontSize = 13.sp,
+                        color = AppColors.TextSecondary,
+                        lineHeight = 18.sp
+                    )
+
+                    if (errorMessage != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFFFFEBEE))
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = errorMessage,
+                                color = Color(0xFFC62828),
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    Column {
+                        Text(
+                            text = strings.authEmailLabel,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AppColors.TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        AppTextField(
+                            value = email,
+                            onValueChange = onEmailChange,
+                            placeholder = strings.authEmailPlaceholder,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Email,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    if (email.isNotBlank() && isEmailValid && !isLoading) {
+                                        onRequestCode()
+                                    }
+                                }
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    AppButton(
+                        text = if (isLoading) "..." else strings.authPasswordResetSendCodeBtn,
+                        variant = ButtonVariant.PRIMARY,
+                        enabled = email.isNotBlank() && isEmailValid && !isLoading,
+                        onClick = onRequestCode,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = strings.authPasswordResetBackToLoginBtn,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = AppColors.TextSecondary,
+                            modifier = Modifier
+                                .pointerHoverIcon(PointerIcon.Hand)
+                                .clickable(
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    onClick = onBackToLogin
+                                )
+                                .padding(vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+
+            ResetPasswordStep.CONFIRM_CODE -> {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(
+                        text = strings.authPasswordResetStep2Desc,
+                        fontSize = 13.sp,
+                        color = AppColors.TextSecondary,
+                        lineHeight = 18.sp
+                    )
+
+                    // Target email box
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(AppColors.SurfaceVariant.copy(alpha = 0.5f))
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Email,
+                                contentDescription = null,
+                                tint = AppColors.TextMuted,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = email,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = AppColors.TextPrimary
+                            )
+                        }
+                    }
+
+                    // Timer & Resend Row
+                    val minutes = (remainingSeconds / 60).toString().padStart(2, '0')
+                    val seconds = (remainingSeconds % 60).toString().padStart(2, '0')
+                    val isExpired = remainingSeconds <= 0
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Timer,
+                                contentDescription = null,
+                                tint = if (isExpired) Color(0xFFE53935) else AppColors.Primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "${strings.authPasswordResetTimerLabel}: $minutes:$seconds",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isExpired) Color(0xFFE53935) else AppColors.Primary
+                            )
+                        }
+
+                        Text(
+                            text = if (isResendingCode) "..." else strings.authPasswordResetResendCodeBtn,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isResendingCode) AppColors.TextMuted else AppColors.PrimaryDark,
+                            modifier = Modifier
+                                .pointerHoverIcon(PointerIcon.Hand)
+                                .clickable(
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    enabled = !isResendingCode && !isLoading,
+                                    onClick = onResendCode
+                                )
+                                .padding(4.dp)
+                        )
+                    }
+
+                    if (codeSentToastVisible) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFFE8F5E9))
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = strings.authPasswordResetCodeSentToast,
+                                color = Color(0xFF2E7D32),
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    if (errorMessage != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFFFFEBEE))
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = errorMessage,
+                                color = Color(0xFFC62828),
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    // Verification code field
+                    Column {
+                        Text(
+                            text = strings.authVerificationCodeLabel,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AppColors.TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        AppTextField(
+                            value = code,
+                            onValueChange = { input ->
+                                if (input.length <= 6) {
+                                    onCodeChange(input.filter { it.isLetterOrDigit() }.uppercase())
+                                }
+                            },
+                            placeholder = strings.authVerificationCodePlaceholder,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Ascii,
+                                imeAction = ImeAction.Next
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    // New Password field
+                    Column {
+                        Text(
+                            text = strings.authNewPasswordLabel,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AppColors.TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Box(contentAlignment = Alignment.CenterEnd) {
+                            AppTextField(
+                                value = newPassword,
+                                onValueChange = onNewPasswordChange,
+                                placeholder = strings.authNewPasswordPlaceholder,
+                                visualTransformation = if (newPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Password,
+                                    imeAction = ImeAction.Next
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .padding(end = 12.dp)
+                                    .size(24.dp)
+                                    .pointerHoverIcon(PointerIcon.Hand)
+                                    .clickable(
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        onClick = onToggleNewPasswordVisible
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (newPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = "Toggle password",
+                                    tint = AppColors.TextMuted,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            if (isNewPasswordPolicyMet) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = AppColors.Primary,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                            Text(
+                                text = strings.authPasswordPolicyHint,
+                                fontSize = 11.5.sp,
+                                fontWeight = if (isNewPasswordPolicyMet) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (isNewPasswordPolicyMet) AppColors.Primary else AppColors.TextMuted
+                            )
+                        }
+                    }
+
+                    // New Password Confirm field
+                    Column {
+                        Text(
+                            text = strings.authNewPasswordConfirmLabel,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AppColors.TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Box(contentAlignment = Alignment.CenterEnd) {
+                            AppTextField(
+                                value = newPasswordConfirm,
+                                onValueChange = onNewPasswordConfirmChange,
+                                placeholder = strings.authNewPasswordConfirmPlaceholder,
+                                visualTransformation = if (newPasswordConfirmVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Password,
+                                    imeAction = ImeAction.Done
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onDone = {
+                                        if (code.length == 6 && isNewPasswordPolicyMet && isNewPasswordConfirmMatched && !isLoading && remainingSeconds > 0) {
+                                            onConfirmReset()
+                                        }
+                                    }
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Row(
+                                modifier = Modifier.padding(end = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                if (isNewPasswordConfirmMatched) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Matched",
+                                        tint = AppColors.Primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .pointerHoverIcon(PointerIcon.Hand)
+                                        .clickable(
+                                            indication = null,
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            onClick = onToggleNewPasswordConfirmVisible
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (newPasswordConfirmVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = "Toggle password confirm",
+                                        tint = AppColors.TextMuted,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    val canSubmit = code.length == 6 && isNewPasswordPolicyMet && isNewPasswordConfirmMatched && !isLoading && !isExpired
+                    AppButton(
+                        text = if (isLoading) "..." else strings.authPasswordResetSubmitBtn,
+                        variant = ButtonVariant.PRIMARY,
+                        enabled = canSubmit,
+                        onClick = onConfirmReset,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = strings.authPasswordResetBackToLoginBtn,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = AppColors.TextSecondary,
+                            modifier = Modifier
+                                .pointerHoverIcon(PointerIcon.Hand)
+                                .clickable(
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    onClick = onBackToLogin
+                                )
+                                .padding(vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+
+            ResetPasswordStep.SUCCESS -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFE8F5E9)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Color(0xFF2E7D32),
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+
+                    Text(
+                        text = strings.authPasswordResetSuccessTitle,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.TextPrimary
+                    )
+
+                    Text(
+                        text = strings.authPasswordResetSuccessDesc,
+                        fontSize = 13.5.sp,
+                        color = AppColors.TextSecondary,
+                        lineHeight = 19.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    AppButton(
+                        text = strings.authPasswordResetBackToLoginBtn,
+                        variant = ButtonVariant.PRIMARY,
+                        onClick = onBackToLogin,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
         }
     }
 }
@@ -955,6 +1643,16 @@ internal fun formatAuthError(
         ) {
             return strings.authErrorAccountLocked
         }
+        if (err.isUserNotFound() || err.code == ErrorCode.USER_NOT_FOUND ||
+            lower.contains("user_not_found") || lower.contains("가입되지 않은") || (err.status == 404 && (lower.contains("user") || lower.contains("resource")))
+        ) {
+            return strings.authErrorUserNotFound
+        }
+        if (err.isInvalidVerificationCode() || err.code == ErrorCode.INVALID_VERIFICATION_CODE ||
+            lower.contains("invalid_verification_code") || lower.contains("인증번호가 일치하지") || (err.status == 400 && (lower.contains("code") || lower.contains("verification")))
+        ) {
+            return strings.authErrorInvalidVerificationCode
+        }
         if (err.hasFieldErrors()) {
             val emailErr = err.getFieldErrorMessage("email")
             val pwErr = err.getFieldErrorMessage("password")
@@ -987,6 +1685,12 @@ internal fun formatAuthError(
 
     if (lower.contains("account_locked") || lower.contains("account locked") || lower.contains("일시적으로 잠겼습니다") || lower.contains("일시 잠겼습니다") || lower.contains("잠겼습니다")) {
         return strings.authErrorAccountLocked
+    }
+    if (lower.contains("user_not_found") || lower.contains("가입되지 않은") || lower.contains("user not found")) {
+        return strings.authErrorUserNotFound
+    }
+    if (lower.contains("invalid_verification_code") || lower.contains("인증번호가 일치하지") || lower.contains("verification code")) {
+        return strings.authErrorInvalidVerificationCode
     }
     if (lower.contains("invalid email or password") || lower.contains("bad credential") || lower.contains("incorrect password") || lower.contains("user not found")) {
         return strings.authErrorInvalidCredentials
