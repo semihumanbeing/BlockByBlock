@@ -1,11 +1,14 @@
 html, body {
     width: 100%;
     height: 100%;
+    height: 100dvh;
     margin: 0;
     padding: 0;
     overflow: hidden;
     background-color: #FAF6F0; /* AppColors.Background: Warm Milk Ivory */
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
     user-select: none;
@@ -15,6 +18,8 @@ html, body {
 
 * {
     -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     outline: none;
     box-sizing: border-box;
 }
@@ -30,6 +35,7 @@ canvas {
 #composeApp {
     width: 100%;
     height: 100%;
+    height: 100dvh;
     position: absolute;
     top: 0;
     left: 0;
@@ -42,6 +48,7 @@ canvas {
     left: 0;
     width: 100%;
     height: 100%;
+    height: 100dvh;
     background-color: #FAF6F0; /* Matching AppColors.Background */
     display: flex;
     flex-direction: column;

@@ -27,7 +27,9 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalDensity
 import com.dahee.blockbyblock.core.i18n.LocalAppLanguage
 import com.dahee.blockbyblock.core.i18n.LocalStrings
 import com.dahee.blockbyblock.core.i18n.getStrings
@@ -356,8 +358,29 @@ fun App() {
                     .background(AppColors.Background),
                 contentAlignment = Alignment.Center
             ) {
+                val currentDensity = LocalDensity.current
                 val isWideScreen = maxWidth >= 840.dp
-                var isSideNavExpanded by remember { mutableStateOf(false) }
+
+                // Mobile responsive density scaling:
+                // Base reference width is 390dp (standard iPhone baseline).
+                // On narrower mobile devices (e.g. 360dp on Samsung Galaxy devices),
+                // scale down density proportionally so UI components and typography fit comfortably
+                // without unwanted overflowing or vertical scrolling.
+                val responsiveScale = if (!isWideScreen && maxWidth < 390.dp && maxWidth > 0.dp) {
+                    (maxWidth.value / 390f).coerceIn(0.85f, 1.0f)
+                } else {
+                    1.0f
+                }
+
+                val responsiveDensity = remember(currentDensity, responsiveScale) {
+                    Density(
+                        density = currentDensity.density * responsiveScale,
+                        fontScale = currentDensity.fontScale
+                    )
+                }
+
+                CompositionLocalProvider(LocalDensity provides responsiveDensity) {
+                    var isSideNavExpanded by remember { mutableStateOf(false) }
 
                 Box(
                     modifier = Modifier
@@ -718,4 +741,5 @@ fun App() {
             }
         }
     }
+}
 }

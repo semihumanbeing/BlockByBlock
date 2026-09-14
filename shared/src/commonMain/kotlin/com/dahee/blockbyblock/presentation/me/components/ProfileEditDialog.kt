@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -25,7 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -71,31 +71,27 @@ fun ProfileEditDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            modifier = modifier
+                .widthIn(max = 565.dp)
+                .fillMaxWidth(0.92f)
+                .imePadding()
+                .clip(RoundedCornerShape(20.dp))
+                .background(AppColors.Background)
+                .border(0.5.dp, AppColors.Border.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
         ) {
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = AppColors.Surface,
-                shadowElevation = 8.dp,
-                modifier = modifier
-                    .fillMaxWidth(0.92f)
-                    .widthIn(max = 480.dp)
-                    .padding(vertical = 24.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
                     .clickable(
                         indication = null,
                         interactionSource = remember { MutableInteractionSource() }
                     ) {
                         focusManager.clearFocus()
                     }
+                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(22.dp)
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
                 // Header with Title & Close button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -131,21 +127,21 @@ fun ProfileEditDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 // Big Avatar Preview (Pure avatar visual without green circle background)
                 Box(
                     modifier = Modifier
-                        .size(84.dp),
+                        .size(76.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     BlockAvatarView(
                         avatarType = selectedAvatar,
-                        size = 80.dp
+                        size = 72.dp
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Avatar Selection Palette (4 types from reference 3d_profile.png)
                 Column(
@@ -163,11 +159,11 @@ fun ProfileEditDialog(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         ProfileAvatarType.entries.forEach { avatarType ->
                             val isSelected = avatarType == selectedAvatar
-                            val cardShape = RoundedCornerShape(14.dp)
+                            val cardShape = RoundedCornerShape(12.dp)
                             val borderColor = if (isSelected) AppColors.Primary else AppColors.Border
                             val bgColor = if (isSelected) AppColors.Surface else AppColors.SurfaceVariant.copy(alpha = 0.5f)
 
@@ -183,19 +179,19 @@ fun ProfileEditDialog(
                                         interactionSource = remember { MutableInteractionSource() },
                                         onClick = { selectedAvatar = avatarType }
                                     )
-                                    .padding(vertical = 10.dp, horizontal = 4.dp),
+                                    .padding(vertical = 8.dp, horizontal = 2.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 BlockAvatarView(
                                     avatarType = avatarType,
-                                    size = 48.dp
+                                    size = 44.dp
                                 )
 
                                 if (isSelected) {
                                     Box(
                                         modifier = Modifier
                                             .align(Alignment.TopEnd)
-                                            .padding(4.dp)
+                                            .padding(3.dp)
                                             .size(16.dp)
                                             .clip(CircleShape)
                                             .background(AppColors.Primary),
@@ -214,7 +210,7 @@ fun ProfileEditDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Nickname Input
                 Column(
@@ -254,7 +250,7 @@ fun ProfileEditDialog(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 // Linked Account Info (Read-only)
                 Row(
@@ -262,7 +258,7 @@ fun ProfileEditDialog(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
                         .background(AppColors.SurfaceVariant.copy(alpha = 0.6f))
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                        .padding(horizontal = 12.dp, vertical = 9.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -280,7 +276,7 @@ fun ProfileEditDialog(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 // Action Buttons: [Cancel] & [Save]
                 Row(
@@ -314,6 +310,5 @@ fun ProfileEditDialog(
             }
         }
     }
-}
 }
 
