@@ -94,7 +94,11 @@
 
             if (loadingTextEl && list && list.length > 0) {
                 var randomIndex = Math.floor(Math.random() * list.length);
-                loadingTextEl.innerHTML = list[randomIndex] + '<span class="dots">...</span>';
+                loadingTextEl.textContent = list[randomIndex];
+                var dotsSpan = document.createElement('span');
+                dotsSpan.className = 'dots';
+                dotsSpan.textContent = '...';
+                loadingTextEl.appendChild(dotsSpan);
             }
 
             function hideSplash() {
