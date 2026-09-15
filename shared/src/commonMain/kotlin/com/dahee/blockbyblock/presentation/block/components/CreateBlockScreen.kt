@@ -693,20 +693,17 @@ fun CreateBlockScreen(
                                     color = AppColors.TextSecondary
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    if (ingredientViewModel != null) {
-                                        AppButton(
-                                            text = strings.addIngredientBtn,
-                                            onClick = { ingredientViewModel.onOpenSearchCatalogDialog() },
-                                            variant = ButtonVariant.PRIMARY
-                                        )
-                                    }
+                                if (ingredientViewModel != null) {
+                                    AppButton(
+                                        text = strings.addIngredientBtn,
+                                        onClick = { ingredientViewModel.onOpenSearchCatalogDialog() },
+                                        variant = ButtonVariant.PRIMARY
+                                    )
+                                } else {
                                     AppButton(
                                         text = strings.createBlockGoToInventory,
                                         onClick = onNavigateToInventory,
-                                        variant = ButtonVariant.SECONDARY
+                                        variant = ButtonVariant.PRIMARY
                                     )
                                 }
                             }
@@ -728,50 +725,6 @@ fun CreateBlockScreen(
                             )
 
                             Spacer(modifier = Modifier.height(10.dp))
-
-                            // Selected Ingredients Summary Tags (Visible across pagination)
-                            val selectedMainIngredients = remember(uiState.selectedIngredientIds, uiState.inStockMainIngredients) {
-                                uiState.inStockMainIngredients.filter { uiState.selectedIngredientIds.contains(it.id) }
-                            }
-                            if (selectedMainIngredients.isNotEmpty()) {
-                                FlowRow(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    selectedMainIngredients.forEach { ing ->
-                                        Row(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(AppColors.PrimaryLight.copy(alpha = 0.7f))
-                                                .border(1.dp, AppColors.Primary, RoundedCornerShape(8.dp))
-                                                .pointerHoverIcon(PointerIcon.Hand)
-                                                .clickable(
-                                                    interactionSource = remember { MutableInteractionSource() },
-                                                    indication = null,
-                                                    onClick = { viewModel.onToggleIngredient(ing.id) }
-                                                )
-                                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Text(
-                                                text = "#${ing.name}",
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = AppColors.PrimaryDark
-                                            )
-                                            Icon(
-                                                imageVector = Icons.Default.Close,
-                                                contentDescription = "Remove",
-                                                tint = AppColors.PrimaryDark,
-                                                modifier = Modifier.size(13.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(10.dp))
-                            }
 
                             if (uiState.filteredInStockIngredients.isEmpty()) {
                                 Box(
