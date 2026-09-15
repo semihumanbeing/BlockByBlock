@@ -68,10 +68,13 @@ data class BlockUiState(
         const val INGREDIENTS_PAGE_SIZE = 4
     }
 
+    val inStockBlocks: List<FoodBlock>
+        get() = blocks.filter { it.quantity > 0 }
+
     val distinctMoldCapacities: List<Int>
         get() {
             val fromMolds = availableMolds.map { it.displayCapacity }
-            val fromBlocks = blocks.map { it.moldCapacityMl }
+            val fromBlocks = inStockBlocks.map { it.moldCapacityMl }
             return (fromMolds + fromBlocks).distinct().sortedDescending()
         }
 
@@ -80,9 +83,9 @@ data class BlockUiState(
 
     val filteredBlocks: List<FoodBlock>
         get() = if (selectedCapacityMl == null) {
-            blocks
+            inStockBlocks
         } else {
-            blocks.filter { it.moldCapacityMl == selectedCapacityMl }
+            inStockBlocks.filter { it.moldCapacityMl == selectedCapacityMl }
         }
 
     val inStockMainIngredients: List<Ingredient>

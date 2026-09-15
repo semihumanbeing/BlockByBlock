@@ -174,7 +174,7 @@ fun BlockInventoryScreen(
                     // All Tab
                     item {
                         AppChip(
-                            text = "${strings.inventoryTabAll} (${uiState.blocks.size})",
+                            text = "${strings.inventoryTabAll} (${uiState.inStockBlocks.size})",
                             selected = uiState.selectedCapacityMl == null,
                             onClick = { viewModel.onCapacityFilterChange(null) }
                         )
@@ -182,7 +182,7 @@ fun BlockInventoryScreen(
 
                     // Mold Capacity Tabs
                     items(uiState.distinctMoldCapacities) { capacity ->
-                        val count = uiState.blocks.count { it.moldCapacityMl == capacity }
+                        val count = uiState.inStockBlocks.count { it.moldCapacityMl == capacity }
                         val isSelected = uiState.selectedCapacityMl == capacity
                         AppChip(
                             text = "${capacity}ml ($count)",

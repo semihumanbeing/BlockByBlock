@@ -40,7 +40,11 @@ class BlockViewModel(
         // Observe food blocks
         coroutineScope.launch {
             foodBlockRepository.observeFoodBlocks().collect { blocks ->
-                _uiState.update { it.copy(blocks = blocks) }
+                _uiState.update { state ->
+                    val availableCapacities = (state.availableMolds.map { it.displayCapacity } + blocks.filter { it.quantity > 0 }.map { it.moldCapacityMl }).toSet()
+                    val selectedCapacity = state.selectedCapacityMl?.takeIf { it in availableCapacities }
+                    state.copy(blocks = blocks, selectedCapacityMl = selectedCapacity)
+                }
             }
         }
 
@@ -113,6 +117,7 @@ class BlockViewModel(
                 val mold = state.availableMolds.find { it.id == moldId }
                 val moldCellCount = (mold?.cellCount ?: history.moldCellCount).coerceAtLeast(1)
                 val moldCount = (history.quantity / moldCellCount).coerceAtLeast(1)
+                val defaultQty = if (history.quantity > 0) history.quantity else (moldCount * moldCellCount)
 
                 val drafts = history.cookingInstructions.map {
                     CookingToolDraft(
@@ -130,8 +135,8 @@ class BlockViewModel(
                     subIngredients = history.subIngredients,
                     selectedMoldId = moldId,
                     selectedMoldCount = moldCount,
-                    blockQuantity = history.quantity,
-                    blockQuantityInput = history.quantity.toString(),
+                    blockQuantity = defaultQty,
+                    blockQuantityInput = defaultQty.toString(),
                     shelfLifeDaysInput = history.shelfLifeDays.toString()
                 )
             }
@@ -353,7 +358,7 @@ class BlockViewModel(
         _uiState.update { state ->
             state.copy(
                 blockQuantityInput = filtered,
-                blockQuantity = if (parsed > 0) parsed.coerceIn(1, 999) else state.blockQuantity
+                blockQuantity = if (filtered.isEmpty()) 0 else parsed.coerceIn(0, 999)
             )
         }
     }
@@ -438,6 +443,7 @@ class BlockViewModel(
     fun onSubmitCreateBlock() {
         val state = _uiState.value
         val mold = state.selectedMold ?: return
+        if (state.blockQuantity <= 0) return
         val isEditing = state.isEditing
 
         val selectedNames = if (state.selectedIngredientIds.isNotEmpty()) {
