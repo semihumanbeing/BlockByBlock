@@ -105,8 +105,8 @@ fun determineBlockStatusesIndexed(
     if (allFoodBlocks == null) {
         return blocks.map { item ->
             when {
+                item.isDeleted == true || item.blockStatus == MealBlockStatus.DELETED -> MealBlockStatus.DELETED
                 item.blockStatus != null -> item.blockStatus
-                item.isDeleted == true -> MealBlockStatus.DELETED
                 item.currentStock != null && item.currentStock <= 0 -> MealBlockStatus.OUT_OF_STOCK
                 else -> MealBlockStatus.AVAILABLE
             }
@@ -114,17 +114,25 @@ fun determineBlockStatusesIndexed(
     }
 
     val foodBlocksMap = allFoodBlocks.associateBy { it.id }
-    // Effective available stock = current freezer stock + blocks already allocated to this slot
+    // Effective available stock = current freezer stock + blocks already allocated to this slot (excluding already out-of-stock/deleted ones)
     val remainingStock = allFoodBlocks.associate { it.id to it.quantity }.toMutableMap()
     originalSlotBlocks.forEach { orig ->
-        remainingStock[orig.blockId] = (remainingStock[orig.blockId] ?: 0) + 1
+        if (orig.blockStatus != MealBlockStatus.OUT_OF_STOCK && orig.blockStatus != MealBlockStatus.DELETED && orig.isDeleted != true) {
+            remainingStock[orig.blockId] = (remainingStock[orig.blockId] ?: 0) + 1
+        }
     }
 
     return blocks.map { item ->
         val foodBlock = foodBlocksMap[item.blockId]
         when {
             item.isDeleted == true || item.blockStatus == MealBlockStatus.DELETED -> MealBlockStatus.DELETED
-            foodBlock == null -> MealBlockStatus.DELETED
+            foodBlock == null -> {
+                // If not in active inventory and not explicitly deleted, it is OUT_OF_STOCK (depleted)
+                MealBlockStatus.OUT_OF_STOCK
+            }
+            item.blockStatus == MealBlockStatus.OUT_OF_STOCK && foodBlock.quantity <= 0 -> {
+                MealBlockStatus.OUT_OF_STOCK
+            }
             else -> {
                 val stock = remainingStock[item.blockId] ?: 0
                 if (stock <= 0) {

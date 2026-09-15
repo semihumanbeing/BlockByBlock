@@ -83,10 +83,31 @@ class MealPlanViewModel(
         val lang = params[5] as com.dahee.blockbyblock.core.i18n.AppLanguage
 
         val effectiveFoodBlocks = if (dialog.isOpen && dialog.pendingRefillCounts.isNotEmpty()) {
-            foodBlocks.map { fb ->
+            val existingIds = foodBlocks.map { it.id }.toSet()
+            val mapped = foodBlocks.map { fb ->
                 val pending = dialog.pendingRefillCounts[fb.id] ?: 0
                 if (pending > 0) fb.copy(quantity = fb.quantity + pending) else fb
             }
+            val synthetic = dialog.pendingRefillCounts
+                .filter { (id, count) -> id !in existingIds && count > 0 }
+                .mapNotNull { (id, count) ->
+                    val sample = dialog.selectedBlocks.find { it.blockId == id }
+                    sample?.let {
+                        FoodBlock(
+                            id = it.blockId,
+                            name = it.blockName,
+                            moldId = "0",
+                            moldName = "${it.moldCapacityMl}ml",
+                            moldCapacityMl = it.moldCapacityMl,
+                            moldCellCount = it.moldCellCount,
+                            moldColorHex = it.blockColorHex,
+                            blockColorHex = it.blockColorHex,
+                            mainIngredients = listOf(it.blockName),
+                            quantity = count
+                        )
+                    }
+                }
+            mapped + synthetic
         } else {
             foodBlocks
         }
@@ -498,19 +519,9 @@ class MealPlanViewModel(
             try {
                 // Actually commit pending refills to repository now that user confirmed save
                 if (dialog.pendingRefillCounts.isNotEmpty()) {
-                    val rawFoodBlocks = latestRawFoodBlocks.associate { it.id to it.quantity }
-                    val origCounts = dialog.originalBlocks.groupingBy { it.blockId }.eachCount()
-                    val selectedCounts = dialog.selectedBlocks.groupingBy { it.blockId }.eachCount()
-
                     dialog.pendingRefillCounts.forEach { (blockId, count) ->
-                        val inStock = rawFoodBlocks[blockId] ?: 0
-                        val orig = origCounts[blockId] ?: 0
-                        val selected = selectedCounts[blockId] ?: 0
-                        val effectiveStock = inStock + orig
-                        val missing = (selected - effectiveStock).coerceAtLeast(0)
-                        val toRefill = minOf(count, missing)
-                        if (toRefill > 0) {
-                            foodBlockRepository.updateQuantity(blockId, toRefill)
+                        if (count > 0) {
+                            foodBlockRepository.updateQuantity(blockId, count)
                         }
                     }
                 }
@@ -740,8 +751,7 @@ class MealPlanViewModel(
     fun onRefillMissingBlocks() {
         val dialog = _dialogState.value
         if (!dialog.isOpen) return
-        val currentFoodBlocks = uiState.value.allFoodBlocks.takeIf { it.isNotEmpty() }
-            ?: return
+        val currentFoodBlocks = uiState.value.allFoodBlocks
         val statuses = determineBlockStatusesIndexed(
             dialog.selectedBlocks,
             currentFoodBlocks,
