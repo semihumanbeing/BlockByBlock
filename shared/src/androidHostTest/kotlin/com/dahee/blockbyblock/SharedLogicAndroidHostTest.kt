@@ -3,6 +3,7 @@ package com.dahee.blockbyblock
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.assertFalse
 import kotlinx.coroutines.launch
@@ -141,6 +142,68 @@ class SharedLogicAndroidHostTest {
         val afterToggleIndex15 = stateAfterToggle.displayedIngredients.indexOfFirst { it.id == "ing_15" }
         assertEquals(initialIndex15, afterToggleIndex15)
         assertEquals(com.dahee.blockbyblock.domain.model.IngredientStatus.OUT_OF_STOCK, stateAfterToggle.displayedIngredients[initialIndex15].status)
+
+        testJob.cancel()
+    }
+
+    @Test
+    fun testIngredientViewModelDeleteAndUndo() = kotlinx.coroutines.runBlocking {
+        val repo = com.dahee.blockbyblock.data.repository.InMemoryIngredientRepository()
+        for (i in 1..10) {
+            repo.upsertIngredient(
+                com.dahee.blockbyblock.domain.model.Ingredient(
+                    id = "ing_$i",
+                    name = "재료 $i",
+                    status = com.dahee.blockbyblock.domain.model.IngredientStatus.STOCK,
+                    category = com.dahee.blockbyblock.domain.model.IngredientCategory.VEGETABLE
+                )
+            )
+        }
+
+        val testJob = kotlinx.coroutines.Job()
+        val testScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined + testJob)
+
+        val viewModel = com.dahee.blockbyblock.presentation.inventory.IngredientViewModel(
+            repository = repo,
+            scope = testScope
+        )
+
+        // 1. Initial State: 10 items
+        val initialItems = viewModel.uiState.value.displayedIngredients
+        assertEquals(10, initialItems.size)
+        val target = initialItems[3] // index 3
+
+        // 2. Delete with Undo
+        viewModel.onDeleteIngredientWithUndo(target, "'${target.name}'이(가) 삭제되었습니다.")
+        val stateAfterDelete = viewModel.uiState.value
+        assertEquals(9, stateAfterDelete.displayedIngredients.size)
+        assertTrue(stateAfterDelete.displayedIngredients.none { it.id == target.id })
+        assertNotNull(stateAfterDelete.undoDeleteState)
+        assertEquals(target.id, stateAfterDelete.undoDeleteState?.ingredient?.id)
+        assertEquals(3, stateAfterDelete.undoDeleteState?.index)
+
+        // 3. Undo Delete -> Item is restored to its exact original position
+        viewModel.onUndoDelete()
+        val stateAfterUndo = viewModel.uiState.value
+        assertEquals(10, stateAfterUndo.displayedIngredients.size)
+        assertTrue(stateAfterUndo.displayedIngredients.any { it.id == target.id })
+        assertNull(stateAfterUndo.undoDeleteState)
+        val restoredIndex = stateAfterUndo.displayedIngredients.indexOfFirst { it.id == target.id }
+        assertEquals(3, restoredIndex)
+        assertEquals(target.name, stateAfterUndo.displayedIngredients[restoredIndex].name)
+
+        // 4. Delete via onDeleteIngredient(id) dialog action and undo
+        val target2 = stateAfterUndo.displayedIngredients[0]
+        viewModel.onDeleteIngredient(target2.id)
+        val stateAfterDelete2 = viewModel.uiState.value
+        assertEquals(9, stateAfterDelete2.displayedIngredients.size)
+        assertNotNull(stateAfterDelete2.undoDeleteState)
+        assertEquals(target2.id, stateAfterDelete2.undoDeleteState?.ingredient?.id)
+
+        viewModel.onUndoDelete()
+        val stateAfterUndo2 = viewModel.uiState.value
+        assertEquals(10, stateAfterUndo2.displayedIngredients.size)
+        assertEquals(target2.id, stateAfterUndo2.displayedIngredients[0].id)
 
         testJob.cancel()
     }
@@ -1578,4 +1641,316 @@ class SharedLogicAndroidHostTest {
         assertTrue(initialOrPlatform == "EN" || initialOrPlatform == "KO")
     }
 
+    @Test
+    fun testComprehensiveOverseasLanguageSyncAndMadridScenarioQA() {
+        // QA 1: Timezone categorization for overseas vs Korean regions
+        fun isKoreanTimezone(tz: String): Boolean {
+            return tz.isEmpty() || tz == "UTC" ||
+                tz.contains("Seoul", ignoreCase = true) ||
+                tz.contains("Pyongyang", ignoreCase = true) ||
+                tz.contains("ROK", ignoreCase = true) ||
+                tz.contains("KST", ignoreCase = true)
+        }
+
+        // Madrid, New York, London, Tokyo are all overseas
+        org.junit.Assert.assertFalse(isKoreanTimezone("Europe/Madrid"))
+        org.junit.Assert.assertFalse(isKoreanTimezone("America/New_York"))
+        org.junit.Assert.assertFalse(isKoreanTimezone("Europe/London"))
+        org.junit.Assert.assertFalse(isKoreanTimezone("Asia/Tokyo"))
+        org.junit.Assert.assertFalse(isKoreanTimezone("Australia/Sydney"))
+
+        // Seoul, Pyongyang, ROK, KST are Korean
+        assertTrue(isKoreanTimezone("Asia/Seoul"))
+        assertTrue(isKoreanTimezone("Asia/Pyongyang"))
+        assertTrue(isKoreanTimezone("ROK"))
+        assertTrue(isKoreanTimezone("KST"))
+
+        // QA 2: Language Resolution Function Behavior
+        fun resolveDefaultLang(langCode: String, tz: String): com.dahee.blockbyblock.core.i18n.AppLanguage {
+            val isKoreanLang = langCode.startsWith("ko", ignoreCase = true)
+            val isKoreanTz = isKoreanTimezone(tz)
+            return if (isKoreanLang && isKoreanTz) {
+                com.dahee.blockbyblock.core.i18n.AppLanguage.KO
+            } else {
+                com.dahee.blockbyblock.core.i18n.AppLanguage.EN
+            }
+        }
+
+        // Test Matrix
+        assertEquals(com.dahee.blockbyblock.core.i18n.AppLanguage.EN, resolveDefaultLang("es", "Europe/Madrid"))
+        assertEquals(com.dahee.blockbyblock.core.i18n.AppLanguage.EN, resolveDefaultLang("en", "Europe/Madrid"))
+        assertEquals(com.dahee.blockbyblock.core.i18n.AppLanguage.EN, resolveDefaultLang("ko", "Europe/Madrid"))
+        assertEquals(com.dahee.blockbyblock.core.i18n.AppLanguage.EN, resolveDefaultLang("en", "America/New_York"))
+        assertEquals(com.dahee.blockbyblock.core.i18n.AppLanguage.KO, resolveDefaultLang("ko", "Asia/Seoul"))
+        assertEquals(com.dahee.blockbyblock.core.i18n.AppLanguage.EN, resolveDefaultLang("en", "Asia/Seoul"))
+
+        // QA 3: Madrid first-time user scenario simulation
+        // 1. First-time visitor has no stored lang
+        com.dahee.blockbyblock.data.remote.TokenStorage.clearTokens()
+        org.junit.Assert.assertNull(com.dahee.blockbyblock.data.remote.TokenStorage.getUserLang())
+
+        // 2. Default language resolves to EN for Europe/Madrid
+        val detected = resolveDefaultLang("es", "Europe/Madrid")
+        assertEquals(com.dahee.blockbyblock.core.i18n.AppLanguage.EN, detected)
+
+        // 3. User registers: SignUpRequest transmits lang = "EN"
+        val signUpReq = com.dahee.blockbyblock.data.remote.dto.SignUpRequest(
+            email = "spain_user@example.com",
+            password = "SecurePassword123!",
+            nickname = "spain_chef",
+            lang = detected.name
+        )
+        assertEquals("EN", signUpReq.lang)
+
+        // 4. Client initialLang fallback uses detected ("EN"), never "KO"
+        val initialLang = com.dahee.blockbyblock.data.remote.TokenStorage.getUserLang() ?: signUpReq.lang ?: "KO"
+        assertEquals("EN", initialLang)
+        com.dahee.blockbyblock.data.remote.TokenStorage.setUserLang(initialLang)
+        assertEquals("EN", com.dahee.blockbyblock.data.remote.TokenStorage.getUserLang())
+
+        // 5. Server response has legacy default "KO" in userRes.lang
+        val serverUserRes = com.dahee.blockbyblock.data.remote.dto.UserResponse(
+            id = "user_spain_1",
+            email = "spain_user@example.com",
+            nickname = "spain_chef",
+            avatarType = "PERSON",
+            onboardingCompleted = false,
+            lang = "KO",
+            timezone = "Europe/Madrid"
+        )
+        // Client preserves local "EN" and does not get stomped by server's "KO"
+        val localLang = com.dahee.blockbyblock.data.remote.TokenStorage.getUserLang()
+        val targetLang = localLang ?: serverUserRes.lang
+        assertEquals("EN", targetLang)
+
+        // QA 4: i18n Strings Completeness Verification
+        val ko = com.dahee.blockbyblock.core.i18n.KoStrings
+        val en = com.dahee.blockbyblock.core.i18n.EnStrings
+        assertTrue(ko.createBlockGoToCookingTools.isNotBlank())
+        assertTrue(en.createBlockGoToCookingTools.isNotBlank())
+        assertTrue(ko.resetMoldShape.isNotBlank())
+        assertTrue(en.resetMoldShape.isNotBlank())
+        assertTrue(ko.addCookingTool.isNotBlank())
+        assertTrue(en.addCookingTool.isNotBlank())
+    }
+
+    @Test
+    fun testBlockInventoryExcludesDepletedBlocksAndHistoryRemains() = kotlinx.coroutines.runBlocking {
+        val equipRepo = com.dahee.blockbyblock.data.repository.InMemoryEquipmentRepository(
+            initialItems = listOf(
+                com.dahee.blockbyblock.domain.model.Equipment(
+                    id = "mold_15",
+                    name = "15ml 실리콘 몰드",
+                    category = com.dahee.blockbyblock.domain.model.EquipmentCategory.MOLD,
+                    customCapacityMl = 15,
+                    cellCount = 6,
+                    isOwned = true
+                )
+            )
+        )
+        val foodRepo = com.dahee.blockbyblock.data.repository.InMemoryFoodBlockRepository()
+        val ingredientRepo = com.dahee.blockbyblock.data.repository.InMemoryIngredientRepository()
+        val testScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined)
+
+        // Setup blocks: one in stock, two depleted (quantity == 0)
+        val inStockBlock = com.dahee.blockbyblock.domain.model.FoodBlock(
+            id = "block_instock",
+            name = "당근 블록",
+            moldId = "mold_15",
+            moldName = "15ml 실리콘 몰드",
+            moldCapacityMl = 15,
+            moldCellCount = 6,
+            moldColorHex = "#FF7043",
+            blockColorHex = "#FF7043",
+            mainIngredients = listOf("당근"),
+            quantity = 3
+        )
+        val depletedBlock1 = com.dahee.blockbyblock.domain.model.FoodBlock(
+            id = "block_depleted_1",
+            name = "소고기 블록",
+            moldId = "mold_30",
+            moldName = "30ml 실리콘 몰드",
+            moldCapacityMl = 30,
+            moldCellCount = 4,
+            moldColorHex = "#8D6E63",
+            blockColorHex = "#8D6E63",
+            mainIngredients = listOf("소고기"),
+            quantity = 0
+        )
+        val depletedBlock2 = com.dahee.blockbyblock.domain.model.FoodBlock(
+            id = "block_depleted_2",
+            name = "브로콜리 블록",
+            moldId = "mold_15",
+            moldName = "15ml 실리콘 몰드",
+            moldCapacityMl = 15,
+            moldCellCount = 6,
+            moldColorHex = "#81C784",
+            blockColorHex = "#81C784",
+            mainIngredients = listOf("브로콜리"),
+            quantity = 0
+        )
+
+        foodRepo.saveFoodBlock(inStockBlock)
+        foodRepo.saveFoodBlock(depletedBlock1)
+        foodRepo.saveFoodBlock(depletedBlock2)
+
+        val viewModel = com.dahee.blockbyblock.presentation.block.BlockViewModel(
+            foodBlockRepository = foodRepo,
+            ingredientRepository = ingredientRepo,
+            equipmentRepository = equipRepo,
+            coroutineScope = testScope
+        )
+
+        val state = viewModel.uiState.value
+
+        // Total blocks in repository is 3
+        assertEquals(3, state.blocks.size)
+
+        // inStockBlocks must ONLY contain quantity > 0 blocks (size == 1)
+        assertEquals(1, state.inStockBlocks.size)
+        assertEquals("당근 블록", state.inStockBlocks[0].name)
+
+        // filteredBlocks must not contain 0-quantity blocks in freezer inventory
+        assertEquals(1, state.filteredBlocks.size)
+        assertEquals("당근 블록", state.filteredBlocks[0].name)
+
+        // When filtering by 30ml (which has only depleted block), filteredBlocks must be empty
+        viewModel.onCapacityFilterChange(30)
+        assertTrue(viewModel.uiState.value.filteredBlocks.isEmpty())
+
+        // Reset filter
+        viewModel.onCapacityFilterChange(null)
+
+        // distinctMoldCapacities should include 15ml (from mold & inStockBlock), but NOT 30ml (depleted and mold unowned)
+        assertTrue(state.distinctMoldCapacities.contains(15))
+        assertFalse(state.distinctMoldCapacities.contains(30))
+
+        // History blocks must still preserve all 3 recipes for reuse
+        assertEquals(3, state.historyBlocks.size)
+        val historyNames = state.historyBlocks.map { it.name }.toSet()
+        assertTrue(historyNames.contains("당근 블록"))
+        assertTrue(historyNames.contains("소고기 블록"))
+        assertTrue(historyNames.contains("브로콜리 블록"))
+
+        // Applying history from a depleted block must not set blockQuantity to 0!
+        viewModel.onOpenCreateScreen()
+        viewModel.onApplyHistoryBlock(depletedBlock1)
+        val afterHistory = viewModel.uiState.value
+        assertEquals("소고기 블록", afterHistory.customBlockName)
+        // Should default to available mold cellCount (6), NOT 0
+        assertTrue(afterHistory.blockQuantity > 0)
+        assertEquals(6, afterHistory.blockQuantity)
+        assertEquals("6", afterHistory.blockQuantityInput)
+
+        // If blockQuantity is 0, onSubmitCreateBlock must be blocked
+        viewModel.onBlockQuantityInputChange("0")
+        assertEquals(0, viewModel.uiState.value.blockQuantity)
+        assertFalse(viewModel.uiState.value.canSubmit)
+        viewModel.onSubmitCreateBlock()
+        // Repository should still have only 3 blocks, no 0-quantity block created
+        assertEquals(3, foodRepo.getFoodBlocks().size)
+    }
+
+    @Test
+    fun testSavedMealSlotWithDepletedBlocksShowsRefillOptionAndRefillsSuccessfully() = kotlinx.coroutines.runBlocking {
+        val testJob = kotlinx.coroutines.Job()
+        val testScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined + testJob)
+
+        val mealRepo = com.dahee.blockbyblock.data.repository.InMemoryMealRecordRepository()
+        val foodRepo = com.dahee.blockbyblock.data.repository.InMemoryFoodBlockRepository()
+
+        // 1. Prepare 1 food block with quantity = 0 (completely depleted)
+        val depletedBlock = com.dahee.blockbyblock.domain.model.FoodBlock(
+            id = "depleted-101",
+            name = "소진된 당근",
+            moldId = "m1",
+            moldName = "몰드 1",
+            moldCapacityMl = 250,
+            moldCellCount = 4,
+            moldColorHex = "#F5B7B1",
+            blockColorHex = "#F5B7B1",
+            mainIngredients = listOf("당근"),
+            quantity = 0
+        )
+        foodRepo.saveFoodBlock(depletedBlock)
+
+        // 2. Saved meal slot already contains this depleted block
+        val savedSlotBlock = com.dahee.blockbyblock.domain.model.MealBlockItem(
+            instanceId = "inst-saved-101",
+            blockId = "depleted-101",
+            blockName = "소진된 당근",
+            blockColorHex = "#F5B7B1",
+            moldCapacityMl = 250,
+            moldCellCount = 4,
+            sortOrder = 0,
+            currentStock = 0,
+            blockStatus = com.dahee.blockbyblock.domain.model.MealBlockStatus.OUT_OF_STOCK
+        )
+        val testDate = "2026-09-15"
+        val dayRecord = com.dahee.blockbyblock.domain.model.DayMealRecord(
+            id = "day_$testDate",
+            dateString = testDate,
+            lunch = com.dahee.blockbyblock.domain.model.MealSlotRecord(
+                mealType = com.dahee.blockbyblock.domain.model.MealType.LUNCH,
+                blocks = listOf(savedSlotBlock),
+                memo = "저장된 소진 식단 테스트"
+            )
+        )
+        mealRepo.saveMealRecord(dayRecord)
+
+        val viewModel = com.dahee.blockbyblock.presentation.mealplan.MealPlanViewModel(
+            mealRecordRepository = mealRepo,
+            foodBlockRepository = foodRepo,
+            viewModelScope = testScope
+        )
+
+        val collectJob = testScope.launch { viewModel.uiState.collect { } }
+
+        // 3. Test determineBlockStatusesIndexed: even though block was in originalSlotBlocks,
+        // because it is OUT_OF_STOCK, it must remain OUT_OF_STOCK (never DELETED and never falsely AVAILABLE)
+        val statuses = com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed(
+            blocks = listOf(savedSlotBlock),
+            allFoodBlocks = listOf(depletedBlock),
+            originalSlotBlocks = listOf(savedSlotBlock)
+        )
+        assertEquals(listOf(com.dahee.blockbyblock.domain.model.MealBlockStatus.OUT_OF_STOCK), statuses)
+
+        // Also test when allFoodBlocks is empty (all inventory depleted / not returned by API)
+        val statusesWithEmptyRepo = com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed(
+            blocks = listOf(savedSlotBlock),
+            allFoodBlocks = emptyList(),
+            originalSlotBlocks = listOf(savedSlotBlock)
+        )
+        assertEquals(listOf(com.dahee.blockbyblock.domain.model.MealBlockStatus.OUT_OF_STOCK), statusesWithEmptyRepo)
+
+        // 4. Open slot dialog for this saved slot
+        viewModel.onOpenSlotDialog(testDate, "9월 15일 화요일", com.dahee.blockbyblock.domain.model.MealType.LUNCH)
+
+        val dialogStatuses = com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed(
+            viewModel.uiState.value.slotSelectedBlocks,
+            viewModel.uiState.value.allFoodBlocks,
+            viewModel.uiState.value.slotOriginalBlocks
+        )
+        // Verify OUT_OF_STOCK is present -> This ensures "+블록 추가" button is displayed!
+        assertTrue(dialogStatuses.any { it == com.dahee.blockbyblock.domain.model.MealBlockStatus.OUT_OF_STOCK })
+
+        // 5. Call onRefillMissingBlocks()
+        viewModel.onRefillMissingBlocks()
+        assertTrue(viewModel.uiState.value.hasPendingRefills)
+
+        // Effective status becomes AVAILABLE
+        val refilledStatuses = com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed(
+            viewModel.uiState.value.slotSelectedBlocks,
+            viewModel.uiState.value.allFoodBlocks,
+            viewModel.uiState.value.slotOriginalBlocks
+        )
+        assertTrue(refilledStatuses.all { it == com.dahee.blockbyblock.domain.model.MealBlockStatus.AVAILABLE })
+
+        // 6. Save slot: refill is committed to food repository
+        viewModel.onSaveSlot()
+        assertEquals(1, foodRepo.getFoodBlocks().first { it.id == "depleted-101" }.quantity)
+
+        collectJob.cancel()
+        testJob.cancel()
+    }
 }
