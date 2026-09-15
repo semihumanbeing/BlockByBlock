@@ -22,6 +22,15 @@ class AuthApiLiveTest {
     @Before
     fun setup() {
         ApiClient.baseUrl = "http://localhost:8000"
+        val isRunning = try {
+            java.net.Socket().use { socket ->
+                socket.connect(java.net.InetSocketAddress("127.0.0.1", 8000), 200)
+                true
+            }
+        } catch (_: Throwable) {
+            false
+        }
+        org.junit.Assume.assumeTrue("Local backend server not running at http://localhost:8000", isRunning)
     }
 
     @Test
