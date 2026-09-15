@@ -440,7 +440,7 @@ fun InventoryScreen(
 
                         // Reset dismiss state to Settled whenever item enters composition (e.g. after undoing deletion)
                         LaunchedEffect(ingredient.id) {
-                            if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+                            if (dismissState.currentValue != SwipeToDismissBoxValue.Settled || dismissState.targetValue != SwipeToDismissBoxValue.Settled) {
                                 dismissState.snapTo(SwipeToDismissBoxValue.Settled)
                             }
                         }

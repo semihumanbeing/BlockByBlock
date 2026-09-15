@@ -113,9 +113,23 @@ class NetworkIngredientRepository(
             val result = apiService.updateIngredient(numericId, req)
             result.onSuccess { res ->
                 val updated = mapResponseToIngredient(res)
-                _ingredients.update { list -> list.map { if (it.id == ingredient.id) updated else it } }
+                _ingredients.update { list ->
+                    val idx = list.indexOfFirst { it.id == ingredient.id }
+                    if (idx >= 0) {
+                        list.map { if (it.id == ingredient.id) updated else it }
+                    } else {
+                        listOf(updated) + list
+                    }
+                }
             }.onFailure {
-                _ingredients.update { list -> list.map { if (it.id == ingredient.id) ingredient else it } }
+                _ingredients.update { list ->
+                    val idx = list.indexOfFirst { it.id == ingredient.id }
+                    if (idx >= 0) {
+                        list.map { if (it.id == ingredient.id) ingredient else it }
+                    } else {
+                        listOf(ingredient) + list
+                    }
+                }
             }
         } else {
             val req = CreateIngredientRequest(
@@ -159,11 +173,75 @@ class NetworkIngredientRepository(
     }
 
     override suspend fun deleteIngredient(id: String) {
+        _ingredients.update { list -> list.filterNot { it.id == id } }
         val numericId = id.toLongOrNull()
         if (numericId != null) {
             apiService.deleteIngredient(numericId)
         }
-        _ingredients.update { list -> list.filterNot { it.id == id } }
+    }
+
+    override suspend fun restoreIngredient(ingredient: Ingredient, insertIndex: Int): Result<Ingredient> {
+        // 1. Optimistic restore to local state immediately so UI updates with 0 latency
+        insertIngredientAt(ingredient, insertIndex)
+
+        val numericId = ingredient.id.toLongOrNull()
+        if (numericId != null) {
+            val restoreResult = apiService.restoreIngredient(numericId)
+            if (restoreResult.isSuccess) {
+                val restored = mapResponseToIngredient(restoreResult.getOrThrow())
+                val finalRestored = if (restored.status != ingredient.status) {
+                    apiService.updateStatus(numericId, ingredient.status.name)
+                    restored.copy(status = ingredient.status)
+                } else {
+                    restored
+                }
+                insertIngredientAt(finalRestored, insertIndex)
+                return Result.success(finalRestored)
+            } else {
+                // If restore endpoint fails (e.g. server hard-deleted or 404), recreate via createIngredient
+                val createReq = CreateIngredientRequest(
+                    name = ingredient.name,
+                    status = ingredient.status.name,
+                    category = ingredient.category.name
+                )
+                val createResult = apiService.createIngredient(createReq)
+                if (createResult.isSuccess) {
+                    val created = mapResponseToIngredient(createResult.getOrThrow())
+                    _ingredients.update { list ->
+                        list.map { if (it.id == ingredient.id) created else it }
+                    }
+                    return Result.success(created)
+                }
+            }
+        } else {
+            val createReq = CreateIngredientRequest(
+                name = ingredient.name,
+                status = ingredient.status.name,
+                category = ingredient.category.name
+            )
+            val createResult = apiService.createIngredient(createReq)
+            if (createResult.isSuccess) {
+                val created = mapResponseToIngredient(createResult.getOrThrow())
+                _ingredients.update { list ->
+                    list.map { if (it.id == ingredient.id) created else it }
+                }
+                return Result.success(created)
+            }
+        }
+
+        return Result.success(ingredient)
+    }
+
+    private fun insertIngredientAt(item: Ingredient, insertIndex: Int) {
+        _ingredients.update { list ->
+            val mutable = list.filterNot { it.id == item.id }.toMutableList()
+            if (insertIndex in 0..mutable.size) {
+                mutable.add(insertIndex, item)
+            } else {
+                mutable.add(0, item)
+            }
+            mutable
+        }
     }
 
     override suspend fun getIngredientById(id: String): Ingredient? {

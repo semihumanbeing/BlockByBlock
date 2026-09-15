@@ -87,6 +87,20 @@ class InMemoryIngredientRepository : IngredientRepository {
         _ingredients.value = currentList
     }
 
+    override suspend fun restoreIngredient(ingredient: Ingredient, insertIndex: Int): Result<Ingredient> {
+        val currentList = _ingredients.value.toMutableList()
+        val existingIndex = currentList.indexOfFirst { it.id == ingredient.id }
+        if (existingIndex >= 0) {
+            currentList[existingIndex] = ingredient
+        } else if (insertIndex in 0..currentList.size) {
+            currentList.add(insertIndex, ingredient)
+        } else {
+            currentList.add(0, ingredient)
+        }
+        _ingredients.value = currentList
+        return Result.success(ingredient)
+    }
+
     override suspend fun getIngredientById(id: String): Ingredient? {
         return _ingredients.value.find { it.id == id }
     }

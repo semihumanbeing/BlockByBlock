@@ -14,7 +14,8 @@ enum class IngredientTab {
 
 data class UndoDeleteState(
     val ingredient: Ingredient,
-    val message: String
+    val message: String,
+    val index: Int = -1
 )
 
 data class IngredientUiState(

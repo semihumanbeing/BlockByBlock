@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancelAndJoin
 import kotlin.random.Random
 
 class IngredientViewModel(
@@ -493,23 +494,26 @@ class IngredientViewModel(
     }
 
     private var undoJob: Job? = null
+    private var pendingDeleteJob: Job? = null
 
     // Delete ingredient with 1-tap Undo support
     fun onDeleteIngredientWithUndo(ingredient: Ingredient, message: String) {
-        scope.launch {
+        val originalIndex = _uiState.value.registeredIngredients.indexOfFirst { it.id == ingredient.id }
+        undoJob?.cancel()
+        pendingDeleteJob?.cancel()
+        _uiState.update {
+            it.copy(
+                isAddDialogOpen = false,
+                editingIngredient = null,
+                undoDeleteState = UndoDeleteState(ingredient, message, originalIndex)
+            )
+        }
+        undoJob = scope.launch {
+            delay(4000)
+            _uiState.update { it.copy(undoDeleteState = null) }
+        }
+        pendingDeleteJob = scope.launch {
             repository.deleteIngredient(ingredient.id)
-            undoJob?.cancel()
-            _uiState.update {
-                it.copy(
-                    isAddDialogOpen = false,
-                    editingIngredient = null,
-                    undoDeleteState = UndoDeleteState(ingredient, message)
-                )
-            }
-            undoJob = scope.launch {
-                delay(4000)
-                _uiState.update { it.copy(undoDeleteState = null) }
-            }
         }
     }
 
@@ -517,9 +521,12 @@ class IngredientViewModel(
     fun onUndoDelete() {
         val lastState = _uiState.value.undoDeleteState ?: return
         undoJob?.cancel()
+        val currentDeleteJob = pendingDeleteJob
+        pendingDeleteJob = null
+        _uiState.update { it.copy(undoDeleteState = null) }
         scope.launch {
-            repository.upsertIngredient(lastState.ingredient)
-            _uiState.update { it.copy(undoDeleteState = null) }
+            currentDeleteJob?.cancelAndJoin()
+            repository.restoreIngredient(lastState.ingredient, lastState.index)
         }
     }
 
@@ -532,7 +539,8 @@ class IngredientViewModel(
         val target = _uiState.value.displayedIngredients.find { it.id == id }
             ?: _uiState.value.registeredIngredients.find { it.id == id }
         if (target != null) {
-            onDeleteIngredientWithUndo(target, "'${target.name}'이(가) 삭제되었습니다.")
+            val strings = com.dahee.blockbyblock.core.i18n.getStrings(currentLanguage)
+            onDeleteIngredientWithUndo(target, strings.itemDeletedToast(target.name))
         } else {
             scope.launch {
                 repository.deleteIngredient(id)

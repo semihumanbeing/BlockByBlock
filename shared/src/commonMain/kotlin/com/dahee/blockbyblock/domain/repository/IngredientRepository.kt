@@ -17,6 +17,10 @@ interface IngredientRepository {
     suspend fun toggleStatus(id: String)
     suspend fun updateStatus(id: String, status: IngredientStatus)
     suspend fun deleteIngredient(id: String)
+    suspend fun restoreIngredient(ingredient: Ingredient, insertIndex: Int = -1): Result<Ingredient> {
+        upsertIngredient(ingredient)
+        return Result.success(ingredient)
+    }
     suspend fun getIngredientById(id: String): Ingredient?
     suspend fun fetchIngredients(): Result<List<Ingredient>>
     suspend fun fetchIngredientsPaged(
