@@ -1906,14 +1906,14 @@ class SharedLogicAndroidHostTest {
 
         val collectJob = testScope.launch { viewModel.uiState.collect { } }
 
-        // 3. Test determineBlockStatusesIndexed: even though block was in originalSlotBlocks,
-        // because it is OUT_OF_STOCK, it must remain OUT_OF_STOCK (never DELETED and never falsely AVAILABLE)
+        // 3. Test determineBlockStatusesIndexed: already saved block in a slot is ALWAYS AVAILABLE
+        // (Even if inventory is 0 or empty, already saved block must never be shown as depleted / OUT_OF_STOCK)
         val statuses = com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed(
             blocks = listOf(savedSlotBlock),
             allFoodBlocks = listOf(depletedBlock),
             originalSlotBlocks = listOf(savedSlotBlock)
         )
-        assertEquals(listOf(com.dahee.blockbyblock.domain.model.MealBlockStatus.OUT_OF_STOCK), statuses)
+        assertEquals(listOf(com.dahee.blockbyblock.domain.model.MealBlockStatus.AVAILABLE), statuses)
 
         // Also test when allFoodBlocks is empty (all inventory depleted / not returned by API)
         val statusesWithEmptyRepo = com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed(
@@ -1921,9 +1921,9 @@ class SharedLogicAndroidHostTest {
             allFoodBlocks = emptyList(),
             originalSlotBlocks = listOf(savedSlotBlock)
         )
-        assertEquals(listOf(com.dahee.blockbyblock.domain.model.MealBlockStatus.OUT_OF_STOCK), statusesWithEmptyRepo)
+        assertEquals(listOf(com.dahee.blockbyblock.domain.model.MealBlockStatus.AVAILABLE), statusesWithEmptyRepo)
 
-        // 4. Open slot dialog for this saved slot
+        // 4. Open slot dialog for this saved slot: it is AVAILABLE initially
         viewModel.onOpenSlotDialog(testDate, "9월 15일 화요일", com.dahee.blockbyblock.domain.model.MealType.LUNCH)
 
         val dialogStatuses = com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed(
@@ -1931,10 +1931,34 @@ class SharedLogicAndroidHostTest {
             viewModel.uiState.value.allFoodBlocks,
             viewModel.uiState.value.slotOriginalBlocks
         )
-        // Verify OUT_OF_STOCK is present -> This ensures "+블록 추가" button is displayed!
-        assertTrue(dialogStatuses.any { it == com.dahee.blockbyblock.domain.model.MealBlockStatus.OUT_OF_STOCK })
+        assertEquals(listOf(com.dahee.blockbyblock.domain.model.MealBlockStatus.AVAILABLE), dialogStatuses)
 
-        // 5. Call onRefillMissingBlocks()
+        // 5. Apply a preset that contains an additional depleted block not in originalBlocks
+        val preset = com.dahee.blockbyblock.domain.model.MealPreset(
+            id = "preset-depleted",
+            name = "소진 프리셋",
+            blocks = listOf(
+                savedSlotBlock,
+                savedSlotBlock.copy(instanceId = "inst-new-depleted", sortOrder = 1)
+            )
+        )
+        viewModel.onApplyPreset(preset)
+
+        val presetStatuses = com.dahee.blockbyblock.domain.model.determineBlockStatusesIndexed(
+            viewModel.uiState.value.slotSelectedBlocks,
+            viewModel.uiState.value.allFoodBlocks,
+            viewModel.uiState.value.slotOriginalBlocks
+        )
+        // 1st block is from original slot -> AVAILABLE, 2nd block is newly added with 0 stock -> OUT_OF_STOCK
+        assertEquals(
+            listOf(
+                com.dahee.blockbyblock.domain.model.MealBlockStatus.AVAILABLE,
+                com.dahee.blockbyblock.domain.model.MealBlockStatus.OUT_OF_STOCK
+            ),
+            presetStatuses
+        )
+
+        // 6. Call onRefillMissingBlocks()
         viewModel.onRefillMissingBlocks()
         assertTrue(viewModel.uiState.value.hasPendingRefills)
 
@@ -1946,7 +1970,7 @@ class SharedLogicAndroidHostTest {
         )
         assertTrue(refilledStatuses.all { it == com.dahee.blockbyblock.domain.model.MealBlockStatus.AVAILABLE })
 
-        // 6. Save slot: refill is committed to food repository
+        // 7. Save slot: refill is committed to food repository
         viewModel.onSaveSlot()
         assertEquals(1, foodRepo.getFoodBlocks().first { it.id == "depleted-101" }.quantity)
 

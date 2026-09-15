@@ -102,45 +102,43 @@ fun determineBlockStatusesIndexed(
     allFoodBlocks: List<FoodBlock>?,
     originalSlotBlocks: List<MealBlockItem> = emptyList()
 ): List<MealBlockStatus> {
-    if (allFoodBlocks == null) {
-        return blocks.map { item ->
-            when {
-                item.isDeleted == true || item.blockStatus == MealBlockStatus.DELETED -> MealBlockStatus.DELETED
-                item.blockStatus != null -> item.blockStatus
-                item.currentStock != null && item.currentStock <= 0 -> MealBlockStatus.OUT_OF_STOCK
-                else -> MealBlockStatus.AVAILABLE
-            }
-        }
-    }
+    // 1. Blocks that are already saved in this slot are already allocated, so they are AVAILABLE.
+    // Count remaining original quota per blockId (excluding deleted blocks).
+    val originalQuota = originalSlotBlocks
+        .filterNot { it.isDeleted == true || it.blockStatus == MealBlockStatus.DELETED }
+        .groupingBy { it.blockId }
+        .eachCount()
+        .toMutableMap()
 
-    val foodBlocksMap = allFoodBlocks.associateBy { it.id }
-    // Effective available stock = current freezer stock + blocks already allocated to this slot (excluding already out-of-stock/deleted ones)
-    val remainingStock = allFoodBlocks.associate { it.id to it.quantity }.toMutableMap()
-    originalSlotBlocks.forEach { orig ->
-        if (orig.blockStatus != MealBlockStatus.OUT_OF_STOCK && orig.blockStatus != MealBlockStatus.DELETED && orig.isDeleted != true) {
-            remainingStock[orig.blockId] = (remainingStock[orig.blockId] ?: 0) + 1
-        }
-    }
+    // 2. Current freezer stock for newly added or excess blocks
+    val freezerStock = allFoodBlocks?.associate { it.id to it.quantity }?.toMutableMap()
 
     return blocks.map { item ->
-        val foodBlock = foodBlocksMap[item.blockId]
         when {
-            item.isDeleted == true || item.blockStatus == MealBlockStatus.DELETED -> MealBlockStatus.DELETED
-            foodBlock == null -> {
-                // If not in active inventory and not explicitly deleted, it is OUT_OF_STOCK (depleted)
-                MealBlockStatus.OUT_OF_STOCK
+            item.isDeleted == true || item.blockStatus == MealBlockStatus.DELETED -> {
+                MealBlockStatus.DELETED
             }
-            item.blockStatus == MealBlockStatus.OUT_OF_STOCK && foodBlock.quantity <= 0 -> {
+            // If already allocated/saved in this slot, it must NOT be shown as depleted (OUT_OF_STOCK)
+            (originalQuota[item.blockId] ?: 0) > 0 -> {
+                originalQuota[item.blockId] = (originalQuota[item.blockId] ?: 0) - 1
+                MealBlockStatus.AVAILABLE
+            }
+            // For newly added / preset blocks beyond original slot: check freezer stock
+            freezerStock != null -> {
+                val stock = freezerStock[item.blockId] ?: 0
+                if (stock > 0) {
+                    freezerStock[item.blockId] = stock - 1
+                    MealBlockStatus.AVAILABLE
+                } else {
+                    MealBlockStatus.OUT_OF_STOCK
+                }
+            }
+            // Fallback when allFoodBlocks is null and block was not in original quota
+            item.blockStatus == MealBlockStatus.OUT_OF_STOCK || (item.currentStock != null && item.currentStock <= 0) -> {
                 MealBlockStatus.OUT_OF_STOCK
             }
             else -> {
-                val stock = remainingStock[item.blockId] ?: 0
-                if (stock <= 0) {
-                    MealBlockStatus.OUT_OF_STOCK
-                } else {
-                    remainingStock[item.blockId] = stock - 1
-                    MealBlockStatus.AVAILABLE
-                }
+                MealBlockStatus.AVAILABLE
             }
         }
     }
